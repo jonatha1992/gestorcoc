@@ -1,0 +1,98 @@
+<nav class="bg-indigo-700 text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <!-- Logo y Título -->
+            <div class="flex items-center">
+                <a routerLink="/" class="flex-shrink-0 flex items-center gap-2 group">
+                    <span class="text-2xl group-hover:scale-110 transition-transform">🛡️</span>
+                    <span class="font-bold text-xl tracking-tight hidden md:block">Sistema CREV</span>
+                </a>
+            </div>
+
+            <!-- Desktop Menu -->
+            <div class="hidden sm:flex sm:items-center sm:space-x-4">
+
+                <!-- Equipamiento Dropdown -->
+                <div class="relative">
+                    <button (click)="toggleEquipMenu()" (clickOutside)="isEquipMenuOpen.set(false)"
+                        class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-600 flex items-center gap-1 transition-colors">
+                        <span>🛠️ Equipamiento</span>
+                        <svg class="h-4 w-4 transition-transform" [class.rotate-180]="isEquipMenuOpen()" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <div *ngIf="isEquipMenuOpen()"
+                        class="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div class="py-1" role="menu">
+                            <a routerLink="/equipamiento" (click)="closeMenus()"
+                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-100 transition-colors"
+                                role="menuitem">📋 Listado de Equipos</a>
+                            <a routerLink="/nuevo-equipo" (click)="closeMenus()"
+                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-100 transition-colors"
+                                role="menuitem">➕ Alta de Equipo</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Registros CREV Dropdown -->
+                <div class="relative">
+                    <button (click)="toggleCrevMenu()"
+                        class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-600 flex items-center gap-1 transition-colors">
+                        <span>🎬 Registros CREV</span>
+                        <svg class="h-4 w-4 transition-transform" [class.rotate-180]="isCrevMenuOpen()" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <div *ngIf="isCrevMenuOpen()"
+                        class="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div class="py-1" role="menu">
+                            <a routerLink="/registros" (click)="closeMenus()"
+                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-100 transition-colors"
+                                role="menuitem">📋 Listado de Registros</a>
+                            <a routerLink="/nuevo-registro" (click)="closeMenus()"
+                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-100 transition-colors"
+                                role="menuitem">➕ Nuevo Registro</a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <div class="flex items-center sm:hidden">
+                <button (click)="isMobileMenuOpen.set(!isMobileMenuOpen())"
+                    class="inline-flex items-center justify-center p-2 rounded-md hover:bg-indigo-600 focus:outline-none transition-colors">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path *ngIf="!isMobileMenuOpen()" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        <path *ngIf="isMobileMenuOpen()" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Content -->
+    <div *ngIf="isMobileMenuOpen()"
+        class="sm:hidden bg-indigo-800 border-t border-indigo-600 animate-in slide-in-from-top duration-200">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+            <div class="text-xs font-semibold text-indigo-300 uppercase px-3 py-2">Equipamiento</div>
+            <a routerLink="/equipamiento" (click)="closeMenus()"
+                class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-600">📋 Listado</a>
+            <a routerLink="/nuevo-equipo" (click)="closeMenus()"
+                class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-600">➕ Alta</a>
+
+            <div class="text-xs font-semibold text-indigo-300 uppercase px-3 py-2 mt-4 border-t border-indigo-700 pt-4">
+                Registros CREV</div>
+            <a routerLink="/registros" (click)="closeMenus()"
+                class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-600">📋 Listado</a>
+            <a routerLink="/nuevo-registro" (click)="closeMenus()"
+                class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-600">➕ Nuevo Registro</a>
+        </div>
+    </div>
+</nav>

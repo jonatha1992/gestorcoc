@@ -1,0 +1,181 @@
+<div class="max-w-5xl mx-auto py-8">
+    <div class="mb-6 flex items-center justify-between">
+        <h1 class="text-3xl font-bold text-gray-900">{{ isEditMode ? 'Editar Registro' : 'Nuevo Registro CREV' }}</h1>
+        <a routerLink="/registros" class="text-indigo-600 hover:text-indigo-900 font-medium">← Volver al listado</a>
+    </div>
+
+    <form [formGroup]="recordForm" (ngSubmit)="onSubmit()" class="space-y-8 pb-20">
+
+        <!-- Sección 1: Datos de Ingreso -->
+        <div class="bg-white shadow-xl rounded-xl border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 px-6 py-3 text-white font-bold flex items-center gap-2">
+                <span>📅</span> 1. Datos de Ingreso
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-3 space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Título / Resumen del Registro *</label>
+                    <input type="text" formControlName="title" placeholder="Ej: Registro escena del crimen..."
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Nº de Orden</label>
+                    <input type="text" formControlName="orderNumber"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Fecha Ingreso</label>
+                    <input type="date" formControlName="entryDate"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Estado</label>
+                    <select formControlName="status"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="En Proceso">En Proceso</option>
+                        <option value="Finalizado">Finalizado</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Tipo Solicitud</label>
+                    <select formControlName="requestType"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                        <option value="Oficio Judicial">Oficio Judicial</option>
+                        <option value="Prevención Sumaria">Prevención Sumaria</option>
+                        <option value="Memorandum">Memorandum</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Número Solicitud</label>
+                    <input type="text" formControlName="requestNumber"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Solicitante</label>
+                    <input type="text" formControlName="requester"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 2: Datos Judiciales / Hecho -->
+        <div class="bg-white shadow-xl rounded-xl border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 px-6 py-3 text-white font-bold flex items-center gap-2">
+                <span>⚖️</span> 2. Datos Judiciales / Hecho
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Causa Judicial / Prevención</label>
+                    <input type="text" formControlName="judicialCase"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Fecha del Hecho</label>
+                    <input type="date" formControlName="incidentDate"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="md:col-span-2 space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Carátula</label>
+                    <input type="text" formControlName="caratula"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Tipo de Delito</label>
+                    <input type="text" formControlName="crimeType"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Dependencia Interviniente</label>
+                    <input type="text" formControlName="unit"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 3: Detalle y Producción -->
+        <div class="bg-white shadow-xl rounded-xl border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 px-6 py-3 text-white font-bold flex items-center gap-2">
+                <span>🎬</span> 3. Detalle y Producción
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Nº de DVD</label>
+                    <input type="text" formControlName="dvdNumber"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Nº de Informe</label>
+                    <input type="text" formControlName="reportNumber"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Recepcionado Por</label>
+                    <input type="text" formControlName="receivedBy"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Confeccionado Por</label>
+                    <input type="text" formControlName="madeBy"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="md:col-span-2 space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Detalle Adicional</label>
+                    <textarea formControlName="detail" rows="2"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 4: Egreso / Finalización -->
+        <div class="bg-white shadow-xl rounded-xl border border-gray-100 overflow-hidden">
+            <div class="bg-indigo-600 px-6 py-3 text-white font-bold flex items-center gap-2">
+                <span>📦</span> 4. Egreso / Finalización
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Fecha de Salida</label>
+                    <input type="date" formControlName="exitDate"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">IFGRA</label>
+                    <input type="text" formControlName="ifgra"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Expediente</label>
+                    <input type="text" formControlName="fileNumber"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Retirado Por</label>
+                    <input type="text" formControlName="withdrawnBy"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Organismo</label>
+                    <input type="text" formControlName="organization"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-700">Nº Acta Entrega</label>
+                    <input type="text" formControlName="deliveryAct"
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de Acción Global -->
+        <div class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-2xl z-40 flex justify-center gap-4">
+            <button type="button" routerLink="/registros"
+                class="px-10 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-all">
+                Cancelar
+            </button>
+            <button type="submit" [disabled]="recordForm.invalid"
+                class="px-10 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:bg-indigo-300 transition-all shadow-lg flex items-center gap-2">
+                <span>💾</span> {{ isEditMode ? 'Actualizar Registro' : 'Guardar Registro CREV' }}
+            </button>
+        </div>
+
+    </form>
+</div>
