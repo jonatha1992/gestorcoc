@@ -7,10 +7,10 @@ Firebase ha sido configurado exitosamente con las credenciales del proyecto **eq
 ## 📋 Credenciales Configuradas
 
 ```
-Proyecto: equipamiento-qr
-Auth Domain: equipamiento-qr.firebaseapp.com
-Project ID: equipamiento-qr
-Storage Bucket: equipamiento-qr.firebasestorage.app
+Proyecto: crev-system
+Auth Domain: crev-system.firebaseapp.com
+Project ID: crev-system
+Storage Bucket: crev-system.firebasestorage.app
 ```
 
 ## 🚀 Próximos Pasos
