@@ -109,7 +109,7 @@ npm run build
 firebase deploy
 ```
 
-La aplicación estará disponible en: `https://equipamiento-qr.web.app`
+La aplicación estará disponible en: `https://crev-system.web.app`
 
 ## 🔧 Scripts Disponibles
 
