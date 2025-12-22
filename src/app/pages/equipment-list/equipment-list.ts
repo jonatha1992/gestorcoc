@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { EquipmentService } from '../../services/equipment';
-import { Equipment } from '../../models/models';
+import { Equipment } from '../../models';
 import { Observable } from 'rxjs';
 
 @Component({
@@ -10,11 +10,11 @@ import { Observable } from 'rxjs';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './equipment-list.html',
-  styleUrl: './equipment-list.css',
 })
 export class EquipmentListComponent implements OnInit {
   private equipmentService = inject(EquipmentService);
-  equipment$: Observable<Equipment[]> = this.equipmentService.getEquipment();
+
+  equipment$ = this.equipmentService.getEquipment();
 
   ngOnInit() { }
 

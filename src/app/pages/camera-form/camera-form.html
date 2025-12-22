@@ -1,0 +1,112 @@
+<div class="max-w-2xl mx-auto py-8">
+    <div class="mb-6 flex items-center justify-between">
+        <h1 class="text-3xl font-bold text-gray-900">{{ isEditMode ? 'Editar Cámara' : 'Nueva Cámara' }}</h1>
+        <a routerLink="/camaras" class="text-indigo-600 hover:text-indigo-900 font-medium">← Volver al listado</a>
+    </div>
+
+    <form [formGroup]="cameraForm" (ngSubmit)="onSubmit()"
+        class="bg-white shadow-xl rounded-xl p-8 border border-gray-100 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Nombre -->
+            <div class="md:col-span-2 space-y-2">
+                <label class="text-sm font-semibold text-gray-700">Nombre de la Cámara *</label>
+                <input type="text" formControlName="name" placeholder="Ej: Cámara Entrada Principal"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+            </div>
+
+            <!-- Ubicación -->
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700">Ubicación *</label>
+                <select formControlName="locationId"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    <option value="">Seleccione...</option>
+                    @for (loc of locations$ | async; track loc.id) {
+                    <option [value]="loc.id">{{ loc.name }}</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Tipo -->
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700">Tipo de Cámara</label>
+                <select formControlName="typeId"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    <option value="">Seleccione...</option>
+                    @for (t of types$ | async; track t.id) {
+                    <option [value]="t.id">{{ t.name }}</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Estado -->
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700">Estado *</label>
+                <select formControlName="status"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    @for (st of statuses; track st.value) {
+                    <option [value]="st.value">{{ st.label }}</option>
+                    }
+                </select>
+            </div>
+
+            <!-- IP -->
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700">Dirección IP</label>
+                <input type="text" formControlName="ipAddress" placeholder="Ej: 192.168.1.100"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono">
+            </div>
+
+            <!-- Marca -->
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700">Marca</label>
+                <input type="text" formControlName="brand"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+            </div>
+
+            <!-- Modelo -->
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700">Modelo</label>
+                <input type="text" formControlName="model"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+            </div>
+
+            <!-- Nº Serie -->
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700">Número de Serie</label>
+                <input type="text" formControlName="serialNumber"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+            </div>
+
+            <!-- Fecha Instalación -->
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700">Fecha de Instalación</label>
+                <input type="date" formControlName="installationDate"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+            </div>
+
+            <!-- Notas -->
+            <div class="md:col-span-2 space-y-2">
+                <label class="text-sm font-semibold text-gray-700">Notas</label>
+                <textarea formControlName="notes" rows="3"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"></textarea>
+            </div>
+
+        </div>
+
+        <div class="pt-4 flex justify-end gap-3">
+            <button type="button" routerLink="/camaras"
+                class="px-6 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">
+                Cancelar
+            </button>
+            <button type="submit" [disabled]="cameraForm.invalid"
+                class="px-6 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors shadow-md">
+                {{ isEditMode ? 'Guardar Cambios' : 'Registrar Cámara' }}
+            </button>
+        </div>
+    </form>
+
+    @if (isLoading) {
+    <app-loader [fullScreen]="true" message="Procesando datos de la cámara..."></app-loader>
+    }
+</div>

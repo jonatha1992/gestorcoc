@@ -1,20 +1,37 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { EquipmentListComponent } from './equipment-list';
+import { EquipmentService } from '../../services/equipment';
+import { CatalogService } from '../../services/catalog.service';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
 
-import { EquipmentList } from './equipment-list';
-
-describe('EquipmentList', () => {
-  let component: EquipmentList;
-  let fixture: ComponentFixture<EquipmentList>;
+describe('EquipmentListComponent', () => {
+  let component: EquipmentListComponent;
+  let fixture: ComponentFixture<EquipmentListComponent>;
+  let mockEquipmentService: any;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [EquipmentList]
-    })
-    .compileComponents();
+    mockEquipmentService = {
+      getEquipment: () => of([]),
+      deleteEquipment: () => Promise.resolve()
+    };
 
-    fixture = TestBed.createComponent(EquipmentList);
+    await TestBed.configureTestingModule({
+      imports: [EquipmentListComponent],
+      providers: [
+        { provide: EquipmentService, useValue: mockEquipmentService },
+        { provide: CatalogService, useValue: { getItemsByCatalogCode: () => of([]) } },
+        provideRouter([])
+      ]
+    })
+      .overrideComponent(EquipmentListComponent, {
+        set: { template: '<table></table>' }
+      })
+      .compileComponents();
+
+    fixture = TestBed.createComponent(EquipmentListComponent);
     component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {

@@ -1,17 +1,17 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData, addDoc, updateDoc, deleteDoc, doc, docData } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, addDoc, updateDoc, deleteDoc, doc, docData, query } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
-import { FilmRecord } from '../models/models';
+import { FilmRecord } from '../models';
 
 @Injectable({
   providedIn: 'root',
 })
 export class FilmRecordService {
   private firestore = inject(Firestore);
-  private filmRecordsCollection = collection(this.firestore, 'registros_filmicos');
 
   getFilmRecords(): Observable<FilmRecord[]> {
-    return collectionData(this.filmRecordsCollection, { idField: 'id' }) as Observable<FilmRecord[]>;
+    const recordsRef = collection(this.firestore, 'registros_filmicos');
+    return collectionData(query(recordsRef), { idField: 'id' }) as Observable<FilmRecord[]>;
   }
 
   getFilmRecordById(id: string): Observable<FilmRecord> {
@@ -20,7 +20,8 @@ export class FilmRecordService {
   }
 
   addFilmRecord(record: FilmRecord) {
-    return addDoc(this.filmRecordsCollection, record);
+    const recordsRef = collection(this.firestore, 'registros_filmicos');
+    return addDoc(recordsRef, record);
   }
 
   updateFilmRecord(record: FilmRecord) {

@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FilmRecordService } from '../../services/film-record';
-import { FilmRecord } from '../../models/models';
+import { FilmRecord } from '../../models';
 import { Observable } from 'rxjs';
 
 @Component({
@@ -10,7 +10,6 @@ import { Observable } from 'rxjs';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './film-record-list.html',
-  styleUrl: './film-record-list.css',
 })
 export class FilmRecordListComponent implements OnInit {
   private recordService = inject(FilmRecordService);

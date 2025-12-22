@@ -17,8 +17,6 @@
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Equipo</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Categoría</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº
                             Serie</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -28,25 +26,22 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    <tr *ngFor="let item of equipment$ | async" class="hover:bg-gray-50 transition-colors">
+                    @for (item of equipment$ | async; track item.id) {
+                    <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">{{ item.name }}</div>
                             <div class="text-xs text-gray-500">{{ item.brand }} {{ item.model }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 text-xs bg-indigo-100 text-indigo-800 rounded-full">{{ item.category
-                                }}</span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {{ item.serialNumber || 'S/N' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-2 py-1 text-xs font-semibold rounded-full" [ngClass]="{
-                  'bg-green-100 text-green-800': item.status === 'Disponible',
-                  'bg-amber-100 text-amber-800': item.status === 'En Reparación',
-                  'bg-blue-100 text-blue-800': item.status === 'Entregado',
-                  'bg-red-100 text-red-800': item.status === 'Baja'
-                }">
+                                    'bg-green-100 text-green-800': item.status === 'Disponible',
+                                    'bg-amber-100 text-amber-800': item.status === 'En Reparación',
+                                    'bg-blue-100 text-blue-800': item.status === 'Entregado',
+                                    'bg-red-100 text-red-800': item.status === 'Baja'
+                                }">
                                 {{ item.status }}
                             </span>
                         </td>
@@ -59,11 +54,13 @@
                             </div>
                         </td>
                     </tr>
-                    <tr *ngIf="(equipment$ | async)?.length === 0">
-                        <td colspan="5" class="px-6 py-10 text-center text-gray-500 italic">
+                    } @empty {
+                    <tr>
+                        <td colspan="4" class="px-6 py-10 text-center text-gray-500 italic">
                             No hay equipos registrados.
                         </td>
                     </tr>
+                    }
                 </tbody>
             </table>
         </div>

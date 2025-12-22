@@ -1,11 +1,11 @@
 export const environment = {
     production: false,
     firebase: {
-        apiKey: "AIzaSyClu_TGVmkGWG_vaztjIf3SLQcUw-EaLAg",
-        authDomain: "equipamiento-qr.firebaseapp.com",
-        projectId: "equipamiento-qr",
-        storageBucket: "equipamiento-qr.firebasestorage.app",
-        messagingSenderId: "582469579718",
-        appId: "1:582469579718:web:03a297e1d9ea7e3ae9b8c7"
+        apiKey: "AIzaSyCbd-Q5biTnz6rxhRy1qK4b-VA8hrmcpPw",
+        authDomain: "crev-system.firebaseapp.com",
+        projectId: "crev-system",
+        storageBucket: "crev-system.firebasestorage.app",
+        messagingSenderId: "126976468684",
+        appId: "1:126976468684:web:eb7f447ff7210edbb78469"
     }
 };

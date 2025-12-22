@@ -1,17 +1,17 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData, addDoc, updateDoc, deleteDoc, doc, docData } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, addDoc, updateDoc, deleteDoc, doc, docData, query } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
-import { Equipment } from '../models/models';
+import { Equipment } from '../models';
 
 @Injectable({
   providedIn: 'root',
 })
 export class EquipmentService {
   private firestore = inject(Firestore);
-  private equipmentCollection = collection(this.firestore, 'equipamiento');
 
   getEquipment(): Observable<Equipment[]> {
-    return collectionData(this.equipmentCollection, { idField: 'id' }) as Observable<Equipment[]>;
+    const equipmentRef = collection(this.firestore, 'equipamiento');
+    return collectionData(query(equipmentRef), { idField: 'id' }) as Observable<Equipment[]>;
   }
 
   getEquipmentById(id: string): Observable<Equipment> {
@@ -20,7 +20,8 @@ export class EquipmentService {
   }
 
   addEquipment(equipment: Equipment) {
-    return addDoc(this.equipmentCollection, equipment);
+    const equipmentRef = collection(this.firestore, 'equipamiento');
+    return addDoc(equipmentRef, equipment);
   }
 
   updateEquipment(equipment: Equipment) {

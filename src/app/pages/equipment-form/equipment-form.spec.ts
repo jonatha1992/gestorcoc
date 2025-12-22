@@ -1,20 +1,51 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { EquipmentFormComponent } from './equipment-form';
+import { ReactiveFormsModule } from '@angular/forms';
+import { EquipmentService } from '../../services/equipment';
+import { CatalogService } from '../../services/catalog.service';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 
-import { EquipmentForm } from './equipment-form';
-
-describe('EquipmentForm', () => {
-  let component: EquipmentForm;
-  let fixture: ComponentFixture<EquipmentForm>;
+describe('EquipmentFormComponent', () => {
+  let component: EquipmentFormComponent;
+  let fixture: ComponentFixture<EquipmentFormComponent>;
+  let mockEquipmentService: any;
+  let mockCatalogService: any;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [EquipmentForm]
-    })
-    .compileComponents();
+    mockEquipmentService = {
+      getEquipmentById: () => of({}),
+      addEquipment: () => Promise.resolve(),
+      updateEquipment: () => Promise.resolve()
+    };
 
-    fixture = TestBed.createComponent(EquipmentForm);
+    mockCatalogService = {
+      getItemsByCatalogCode: () => of([])
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [EquipmentFormComponent, ReactiveFormsModule],
+      providers: [
+        { provide: EquipmentService, useValue: mockEquipmentService },
+        { provide: CatalogService, useValue: mockCatalogService },
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { params: {} }
+          }
+        }
+      ]
+    })
+      .overrideComponent(EquipmentFormComponent, {
+        set: { template: '<form></form>' }
+      })
+      .compileComponents();
+
+    fixture = TestBed.createComponent(EquipmentFormComponent);
     component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {

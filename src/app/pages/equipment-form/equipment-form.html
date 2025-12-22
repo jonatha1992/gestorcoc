@@ -15,17 +15,27 @@
                     class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
             </div>
 
-            <!-- Categoría -->
+            <!-- Categoría (desde catálogo) -->
             <div class="space-y-2">
                 <label class="text-sm font-semibold text-gray-700">Categoría *</label>
-                <select formControlName="category"
+                <select formControlName="categoryId"
                     class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                     <option value="">Seleccione...</option>
-                    <option value="Cámara">Cámara</option>
-                    <option value="Lente">Lente</option>
-                    <option value="Audio">Audio</option>
-                    <option value="Iluminación">Iluminación</option>
-                    <option value="Accesorio">Accesorio</option>
+                    @for (cat of categories$ | async; track cat.id) {
+                    <option [value]="cat.id">{{ cat.name }}</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Ubicación (desde catálogo) -->
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700">Ubicación</label>
+                <select formControlName="locationId"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    <option value="">Sin ubicación</option>
+                    @for (loc of locations$ | async; track loc.id) {
+                    <option [value]="loc.id">{{ loc.name }}</option>
+                    }
                 </select>
             </div>
 
@@ -34,10 +44,9 @@
                 <label class="text-sm font-semibold text-gray-700">Estado *</label>
                 <select formControlName="status"
                     class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-                    <option value="Disponible">Disponible</option>
-                    <option value="En Reparación">En Reparación</option>
-                    <option value="Entregado">Entregado</option>
-                    <option value="Baja">Baja</option>
+                    @for (st of statuses; track st.value) {
+                    <option [value]="st.value">{{ st.label }}</option>
+                    }
                 </select>
             </div>
 
@@ -56,7 +65,7 @@
             </div>
 
             <!-- Nº Serie -->
-            <div class="md:col-span-2 space-y-2">
+            <div class="space-y-2">
                 <label class="text-sm font-semibold text-gray-700">Número de Serie</label>
                 <input type="text" formControlName="serialNumber"
                     class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
@@ -82,4 +91,8 @@
             </button>
         </div>
     </form>
+
+    @if (isLoading) {
+    <app-loader [fullScreen]="true" message="Guardando datos del equipo..."></app-loader>
+    }
 </div>

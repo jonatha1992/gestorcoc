@@ -1,20 +1,35 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FilmRecordListComponent } from './film-record-list';
+import { FilmRecordService } from '../../services/film-record';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
 
-import { FilmRecordList } from './film-record-list';
-
-describe('FilmRecordList', () => {
-  let component: FilmRecordList;
-  let fixture: ComponentFixture<FilmRecordList>;
+describe('FilmRecordListComponent', () => {
+  let component: FilmRecordListComponent;
+  let fixture: ComponentFixture<FilmRecordListComponent>;
+  let mockFilmRecordService: any;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [FilmRecordList]
-    })
-    .compileComponents();
+    mockFilmRecordService = {
+      getFilmRecords: () => of([]),
+      deleteFilmRecord: () => Promise.resolve()
+    };
 
-    fixture = TestBed.createComponent(FilmRecordList);
+    await TestBed.configureTestingModule({
+      imports: [FilmRecordListComponent],
+      providers: [
+        { provide: FilmRecordService, useValue: mockFilmRecordService },
+        provideRouter([])
+      ]
+    })
+      .overrideComponent(FilmRecordListComponent, {
+        set: { template: '<table></table>' }
+      })
+      .compileComponents();
+
+    fixture = TestBed.createComponent(FilmRecordListComponent);
     component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
