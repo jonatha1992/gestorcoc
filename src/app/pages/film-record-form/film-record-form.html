@@ -31,18 +31,19 @@
                     <label class="text-sm font-semibold text-gray-700">Estado</label>
                     <select formControlName="status"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="En Proceso">En Proceso</option>
-                        <option value="Finalizado">Finalizado</option>
+                        @for (st of statuses; track st.value) {
+                        <option [value]="st.value">{{ st.label }}</option>
+                        }
                     </select>
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Tipo Solicitud</label>
-                    <select formControlName="requestType"
+                    <select formControlName="requestTypeId"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
-                        <option value="Oficio Judicial">Oficio Judicial</option>
-                        <option value="Prevención Sumaria">Prevención Sumaria</option>
-                        <option value="Memorandum">Memorandum</option>
+                        <option value="">Seleccione...</option>
+                        @for (rt of requestTypes$ | async; track rt.id) {
+                        <option [value]="rt.id">{{ rt.name }}</option>
+                        }
                     </select>
                 </div>
                 <div class="space-y-2">
@@ -81,13 +82,23 @@
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Tipo de Delito</label>
-                    <input type="text" formControlName="crimeType"
+                    <select formControlName="crimeTypeId"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                        <option value="">Seleccione...</option>
+                        @for (ct of crimeTypes$ | async; track ct.id) {
+                        <option [value]="ct.id">{{ ct.name }}</option>
+                        }
+                    </select>
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Dependencia Interviniente</label>
-                    <input type="text" formControlName="unit"
+                    <select formControlName="unitId"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                        <option value="">Seleccione...</option>
+                        @for (u of units$ | async; track u.id) {
+                        <option [value]="u.id">{{ u.name }}</option>
+                        }
+                    </select>
                 </div>
             </div>
         </div>
@@ -154,14 +165,30 @@
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Organismo</label>
-                    <input type="text" formControlName="organization"
+                    <select formControlName="organizationId"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
+                        <option value="">Seleccione...</option>
+                        @for (org of organizations$ | async; track org.id) {
+                        <option [value]="org.id">{{ org.name }}</option>
+                        }
+                    </select>
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Nº Acta Entrega</label>
                     <input type="text" formControlName="deliveryAct"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
+            </div>
+        </div>
+
+        <!-- Observaciones -->
+        <div class="bg-white shadow-xl rounded-xl border border-gray-100 overflow-hidden">
+            <div class="bg-gray-600 px-6 py-3 text-white font-bold flex items-center gap-2">
+                <span>📝</span> Observaciones
+            </div>
+            <div class="p-6">
+                <textarea formControlName="observations" rows="3" placeholder="Notas adicionales..."
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none"></textarea>
             </div>
         </div>
 
@@ -178,4 +205,8 @@
         </div>
 
     </form>
+
+    @if (isLoading) {
+    <app-loader [fullScreen]="true" message="Procesando registro... Por favor espere."></app-loader>
+    }
 </div>
