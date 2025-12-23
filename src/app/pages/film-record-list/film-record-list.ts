@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FilmRecordService } from '../../services/film-record';
 import { CatalogService } from '../../services/catalog.service';
+import { LoadingService } from '../../services/loading.service';
 import { FilmRecord, CATALOG_CODES } from '../../models';
 import * as XLSX from 'xlsx';
 import { map } from 'rxjs/operators';
@@ -17,6 +18,7 @@ import { map } from 'rxjs/operators';
 export class FilmRecordListComponent implements OnInit {
   private recordService = inject(FilmRecordService);
   private catalogService = inject(CatalogService);
+  private loadingService = inject(LoadingService);
 
   records: FilmRecord[] = [];
   loading = false;
@@ -34,7 +36,7 @@ export class FilmRecordListComponent implements OnInit {
   };
 
   // Ordenamiento
-  sortField = 'nroOrden';
+  sortField = 'fechaIngreso'; // Changed default to fechaIngreso
   sortDirection: 'asc' | 'desc' = 'desc';
 
   // Catálogos
@@ -63,6 +65,7 @@ export class FilmRecordListComponent implements OnInit {
       this.history = [];
     }
     this.loading = true;
+    this.loadingService.show();
     this.recordService.getFilmRecords(
       this.pageSize,
       this.lastVisible,
@@ -74,10 +77,12 @@ export class FilmRecordListComponent implements OnInit {
         this.records = res.data;
         this.lastVisible = res.lastVisible;
         this.loading = false;
+        this.loadingService.hide();
       },
       error: (err) => {
         console.error('Error loading records', err);
         this.loading = false;
+        this.loadingService.hide();
       }
     });
   }
