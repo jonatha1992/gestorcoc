@@ -14,22 +14,22 @@
             <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="md:col-span-3 space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Título / Resumen del Registro *</label>
-                    <input type="text" formControlName="title" placeholder="Ej: Registro escena del crimen..."
+                    <input type="text" formControlName="nroAsunto" placeholder="Ej: Registro escena del crimen..."
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Nº de Orden</label>
-                    <input type="text" formControlName="orderNumber"
+                    <input type="text" formControlName="nroOrden"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Fecha Ingreso</label>
-                    <input type="date" formControlName="entryDate"
+                    <input type="date" formControlName="fechaIngreso"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Estado</label>
-                    <select formControlName="status"
+                    <select formControlName="estado"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                         @for (st of statuses; track st.value) {
                         <option [value]="st.value">{{ st.label }}</option>
@@ -38,7 +38,7 @@
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Tipo Solicitud</label>
-                    <select formControlName="requestTypeId"
+                    <select formControlName="idTipoSolicitud"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                         <option value="">Seleccione...</option>
                         @for (rt of requestTypes$ | async; track rt.id) {
@@ -48,12 +48,12 @@
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Número Solicitud</label>
-                    <input type="text" formControlName="requestNumber"
+                    <input type="text" formControlName="nroSolicitud"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Solicitante</label>
-                    <input type="text" formControlName="requester"
+                    <input type="text" formControlName="solicitante"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
             </div>
@@ -67,12 +67,12 @@
             <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Causa Judicial / Prevención</label>
-                    <input type="text" formControlName="judicialCase"
+                    <input type="text" formControlName="causaJudicial"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Fecha del Hecho</label>
-                    <input type="date" formControlName="incidentDate"
+                    <input type="date" formControlName="fechaHecho"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
                 <div class="md:col-span-2 space-y-2">
@@ -82,7 +82,7 @@
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Tipo de Delito</label>
-                    <select formControlName="crimeTypeId"
+                    <select formControlName="idTipoDelito"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                         <option value="">Seleccione...</option>
                         @for (ct of crimeTypes$ | async; track ct.id) {
@@ -92,7 +92,7 @@
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Dependencia Interviniente</label>
-                    <select formControlName="unitId"
+                    <select formControlName="idUnidad"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                         <option value="">Seleccione...</option>
                         @for (u of units$ | async; track u.id) {
@@ -111,27 +111,27 @@
             <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Nº de DVD</label>
-                    <input type="text" formControlName="dvdNumber"
+                    <input type="text" formControlName="nroDvd"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Nº de Informe</label>
-                    <input type="text" formControlName="reportNumber"
+                    <input type="text" formControlName="nroInforme"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Recepcionado Por</label>
-                    <input type="text" formControlName="receivedBy"
+                    <input type="text" formControlName="recepcionadoPor"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Confeccionado Por</label>
-                    <input type="text" formControlName="madeBy"
+                    <input type="text" formControlName="confeccionadoPor"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
                 <div class="md:col-span-2 space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Detalle Adicional</label>
-                    <textarea formControlName="detail" rows="2"
+                    <textarea formControlName="detalle" rows="2"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none"></textarea>
                 </div>
             </div>
@@ -145,7 +145,7 @@
             <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Fecha de Salida</label>
-                    <input type="date" formControlName="exitDate"
+                    <input type="date" formControlName="fechaSalida"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
                 <div class="space-y-2">
@@ -155,17 +155,17 @@
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Expediente</label>
-                    <input type="text" formControlName="fileNumber"
+                    <input type="text" formControlName="nroExpediente"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Retirado Por</label>
-                    <input type="text" formControlName="withdrawnBy"
+                    <input type="text" formControlName="retiradoPor"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Organismo</label>
-                    <select formControlName="organizationId"
+                    <select formControlName="idOrganismo"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                         <option value="">Seleccione...</option>
                         @for (org of organizations$ | async; track org.id) {
@@ -175,7 +175,7 @@
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-700">Nº Acta Entrega</label>
-                    <input type="text" formControlName="deliveryAct"
+                    <input type="text" formControlName="actaEntrega"
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none">
                 </div>
             </div>
@@ -187,7 +187,7 @@
                 <span>📝</span> Observaciones
             </div>
             <div class="p-6">
-                <textarea formControlName="observations" rows="3" placeholder="Notas adicionales..."
+                <textarea formControlName="observaciones" rows="3" placeholder="Notas adicionales..."
                     class="w-full px-4 py-2 rounded-lg border border-gray-300 outline-none"></textarea>
             </div>
         </div>
