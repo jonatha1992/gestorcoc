@@ -20,62 +20,79 @@ export class FilmRecordListComponent implements OnInit {
   private catalogService = inject(CatalogService);
   private loadingService = inject(LoadingService);
 
-  records: FilmRecord[] = [];
+  allRecords: FilmRecord[] = [];
+  filteredRecords: FilmRecord[] = [];
+  records: FilmRecord[] = []; // Current page
   loading = false;
 
   // Paginación
   pageSize = 20;
-  lastVisible: any = null;
-  history: any[] = [];
+  currentPage = 1;
+  totalPages = 1;
 
   // Filtros
   filters = {
+    fechaDesde: '',
+    fechaHasta: '',
+    nroSolicitud: '',
     nroAsunto: '',
     estado: '',
-    solicitante: ''
+    solicitante: '',
+    idTipoSolicitud: '',
   };
 
   // Ordenamiento
-  sortField = 'fechaIngreso'; // Changed default to fechaIngreso
+  sortField = 'fechaIngreso';
   sortDirection: 'asc' | 'desc' = 'desc';
 
   // Catálogos
   requestTypeMap: { [key: string]: string } = {};
+  requestTypes: any[] = []; // List for dropdown
 
   // Detalle Modal
   selectedRecord: FilmRecord | null = null;
 
   ngOnInit() {
+    this.setDefaultDates();
     this.loadCatalogs();
-    this.loadRecords();
+    this.loadAllRecords();
+  }
+
+  setDefaultDates() {
+    const now = new Date();
+    // Primer día del mes actual
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Último día del mes actual
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    this.filters.fechaDesde = formatDate(firstDay);
+    this.filters.fechaHasta = formatDate(lastDay);
   }
 
   loadCatalogs() {
     this.catalogService.getItemsByCatalogCode(CATALOG_CODES.TIPOS_SOLICITUD)
       .subscribe(items => {
+        this.requestTypes = items;
         items.forEach(item => {
           if (item.id) this.requestTypeMap[item.id] = item.name;
         });
       });
   }
 
-  loadRecords(reset = false) {
-    if (reset) {
-      this.lastVisible = null;
-      this.history = [];
-    }
+  loadAllRecords() {
     this.loading = true;
     this.loadingService.show();
-    this.recordService.getFilmRecords(
-      this.pageSize,
-      this.lastVisible,
-      this.filters,
-      this.sortField,
-      this.sortDirection
-    ).subscribe({
-      next: (res) => {
-        this.records = res.data;
-        this.lastVisible = res.lastVisible;
+    this.recordService.getAllFilmRecords().subscribe({
+      next: (data) => {
+        this.allRecords = data;
+        this.applyFilters();
         this.loading = false;
         this.loadingService.hide();
       },
@@ -85,6 +102,98 @@ export class FilmRecordListComponent implements OnInit {
         this.loadingService.hide();
       }
     });
+  }
+
+  applyFilters() {
+    let filtered = [...this.allRecords];
+
+    // Text Search (Case Insensitive)
+    if (this.filters.nroSolicitud) {
+      const term = this.filters.nroSolicitud.toUpperCase();
+      filtered = filtered.filter(r => r.nroSolicitud?.toUpperCase().includes(term));
+    }
+    if (this.filters.nroAsunto) {
+      const term = this.filters.nroAsunto.toUpperCase();
+      filtered = filtered.filter(r => r.nroAsunto?.toUpperCase().includes(term));
+    }
+    if (this.filters.solicitante) {
+      const term = this.filters.solicitante.toUpperCase();
+      filtered = filtered.filter(r => r.solicitante?.toUpperCase().includes(term));
+    }
+
+    // Exact Match
+    if (this.filters.estado) {
+      filtered = filtered.filter(r => r.estado === this.filters.estado);
+    }
+    if (this.filters.idTipoSolicitud) {
+      filtered = filtered.filter(r => r.idTipoSolicitud === this.filters.idTipoSolicitud);
+    }
+
+    // Date Range
+    if (this.filters.fechaDesde) {
+      filtered = filtered.filter(r => r.fechaIngreso && r.fechaIngreso >= this.filters.fechaDesde);
+    }
+    if (this.filters.fechaHasta) {
+      filtered = filtered.filter(r => r.fechaIngreso && r.fechaIngreso <= this.filters.fechaHasta);
+    }
+
+    // Sorting
+    filtered.sort((a: any, b: any) => {
+      const valA = a[this.sortField] || '';
+      const valB = b[this.sortField] || '';
+      if (valA < valB) return this.sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return this.sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    this.filteredRecords = filtered;
+    this.currentPage = 1;
+    this.updatePage();
+  }
+
+  updatePage() {
+    this.totalPages = Math.ceil(this.filteredRecords.length / this.pageSize);
+    const start = (this.currentPage - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    this.records = this.filteredRecords.slice(start, end);
+  }
+
+  nextPage() {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.updatePage();
+    }
+  }
+
+  prevPage() {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.updatePage();
+    }
+  }
+
+  toggleSort(field: string) {
+    if (this.sortField === field) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortField = field;
+      this.sortDirection = 'desc';
+    }
+    this.applyFilters();
+  }
+
+  clearFilters() {
+    this.filters = {
+      fechaDesde: '',
+      fechaHasta: '',
+      nroSolicitud: '',
+      nroAsunto: '',
+      estado: '',
+      solicitante: '',
+      idTipoSolicitud: '',
+    };
+    this.setDefaultDates();
+    this.applyFilters();
   }
 
   getRequestTypeName(id: string | undefined): string {
@@ -100,52 +209,18 @@ export class FilmRecordListComponent implements OnInit {
     this.selectedRecord = null;
   }
 
-  nextPage() {
-    if (this.lastVisible) {
-      this.history.push(this.lastVisible);
-      this.loadRecords();
-    }
-  }
-
-  prevPage() {
-    if (this.history.length > 0) {
-      this.history.pop(); // Remove current
-      const prev = this.history.length > 0 ? this.history[this.history.length - 1] : null;
-      this.lastVisible = prev;
-      this.history = []; // Reset for simplicity
-      this.lastVisible = null;
-      this.loadRecords();
-    }
-  }
-
-  applyFilters() {
-    this.loadRecords(true);
-  }
-
-  toggleSort(field: string) {
-    if (this.sortField === field) {
-      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-      this.sortField = field;
-      this.sortDirection = 'desc';
-    }
-    this.loadRecords(true);
-  }
-
   deleteRecord(id: string | undefined) {
     if (id && confirm('¿Estás seguro de eliminar este registro?')) {
       this.recordService.deleteFilmRecord(id).then(() => {
-        this.loadRecords(true);
+        this.loadAllRecords();
       });
     }
   }
 
   exportToExcel() {
-    this.recordService.getAllFilmRecords().subscribe(allRecords => {
-      const worksheet = XLSX.utils.json_to_sheet(allRecords);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Registros');
-      XLSX.writeFile(workbook, 'Registros_Filmicos.xlsx');
-    });
+    const worksheet = XLSX.utils.json_to_sheet(this.filteredRecords);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Registros');
+    XLSX.writeFile(workbook, 'Registros_Filmicos.xlsx');
   }
 }

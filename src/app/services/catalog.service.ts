@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData, addDoc, updateDoc, deleteDoc, doc, docData, query, where } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, addDoc, updateDoc, deleteDoc, doc, docData, query, where, orderBy, limit } from '@angular/fire/firestore';
 import { Observable, of } from 'rxjs';
 import { switchMap, map, catchError } from 'rxjs/operators';
 import { Catalog, CatalogItem } from '../models';
@@ -16,8 +16,8 @@ export class CatalogService {
 
     getCatalogs(): Observable<Catalog[]> {
         const catalogsRef = collection(this.firestore, 'catalogs');
-        // Envolvemos en query() para evitar error de compatibilidad de tipos
-        return collectionData(query(catalogsRef), { idField: 'id' }) as Observable<Catalog[]>;
+        const q = query(catalogsRef, orderBy('name', 'asc'), limit(50));
+        return collectionData(q, { idField: 'id' }) as Observable<Catalog[]>;
     }
 
     getCatalogById(id: string): Observable<Catalog> {
@@ -27,7 +27,7 @@ export class CatalogService {
 
     getCatalogByCode(code: string): Observable<Catalog | undefined> {
         const catalogsRef = collection(this.firestore, 'catalogs');
-        const q = query(catalogsRef, where('code', '==', code));
+        const q = query(catalogsRef, where('code', '==', code), limit(1));
         return (collectionData(q, { idField: 'id' }) as Observable<Catalog[]>).pipe(
             map(catalogs => catalogs[0]),
             catchError(() => of(undefined))
@@ -56,7 +56,12 @@ export class CatalogService {
 
     getItemsByCatalogId(catalogId: string): Observable<CatalogItem[]> {
         const itemsRef = collection(this.firestore, 'catalog_items');
-        const q = query(itemsRef, where('catalogId', '==', catalogId));
+        const q = query(
+            itemsRef,
+            where('catalogId', '==', catalogId),
+            orderBy('name', 'asc'),
+            limit(100)
+        );
         return (collectionData(q, { idField: 'id' }) as Observable<CatalogItem[]>).pipe(
             catchError(() => of([]))
         );
@@ -80,7 +85,8 @@ export class CatalogService {
 
     getAllItems(): Observable<CatalogItem[]> {
         const itemsRef = collection(this.firestore, 'catalog_items');
-        return collectionData(query(itemsRef), { idField: 'id' }) as Observable<CatalogItem[]>;
+        const q = query(itemsRef, orderBy('name', 'asc'), limit(50));
+        return collectionData(q, { idField: 'id' }) as Observable<CatalogItem[]>;
     }
 
     getItemById(id: string): Observable<CatalogItem> {

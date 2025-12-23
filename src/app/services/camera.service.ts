@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData, addDoc, updateDoc, deleteDoc, doc, docData, query, where } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, addDoc, updateDoc, deleteDoc, doc, docData, query, where, limit, orderBy } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { Camera } from '../models';
 
@@ -11,7 +11,7 @@ export class CameraService {
 
     getCameras(): Observable<Camera[]> {
         const camerasRef = collection(this.firestore, 'camaras');
-        return collectionData(query(camerasRef), { idField: 'id' }) as Observable<Camera[]>;
+        return collectionData(query(camerasRef, orderBy('name', 'asc'), limit(50)), { idField: 'id' }) as Observable<Camera[]>;
     }
 
     getCameraById(id: string): Observable<Camera> {
@@ -21,13 +21,13 @@ export class CameraService {
 
     getCamerasByLocation(locationId: string): Observable<Camera[]> {
         const camerasRef = collection(this.firestore, 'camaras');
-        const q = query(camerasRef, where('locationId', '==', locationId));
+        const q = query(camerasRef, where('locationId', '==', locationId), limit(50));
         return collectionData(q, { idField: 'id' }) as Observable<Camera[]>;
     }
 
     getCamerasByStatus(status: string): Observable<Camera[]> {
         const camerasRef = collection(this.firestore, 'camaras');
-        const q = query(camerasRef, where('status', '==', status));
+        const q = query(camerasRef, where('status', '==', status), limit(50));
         return collectionData(q, { idField: 'id' }) as Observable<Camera[]>;
     }
 

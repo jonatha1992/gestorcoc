@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData, addDoc, updateDoc, deleteDoc, doc, docData, query, where, orderBy } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, addDoc, updateDoc, deleteDoc, doc, docData, query, where, orderBy, limit } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { CameraUpdate } from '../models';
 
@@ -14,7 +14,8 @@ export class CameraUpdateService {
         const q = query(
             updatesRef,
             where('cameraId', '==', cameraId),
-            orderBy('date', 'desc')
+            orderBy('date', 'desc'),
+            limit(50)
         );
         return collectionData(q, { idField: 'id' }) as Observable<CameraUpdate[]>;
     }
@@ -24,7 +25,8 @@ export class CameraUpdateService {
         const q = query(
             updatesRef,
             where('status', '==', 'Abierta'),
-            orderBy('date', 'desc')
+            orderBy('date', 'desc'),
+            limit(50)
         );
         return collectionData(q, { idField: 'id' }) as Observable<CameraUpdate[]>;
     }

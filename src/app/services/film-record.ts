@@ -38,19 +38,61 @@ export class FilmRecordService {
 
     // Filters
     if (filters.nroAsunto) {
-      constraints.push(where('nroAsunto', '>=', filters.nroAsunto));
-      constraints.push(where('nroAsunto', '<=', filters.nroAsunto + '\uf8ff'));
+      const term = filters.nroAsunto.toUpperCase();
+      constraints.push(where('nroAsunto', '>=', term));
+      constraints.push(where('nroAsunto', '<=', term + '\uf8ff'));
+    }
+    if (filters.nroSolicitud) {
+      const term = filters.nroSolicitud.toUpperCase();
+      constraints.push(where('nroSolicitud', '>=', term));
+      constraints.push(where('nroSolicitud', '<=', term + '\uf8ff'));
     }
     if (filters.estado) {
       constraints.push(where('estado', '==', filters.estado));
     }
     if (filters.solicitante) {
-      constraints.push(where('solicitante', '>=', filters.solicitante));
-      constraints.push(where('solicitante', '<=', filters.solicitante + '\uf8ff'));
+      const term = filters.solicitante.toUpperCase();
+      constraints.push(where('solicitante', '>=', term));
+      constraints.push(where('solicitante', '<=', term + '\uf8ff'));
+    }
+
+    // New filter: idTipoSolicitud
+    if (filters.idTipoSolicitud) {
+      constraints.push(where('idTipoSolicitud', '==', filters.idTipoSolicitud));
+    }
+
+    // New filter: Date Range (fechaIngreso)
+    if (filters.fechaDesde) {
+      constraints.push(where('fechaIngreso', '>=', filters.fechaDesde));
+    }
+    if (filters.fechaHasta) {
+      constraints.push(where('fechaIngreso', '<=', filters.fechaHasta));
+    }
+
+    // --- FIRESTORE QUERY LIMITATION FIX ---
+    // If we have ANY inequality filter, the first orderBy MUST be on that same field.
+    // Range filters we have: nroAsunto, nroSolicitud, solicitante, fechaIngreso.
+
+    let firstSortField = sortField;
+    let firstSortDir = sortDirection;
+
+    if (filters.nroAsunto) {
+      firstSortField = 'nroAsunto';
+    } else if (filters.nroSolicitud) {
+      firstSortField = 'nroSolicitud';
+    } else if (filters.solicitante) {
+      firstSortField = 'solicitante';
+    } else if (filters.fechaDesde || filters.fechaHasta) {
+      firstSortField = 'fechaIngreso';
     }
 
     // Sort
-    constraints.push(orderBy(sortField, sortDirection));
+    constraints.push(orderBy(firstSortField, firstSortDir));
+
+    // If the requested sort field is different from the mandatory one, add it as second sort
+    if (firstSortField !== sortField) {
+      constraints.push(orderBy(sortField, sortDirection));
+    }
 
     // Pagination
     if (lastDoc) {
@@ -71,7 +113,7 @@ export class FilmRecordService {
 
   getAllFilmRecords(): Observable<FilmRecord[]> {
     const recordsRef = collection(this.firestore, this.collectionName);
-    return collectionData(query(recordsRef, orderBy('nroOrden', 'desc')), { idField: 'id' }) as Observable<FilmRecord[]>;
+    return collectionData(query(recordsRef, orderBy('nroOrden', 'desc'), limit(50)), { idField: 'id' }) as Observable<FilmRecord[]>;
   }
 
   getFilmRecordById(id: string): Observable<FilmRecord> {

@@ -1,0 +1,89 @@
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
+            <p class="text-gray-500 mt-1">Administración de accesos y roles del sistema</p>
+        </div>
+    </div>
+
+    @if (loading) {
+    <app-loader [fullScreen]="true" message="Actualizando usuario..."></app-loader>
+    }
+
+    <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Usuario</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol
+                            Principal</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Estado</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @for (user of users$ | async; track user.uid) {
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="h-10 w-10 flex-shrink-0">
+                                    @if (user.photoURL) {
+                                    <img class="h-10 w-10 rounded-full" [src]="user.photoURL" alt="">
+                                    } @else {
+                                    <div
+                                        class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
+                                        {{ user.displayName.charAt(0) || user.email.charAt(0) | uppercase }}
+                                    </div>
+                                    }
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">{{ user.displayName || 'Sin nombre'
+                                        }}</div>
+                                    <div class="text-xs text-gray-500">UID: {{ user.uid.substring(0, 8) }}...</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ user.email }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <select [ngModel]="getRoleName(user.roleIds)" (change)="onRoleChange(user, $event)"
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border py-1.5 px-3">
+                                @for (role of roles; track role) {
+                                <option [value]="role">{{ role | titlecase }}</option>
+                                }
+                            </select>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                                [ngClass]="user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+                                {{ user.isActive ? 'Activo' : 'Inactivo' }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button (click)="toggleUserStatus(user)"
+                                [ngClass]="user.isActive ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'"
+                                class="transition-colors font-semibold"
+                                [title]="user.isActive ? 'Desactivar usuario' : 'Activar usuario'">
+                                {{ user.isActive ? 'Desactivar' : 'Activar' }}
+                            </button>
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="5" class="px-6 py-10 text-center text-gray-500 italic">
+                            No hay usuarios registrados.
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

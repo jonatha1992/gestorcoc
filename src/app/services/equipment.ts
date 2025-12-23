@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData, addDoc, updateDoc, deleteDoc, doc, docData, query } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, addDoc, updateDoc, deleteDoc, doc, docData, query, limit, orderBy } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { Equipment } from '../models';
 
@@ -11,7 +11,7 @@ export class EquipmentService {
 
   getEquipment(): Observable<Equipment[]> {
     const equipmentRef = collection(this.firestore, 'equipamiento');
-    return collectionData(query(equipmentRef), { idField: 'id' }) as Observable<Equipment[]>;
+    return collectionData(query(equipmentRef, orderBy('name', 'asc'), limit(50)), { idField: 'id' }) as Observable<Equipment[]>;
   }
 
   getEquipmentById(id: string): Observable<Equipment> {
