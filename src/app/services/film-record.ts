@@ -16,14 +16,16 @@ import {
   getDocs,
   QueryConstraint
 } from '@angular/fire/firestore';
-import { Observable, from, map } from 'rxjs';
+import { Observable, from, map, switchMap, of } from 'rxjs';
 import { FilmRecord } from '../models';
+import { OrganizationAccessService } from './organization-access.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class FilmRecordService {
   private firestore = inject(Firestore);
+  private orgAccess = inject(OrganizationAccessService);
   private collectionName = 'registros_filmicos';
 
   getFilmRecords(
@@ -102,11 +104,32 @@ export class FilmRecordService {
 
     const q = query(recordsRef, ...constraints);
 
-    return from(getDocs(q)).pipe(
-      map(snapshot => {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FilmRecord));
-        const lastVisible = snapshot.docs[snapshot.docs.length - 1];
-        return { data, lastVisible };
+    return this.orgAccess.allowedAccess$.pipe(
+      switchMap(access => {
+        const finalConstraints = [...constraints];
+
+        if (!access.isAdmin) {
+          // If not admin, must filter by units OR systems
+          if ((!access.units || access.units.length === 0) && (!access.systems || access.systems.length === 0)) {
+            return of({ data: [], lastVisible: null });
+          }
+
+          if (access.units && access.units.length > 0) {
+            // Priority to units filter. Limit 10 due to Firestore 'in'
+            finalConstraints.push(where('orgUnitId', 'in', access.units.slice(0, 10)));
+          } else if (access.systems && access.systems.length > 0) {
+            finalConstraints.push(where('orgSystemId', 'in', access.systems.slice(0, 10)));
+          }
+        }
+
+        const finalQuery = query(recordsRef, ...finalConstraints);
+        return from(getDocs(finalQuery)).pipe(
+          map(snapshot => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FilmRecord));
+            const lastVisible = snapshot.docs[snapshot.docs.length - 1];
+            return { data, lastVisible };
+          })
+        );
       })
     );
   }

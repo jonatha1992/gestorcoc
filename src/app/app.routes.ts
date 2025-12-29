@@ -7,6 +7,9 @@ import { CameraListComponent } from './pages/camera-list/camera-list';
 import { CameraFormComponent } from './pages/camera-form/camera-form';
 import { CatalogListComponent } from './pages/catalog-list/catalog-list';
 import { UserListComponent } from './pages/user-list/user-list';
+import { UnitListComponent } from './pages/organization/unit-list/unit-list';
+import { SystemListComponent } from './pages/organization/system-list/system-list';
+import { GroupListComponent } from './pages/organization/group-list/group-list';
 import { LoginPageComponent } from './pages/login/login';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
@@ -70,6 +73,24 @@ export const routes: Routes = [
     {
         path: 'usuarios',
         component: UserListComponent,
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['admin'] }
+    },
+    {
+        path: 'organización/unidades',
+        component: UnitListComponent,
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['admin'] }
+    },
+    {
+        path: 'organización/sistemas',
+        component: SystemListComponent,
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['admin'] }
+    },
+    {
+        path: 'organización/grupos',
+        component: GroupListComponent,
         canActivate: [authGuard, roleGuard],
         data: { roles: ['admin'] }
     },

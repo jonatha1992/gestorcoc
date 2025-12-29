@@ -1,9 +1,10 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { CameraService } from '../../services/camera.service';
-import { Camera } from '../../models';
-import { Observable } from 'rxjs';
+import { Observable, combineLatest } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { CameraService, UnitService, CctvSystemService, ToastService } from '../../services';
+import { Camera, Unit, CctvSystem } from '../../models';
 
 @Component({
     selector: 'app-camera-list',
@@ -13,8 +14,22 @@ import { Observable } from 'rxjs';
 })
 export class CameraListComponent implements OnInit {
     private cameraService = inject(CameraService);
+    private unitService = inject(UnitService);
+    private systemService = inject(CctvSystemService);
 
-    cameras$ = this.cameraService.getCameras();
+    cameras$: Observable<any[]> = combineLatest([
+        this.cameraService.getCameras(),
+        this.unitService.getUnits(),
+        this.systemService.getSystems()
+    ]).pipe(
+        map(([cameras, units, systems]: [Camera[], Unit[], CctvSystem[]]) => {
+            return cameras.map(cam => ({
+                ...cam,
+                unitName: units.find(u => u.id === cam.orgUnitId)?.name || '-',
+                systemName: systems.find(s => s.id === cam.orgSystemId)?.name || '-'
+            }));
+        })
+    );
 
     ngOnInit() { }
 

@@ -33,6 +33,14 @@ export interface FilmRecord {
     estado: FilmRecordStatus;
     observaciones?: string;
 
+    // Vinculación Organizacional (Nueva Estructura)
+    orgUnitId?: string;              // ID de la Unidad (Unidades de Organización)
+    orgSystemId?: string;            // ID del Sistema (Sistemas de CCTV)
+
+    // Propiedades de Visualización (Map)
+    unitName?: string;
+    systemName?: string;
+
     // Auditoría
     createdAt?: Timestamp;
     createdBy?: string;

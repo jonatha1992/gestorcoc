@@ -2,12 +2,13 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
-import { FilmRecordService } from '../../services/film-record';
 import { CatalogService } from '../../services/catalog.service';
-import { ToastService } from '../../services/toast.service';
+import { FilmRecordService } from '../../services/film-record';
+import { UnitService, CctvSystemService, ToastService } from '../../services';
 import { LoaderComponent } from '../../components/ui/loader/loader';
 import { FilmRecord, CatalogItem, CATALOG_CODES } from '../../models';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 import { Timestamp } from '@angular/fire/firestore';
 
 @Component({
@@ -20,6 +21,8 @@ export class FilmRecordFormComponent implements OnInit {
   private fb = inject(FormBuilder);
   private recordService = inject(FilmRecordService);
   private catalogService = inject(CatalogService);
+  private unitService = inject(UnitService);
+  private cctvService = inject(CctvSystemService);
   private toast = inject(ToastService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -57,7 +60,18 @@ export class FilmRecordFormComponent implements OnInit {
     idOrganismo: [''],
     estado: ['Pendiente'],
     observaciones: [''],
+    orgUnitId: [''],
+    orgSystemId: [''],
   });
+
+  // Nuevos Catálogos Organizacionales
+  orgUnits$ = this.unitService.getUnits();
+  orgSystems$: Observable<any[]> = this.recordForm.get('orgUnitId')!.valueChanges.pipe(
+    switchMap((unitId: string) => {
+      if (!unitId) return this.cctvService.getSystems();
+      return this.cctvService.getSystemsByUnit(unitId);
+    })
+  );
 
   // Estados hardcodeados
   statuses = [
@@ -74,7 +88,7 @@ export class FilmRecordFormComponent implements OnInit {
     this.recordId = this.route.snapshot.params['id'];
     if (this.recordId) {
       this.isEditMode = true;
-      this.recordService.getFilmRecordById(this.recordId).subscribe(data => {
+      this.recordService.getFilmRecordById(this.recordId).subscribe((data: FilmRecord) => {
         if (data) {
           this.recordForm.patchValue(data);
         }
@@ -112,7 +126,7 @@ export class FilmRecordFormComponent implements OnInit {
         this.toast.success('Nuevo registro guardado');
       }
       this.router.navigate(['/registros']);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving record:', error);
       this.toast.error('Error al intentar guardar el registro');
     } finally {

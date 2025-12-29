@@ -21,6 +21,8 @@
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Estado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Unidad / VMS</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Acciones</th>
                     </tr>
@@ -40,6 +42,10 @@
                                 [ngClass]="getStatusClass(cam.status)">
                                 {{ cam.status }}
                             </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-xs font-semibold text-gray-700">{{ cam.unitName }}</div>
+                            <div class="text-[10px] text-gray-500 italic">{{ cam.systemName }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex justify-end gap-3">

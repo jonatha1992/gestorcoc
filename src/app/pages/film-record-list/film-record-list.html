@@ -100,6 +100,8 @@
                             Tipo <span *ngIf="sortField === 'idTipoSolicitud'">{{ sortDirection === 'asc' ? '↑' : '↓'
                                 }}</span>
                         </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Unidad / VMS</th>
                         <th (click)="toggleSort('causaJudicial')"
                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                             Causa / Carátula <span *ngIf="sortField === 'causaJudicial'">{{ sortDirection === 'asc' ?
@@ -136,6 +138,10 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {{ getRequestTypeName(rec.idTipoSolicitud) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-xs font-semibold text-gray-700">{{ rec.unitName }}</div>
+                            <div class="text-[10px] text-gray-500 italic">{{ rec.systemName }}</div>
                         </td>
                         <td class="px-6 py-4">
                             <div class="text-sm font-semibold text-indigo-600">{{ rec.causaJudicial || 'S/C' }}</div>

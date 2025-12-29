@@ -94,7 +94,7 @@
                 <div *appHasPermission="['catalogos', 'read']" class="relative dropdown-menu">
                     <button (click)="toggleCatalogMenu()"
                         class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-600 flex items-center gap-1 transition-colors">
-                        <span>⚙️ Catálogos</span>
+                        <span>⚙️ Configuración</span>
                         <svg class="h-4 w-4 transition-transform" [class.rotate-180]="isCatalogMenuOpen()" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -110,6 +110,18 @@
                             <a *appHasPermission="['usuarios', 'read']" routerLink="/usuarios" (click)="closeMenus()"
                                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-100 transition-colors"
                                 role="menuitem">👥 Gestión de Usuarios</a>
+                            <div class="border-t border-gray-100 my-1"></div>
+                            <div class="px-4 py-1 text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                Organización</div>
+                            <a routerLink="/organización/unidades" (click)="closeMenus()"
+                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-100 transition-colors"
+                                role="menuitem">🏢 Unidades</a>
+                            <a routerLink="/organización/sistemas" (click)="closeMenus()"
+                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-100 transition-colors"
+                                role="menuitem">📽️ VMS (Sistemas)</a>
+                            <a routerLink="/organización/grupos" (click)="closeMenus()"
+                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-100 transition-colors"
+                                role="menuitem">🔐 Grupos de Acceso</a>
                         </div>
                     </div>
                     }
@@ -228,6 +240,15 @@
             <a *appHasPermission="['usuarios', 'read']" routerLink="/usuarios" (click)="closeMenus()"
                 class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-600 transition-colors">👥
                 Usuarios</a>
+            <a routerLink="/organización/unidades" (click)="closeMenus()"
+                class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-600 transition-colors">🏢
+                Unidades</a>
+            <a routerLink="/organización/sistemas" (click)="closeMenus()"
+                class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-600 transition-colors">📽️
+                VMS</a>
+            <a routerLink="/organización/grupos" (click)="closeMenus()"
+                class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-600 transition-colors">🔐
+                Grupos</a>
 
             <div class="pt-4 mt-4 border-t border-indigo-700/50">
                 <button (click)="logout()"

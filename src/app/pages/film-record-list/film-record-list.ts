@@ -4,10 +4,11 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FilmRecordService } from '../../services/film-record';
 import { CatalogService } from '../../services/catalog.service';
-import { LoadingService } from '../../services/loading.service';
-import { FilmRecord, CATALOG_CODES } from '../../models';
+import { LoadingService, UnitService, CctvSystemService, ToastService } from '../../services';
+import { FilmRecord, Unit, CctvSystem, CATALOG_CODES } from '../../models';
 import * as XLSX from 'xlsx';
-import { map } from 'rxjs/operators';
+import { Observable, combineLatest, of } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-film-record-list',
@@ -19,6 +20,8 @@ export class FilmRecordListComponent implements OnInit {
   private recordService = inject(FilmRecordService);
   private catalogService = inject(CatalogService);
   private loadingService = inject(LoadingService);
+  private unitService = inject(UnitService);
+  private systemService = inject(CctvSystemService);
 
   allRecords: FilmRecord[] = [];
   filteredRecords: FilmRecord[] = [];
@@ -50,7 +53,7 @@ export class FilmRecordListComponent implements OnInit {
   requestTypes: any[] = []; // List for dropdown
 
   // Detalle Modal
-  selectedRecord: FilmRecord | null = null;
+  selectedRecord: any = null;
 
   ngOnInit() {
     this.setDefaultDates();
@@ -60,9 +63,7 @@ export class FilmRecordListComponent implements OnInit {
 
   setDefaultDates() {
     const now = new Date();
-    // Primer día del mes actual
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    // Último día del mes actual
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     const formatDate = (date: Date) => {
@@ -89,9 +90,19 @@ export class FilmRecordListComponent implements OnInit {
   loadAllRecords() {
     this.loading = true;
     this.loadingService.show();
-    this.recordService.getAllFilmRecords().subscribe({
-      next: (data) => {
-        this.allRecords = data;
+    this.recordService.getAllFilmRecords().pipe(
+      switchMap((records: FilmRecord[]) => combineLatest([
+        of(records),
+        this.unitService.getUnits(),
+        this.systemService.getSystems()
+      ]))
+    ).subscribe({
+      next: ([records, units, systems]: [FilmRecord[], Unit[], CctvSystem[]]) => {
+        this.allRecords = records.map(rec => ({
+          ...rec,
+          unitName: units.find(u => u.id === rec.orgUnitId)?.name || '-',
+          systemName: systems.find(s => s.id === rec.orgSystemId)?.name || '-'
+        })) as any[];
         this.applyFilters();
         this.loading = false;
         this.loadingService.hide();
@@ -107,7 +118,6 @@ export class FilmRecordListComponent implements OnInit {
   applyFilters() {
     let filtered = [...this.allRecords];
 
-    // Text Search (Case Insensitive)
     if (this.filters.nroSolicitud) {
       const term = this.filters.nroSolicitud.toUpperCase();
       filtered = filtered.filter(r => r.nroSolicitud?.toUpperCase().includes(term));
@@ -121,7 +131,6 @@ export class FilmRecordListComponent implements OnInit {
       filtered = filtered.filter(r => r.solicitante?.toUpperCase().includes(term));
     }
 
-    // Exact Match
     if (this.filters.estado) {
       filtered = filtered.filter(r => r.estado === this.filters.estado);
     }
@@ -129,7 +138,6 @@ export class FilmRecordListComponent implements OnInit {
       filtered = filtered.filter(r => r.idTipoSolicitud === this.filters.idTipoSolicitud);
     }
 
-    // Date Range
     if (this.filters.fechaDesde) {
       filtered = filtered.filter(r => r.fechaIngreso && r.fechaIngreso >= this.filters.fechaDesde);
     }
@@ -137,7 +145,6 @@ export class FilmRecordListComponent implements OnInit {
       filtered = filtered.filter(r => r.fechaIngreso && r.fechaIngreso <= this.filters.fechaHasta);
     }
 
-    // Sorting
     filtered.sort((a: any, b: any) => {
       const valA = a[this.sortField] || '';
       const valB = b[this.sortField] || '';

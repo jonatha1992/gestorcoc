@@ -11,6 +11,7 @@ export interface User {
     photoURL?: string;
 
     roleIds: string[];               // Referencias a roles
+    orgGroupIds?: string[];          // Referencias a grupos organizacionales (Unidades/Sistemas)
     isActive: boolean;
 
     // Metadata
