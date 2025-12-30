@@ -20,6 +20,14 @@ export interface Camera {
     installationDate?: string;
     notes?: string;
 
+    // Vinculación Organizacional (Nueva Estructura)
+    orgUnitId?: string;              // ID de la Unidad
+    orgSystemId?: string;            // ID del Sistema
+
+    // Propiedades de Visualización
+    unitName?: string;
+    systemName?: string;
+
     // Auditoría
     createdAt: Timestamp;
     createdBy: string;

@@ -121,15 +121,15 @@ async function migrate() {
             model: model || '',
             locationId: await getOrCreateItem(CATALOG_CODES.UBICACIONES, locationName || 'DESCONOCIDA'),
             typeId: await getOrCreateItem(CATALOG_CODES.TIPOS_CAMARA, brand || 'OTRA'),
-            ipAddress: ipAddress || '',
-            serialNumber: serialNumber || '',
-            status: statusField === 'Online' ? 'Operativa' : 'Fuera de Servicio',
+            ipAddress: fields[8]?.trim() || '', // Direccion IP is at index 8
+            serialNumber: fields[12]?.trim() || '', // Numero de serie is at index 12
+            status: fields[13]?.trim() === 'True' ? 'Operativa' : 'Fuera de Servicio', // Conectado is at index 13
             notes: fields[5]?.trim() || '', // ID Logico
             createdAt: serverTimestamp(),
             createdBy: 'migration_script'
         };
 
-        const newDocRef = doc(collection(db, "cameras"));
+        const newDocRef = doc(collection(db, "camaras")); // Changed from "cameras" to "camaras"
         batch.set(newDocRef, camera);
 
         count++;

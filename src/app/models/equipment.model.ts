@@ -20,6 +20,12 @@ export interface Equipment {
     description?: string;
     qrCode?: string;
 
+    // Vinculación Organizacional (Nueva Estructura)
+    orgUnitId?: string;              // ID de la Unidad
+
+    // Propiedades de Visualización
+    unitName?: string;
+
     // Auditoría
     createdAt: Timestamp;
     createdBy: string;

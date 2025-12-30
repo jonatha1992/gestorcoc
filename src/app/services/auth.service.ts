@@ -1,10 +1,9 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { Auth, signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser } from '@angular/fire/auth';
-import { Firestore, doc, docData, setDoc, updateDoc } from '@angular/fire/firestore';
+import { Firestore, doc, docData, setDoc, updateDoc, Timestamp } from '@angular/fire/firestore';
 import { Observable, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
-import { User } from '../models';
-import { Timestamp } from '@angular/fire/firestore';
+import { User, ModuleName, ActionType, DEFAULT_PERMISSIONS, RoleName } from '../models/user.model';
 
 @Injectable({
     providedIn: 'root',
@@ -72,6 +71,22 @@ export class AuthService {
 
     hasAnyRole(roleNames: string[]): boolean {
         return roleNames.some(role => this.userRoles().includes(role));
+    }
+
+    /**
+     * Checks if the user has a specific permission for a module
+     */
+    hasPermission(module: ModuleName, action: ActionType): boolean {
+        const roles = this.userRoles() as RoleName[];
+        if (roles.includes('admin')) return true;
+
+        return roles.some(roleName => {
+            const permissions = DEFAULT_PERMISSIONS[roleName];
+            if (!permissions) return false;
+
+            const modulePerm = permissions.find(p => p.module === module);
+            return modulePerm?.actions.includes(action) || false;
+        });
     }
 
     // ============================================

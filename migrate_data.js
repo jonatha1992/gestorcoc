@@ -38,6 +38,33 @@ const CATALOG_CODES = {
 async function migrate() {
     console.log("Starting migration...");
 
+    // 0. CLEANUP: Delete existing records to avoid duplicates
+    console.log("Cleaning up existing records...");
+    const existingDocs = await getDocs(collection(db, "registros_filmicos"));
+    if (!existingDocs.empty) {
+        let deleteBatch = writeBatch(db);
+        let deleteCount = 0;
+        let totalDeleted = 0;
+
+        const docs = existingDocs.docs;
+        for (const doc of docs) {
+            deleteBatch.delete(doc.ref);
+            deleteCount++;
+            totalDeleted++;
+
+            if (deleteCount >= 400) {
+                await deleteBatch.commit();
+                deleteBatch = writeBatch(db);
+                deleteCount = 0;
+                console.log(`Deleted batch. Total deleted so far: ${totalDeleted}`);
+            }
+        }
+        if (deleteCount > 0) {
+            await deleteBatch.commit();
+        }
+        console.log(`Finished cleaning up. Total deleted: ${totalDeleted} existing records.`);
+    }
+
     // 1. Get Catalogs
     const catalogsSnapshot = await getDocs(collection(db, "catalogs"));
     const catalogs = {};
@@ -134,15 +161,16 @@ async function migrate() {
         const record = {
             nroOrden: row['Nº ORDEN']?.toString() || '',
             fechaIngreso: formatDate(row['FECHA INGRESO']),
-            idTipoSolicitud: await getOrCreateItem(CATALOG_CODES.TIPOS_SOLICITUD, row['TIPO \r\nSOLICITUD']),
+            nroAsunto: row['NRO ASUNTO']?.toString() || '',
             nroSolicitud: row['NUMERO SOLICITUD']?.toString() || '',
+            idTipoSolicitud: await getOrCreateItem(CATALOG_CODES.TIPOS_SOLICITUD, row['TIPO \r\nSOLICITUD']),
             solicitante: row['SOLICITANTE']?.toString() || '',
             causaJudicial: row['Nº DE CAUSA JUDICIAL/PREVENCION SUMARIA']?.toString() || '',
             caratula: row['CARATULA']?.toString() || '',
             fechaHecho: formatDate(row['FECHA DEL HECHO']),
             idTipoDelito: await getOrCreateItem(CATALOG_CODES.TIPOS_DELITO, row['TIPO DE DELITO']),
             idUnidad: await getOrCreateItem(CATALOG_CODES.UNIDADES, row['DEPENDENCIA INTERVINIENTE']),
-            recepcionadoPor: row['RECEPCIONADO POR ']?.toString() || '',
+            recepcionadoPor: row['RECEPCIONADO POR ']?.toString() || '', // Note space
             confeccionadoPor: row['CONFECCIONADO POR']?.toString() || '',
             detalle: row['DETALLE']?.toString() || '',
             nroDvd: row['Nº DE DVD']?.toString() || '',
@@ -155,7 +183,6 @@ async function migrate() {
             idOrganismo: await getOrCreateItem(CATALOG_CODES.ORGANISMOS, row['ORGANISMO']),
             estado: statusMap[row['ESTADO']] || 'Pendiente',
             observaciones: row['OBSERVACIONES']?.toString() || '',
-            nroAsunto: row['NUMERO SOLICITUD']?.toString() || (row['Nº ORDEN']?.toString() || i.toString()),
             createdAt: serverTimestamp(),
             createdBy: 'migration_script'
         };

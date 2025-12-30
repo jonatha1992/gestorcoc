@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { EquipmentService } from '../../services/equipment';
 import { CatalogService } from '../../services/catalog.service';
-import { ToastService } from '../../services/toast.service';
+import { UnitService, ToastService } from '../../services';
 import { LoaderComponent } from '../../components/ui/loader/loader';
 import { Equipment, CatalogItem, CATALOG_CODES } from '../../models';
 import { Observable } from 'rxjs';
@@ -20,6 +20,7 @@ export class EquipmentFormComponent implements OnInit {
   private fb = inject(FormBuilder);
   private equipmentService = inject(EquipmentService);
   private catalogService = inject(CatalogService);
+  private unitService = inject(UnitService);
   private toast = inject(ToastService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -30,6 +31,9 @@ export class EquipmentFormComponent implements OnInit {
   categories$ = this.catalogService.getItemsByCatalogCode(CATALOG_CODES.CATEGORIAS);
   locations$ = this.catalogService.getItemsByCatalogCode(CATALOG_CODES.UBICACIONES);
 
+  // Nuevos Catálogos Organizacionales
+  orgUnits$ = this.unitService.getUnits();
+
   equipmentForm: FormGroup = this.fb.group({
     name: ['', [Validators.required]],
     categoryId: ['', [Validators.required]],
@@ -39,6 +43,7 @@ export class EquipmentFormComponent implements OnInit {
     model: [''],
     status: ['Disponible', [Validators.required]],
     description: [''],
+    orgUnitId: [''],
   });
 
   isEditMode = false;

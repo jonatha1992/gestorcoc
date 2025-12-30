@@ -4,10 +4,11 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { CameraService } from '../../services/camera.service';
 import { CatalogService } from '../../services/catalog.service';
-import { ToastService } from '../../services/toast.service';
+import { UnitService, CctvSystemService, ToastService } from '../../services';
 import { LoaderComponent } from '../../components/ui/loader/loader';
 import { Camera, CatalogItem, CATALOG_CODES } from '../../models';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 import { Timestamp } from '@angular/fire/firestore';
 
 @Component({
@@ -20,6 +21,8 @@ export class CameraFormComponent implements OnInit {
     private fb = inject(FormBuilder);
     private cameraService = inject(CameraService);
     private catalogService = inject(CatalogService);
+    private unitService = inject(UnitService);
+    private cctvService = inject(CctvSystemService);
     private toast = inject(ToastService);
     private router = inject(Router);
     private route = inject(ActivatedRoute);
@@ -41,7 +44,18 @@ export class CameraFormComponent implements OnInit {
         model: [''],
         installationDate: [''],
         notes: [''],
+        orgUnitId: [''],
+        orgSystemId: [''],
     });
+
+    // Nuevos Catálogos Organizacionales
+    orgUnits$ = this.unitService.getUnits();
+    orgSystems$: Observable<any[]> = this.cameraForm.get('orgUnitId')!.valueChanges.pipe(
+        switchMap((unitId: string) => {
+            if (!unitId) return this.cctvService.getSystems();
+            return this.cctvService.getSystemsByUnit(unitId);
+        })
+    );
 
     statuses = [
         { value: 'Operativa', label: 'Operativa' },

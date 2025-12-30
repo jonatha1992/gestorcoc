@@ -78,6 +78,29 @@
                     class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
             </div>
 
+            <!-- Vinculación Organizacional -->
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700">Unidad Organizacional</label>
+                <select formControlName="orgUnitId"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    <option value="">Seleccione Unidad...</option>
+                    @for (u of orgUnits$ | async; track u.id) {
+                    <option [value]="u.id">{{ u.name }}</option>
+                    }
+                </select>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700">VMS (Sistema CCTV)</label>
+                <select formControlName="orgSystemId"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    <option value="">Seleccione Sistema...</option>
+                    @for (s of orgSystems$ | async; track s.id) {
+                    <option [value]="s.id">{{ s.name }}</option>
+                    }
+                </select>
+            </div>
+
             <!-- Fecha Instalación -->
             <div class="space-y-2">
                 <label class="text-sm font-semibold text-gray-700">Fecha de Instalación</label>
