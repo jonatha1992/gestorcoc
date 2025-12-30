@@ -6,7 +6,8 @@ import { Timestamp } from '@angular/fire/firestore';
 
 export interface User {
     uid: string;                     // Firebase Auth UID
-    email: string;
+    username: string;               // Nombre de usuario (Unique identifier)
+    email?: string;                  // LEGACY/INTERNAL: Only if needed for debugging or migration
     displayName: string;
     photoURL?: string;
 
@@ -25,74 +26,64 @@ export interface User {
 // ROLES Y PERMISOS
 // ============================================
 
-export type ModuleName =
-    | 'equipamiento'
-    | 'registros'
-    | 'camaras'
-    | 'catalogos'
-    | 'usuarios'
-    | 'roles';
+// Definición de Roles
+export const ROLE_NAMES = {
+    ADMIN: 'admin',
+    TURNO_CREV: 'turno_crev',
+    TURNO_COC: 'turno_coc'
+} as const;
 
-export type ActionType = 'read' | 'create' | 'update' | 'delete';
+export type RoleName = typeof ROLE_NAMES[keyof typeof ROLE_NAMES];
 
+// Definición de Módulos (Alineados con el Navbar)
+// 'hechos' (antes registros), 'camaras', 'equipamiento', 'catalogos'
+// 'usuarios' y 'roles' (están bajo Configuración en el navbar, pero son permisos distintos)
+export type ModuleName = 'hechos' | 'registros' | 'camaras' | 'equipamiento' | 'catalogos' | 'usuarios' | 'roles';
+
+// Definición de Acciones
+export type ActionType = 'create' | 'read' | 'update' | 'delete' | 'export';
+
+// Estructura de Permiso
 export interface Permission {
     module: ModuleName;
     actions: ActionType[];
 }
 
+// Interfaz completa de Rol (para Firestore)
 export interface Role {
     id?: string;
-    name: string;                    // Ej: "Admin", "Operador", "Consulta"
-    description?: string;
+    name: string;
     permissions: Permission[];
-    isActive: boolean;
-
-    // Auditoría
-    createdAt: Timestamp;
-    createdBy: string;
-    updatedAt?: Timestamp;
-    updatedBy?: string;
+    isSystem?: boolean;
 }
 
-// ============================================
-// ROLES PREDEFINIDOS
-// ============================================
-
-export const ROLE_NAMES = {
-    ADMIN: 'admin',
-    OPERADOR: 'operador',
-    CONSULTA: 'consulta',
-} as const;
-
-export type RoleName = typeof ROLE_NAMES[keyof typeof ROLE_NAMES];
-
-// ============================================
-// PERMISOS POR DEFECTO
-// ============================================
-
-export const DEFAULT_PERMISSIONS: Record<RoleName, Permission[]> = {
-    admin: [
-        { module: 'equipamiento', actions: ['read', 'create', 'update', 'delete'] },
-        { module: 'registros', actions: ['read', 'create', 'update', 'delete'] },
-        { module: 'camaras', actions: ['read', 'create', 'update', 'delete'] },
-        { module: 'catalogos', actions: ['read', 'create', 'update', 'delete'] },
-        { module: 'usuarios', actions: ['read', 'create', 'update', 'delete'] },
-        { module: 'roles', actions: ['read', 'create', 'update', 'delete'] },
-    ],
-    operador: [
-        { module: 'equipamiento', actions: ['read', 'create', 'update'] },
-        { module: 'registros', actions: ['read', 'create', 'update'] },
-        { module: 'camaras', actions: ['read', 'create', 'update'] },
-        { module: 'catalogos', actions: ['read'] },
-        { module: 'usuarios', actions: ['read'] },
-        { module: 'roles', actions: ['read'] },
-    ],
-    consulta: [
-        { module: 'equipamiento', actions: ['read'] },
-        { module: 'registros', actions: ['read'] },
-        { module: 'camaras', actions: ['read'] },
-        { module: 'catalogos', actions: ['read'] },
-        { module: 'usuarios', actions: [] },
-        { module: 'roles', actions: [] },
-    ],
-};
+// Fallback Permissions (Updated to use new RoleName values)
+export const DEFAULT_ROLES_CONFIG: Role[] = [
+    {
+        name: ROLE_NAMES.ADMIN,
+        isSystem: true,
+        permissions: [
+            { module: 'equipamiento', actions: ['read', 'create', 'update', 'delete', 'export'] },
+            { module: 'hechos', actions: ['read', 'create', 'update', 'delete', 'export'] },
+            { module: 'camaras', actions: ['read', 'create', 'update', 'delete', 'export'] },
+            { module: 'catalogos', actions: ['read', 'create', 'update', 'delete'] },
+            { module: 'usuarios', actions: ['read', 'create', 'update', 'delete'] },
+            { module: 'roles', actions: ['read', 'create', 'update', 'delete'] }
+        ]
+    },
+    {
+        name: ROLE_NAMES.TURNO_CREV,
+        permissions: [
+            { module: 'hechos', actions: ['read', 'create', 'update'] },
+            { module: 'equipamiento', actions: ['read'] }
+        ]
+    },
+    {
+        name: ROLE_NAMES.TURNO_COC,
+        permissions: [
+            { module: 'camaras', actions: ['read', 'create', 'update'] },
+            { module: 'equipamiento', actions: ['read', 'create', 'update'] },
+            { module: 'hechos', actions: ['read'] }
+        ]
+    }
+];

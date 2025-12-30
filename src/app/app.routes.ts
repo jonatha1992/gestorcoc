@@ -11,12 +11,14 @@ import { UnitListComponent } from './pages/organization/unit-list/unit-list';
 import { SystemListComponent } from './pages/organization/system-list/system-list';
 import { GroupListComponent } from './pages/organization/group-list/group-list';
 import { LoginPageComponent } from './pages/login/login';
+import { HomeComponent } from './pages/home/home';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 
 export const routes: Routes = [
     { path: 'login', component: LoginPageComponent },
-    { path: '', redirectTo: 'equipamiento', pathMatch: 'full' },
+    { path: '', redirectTo: 'home', pathMatch: 'full' },
+    { path: 'home', component: HomeComponent, canActivate: [authGuard] },
 
     // Equipamiento
     { path: 'equipamiento', component: EquipmentListComponent, canActivate: [authGuard] },
@@ -35,6 +37,24 @@ export const routes: Routes = [
 
     // Registros Fílmicos
     { path: 'registros', component: FilmRecordListComponent, canActivate: [authGuard] },
+    // Hechos
+    {
+        path: 'hechos',
+        loadComponent: () => import('./pages/hecho-list/hecho-list').then(m => m.HechoListComponent),
+        canActivate: [authGuard]
+    },
+    {
+        path: 'hechos/nuevo',
+        loadComponent: () => import('./pages/hecho-form/hecho-form').then(m => m.HechoFormComponent),
+        canActivate: [authGuard]
+    },
+    {
+        path: 'hechos/editar/:id',
+        loadComponent: () => import('./pages/hecho-form/hecho-form').then(m => m.HechoFormComponent),
+        canActivate: [authGuard]
+    },
+
+    // Registros (Legacy/Filmicos)
     {
         path: 'nuevo-registro',
         component: FilmRecordFormComponent,
@@ -64,6 +84,11 @@ export const routes: Routes = [
     },
 
     // Administración
+    {
+        path: 'roles',
+        loadComponent: () => import('./pages/role-list/role-list').then(m => m.RoleListComponent),
+        canActivate: [authGuard] // TODO: Add role restriction for admin only
+    },
     {
         path: 'catalogos',
         component: CatalogListComponent,

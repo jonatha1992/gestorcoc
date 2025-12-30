@@ -32,7 +32,7 @@ export class GroupListComponent implements OnInit {
         description: '',
         unitIds: [],
         systemIds: [],
-        roleId: ROLE_NAMES.CONSULTA // Default role
+        roleId: ROLE_NAMES.TURNO_CREV // Default role
     };
 
     ngOnInit() {
@@ -82,7 +82,7 @@ export class GroupListComponent implements OnInit {
             description: '',
             unitIds: [],
             systemIds: [],
-            roleId: ROLE_NAMES.CONSULTA
+            roleId: ROLE_NAMES.TURNO_CREV
         };
         this.showModal = true;
     }
@@ -93,7 +93,7 @@ export class GroupListComponent implements OnInit {
             ...group,
             unitIds: [...(group.unitIds || [])],
             systemIds: [...(group.systemIds || [])],
-            roleId: group.roleId || ROLE_NAMES.CONSULTA
+            roleId: group.roleId || ROLE_NAMES.TURNO_CREV
         };
         this.showModal = true;
     }
