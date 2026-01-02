@@ -12,6 +12,9 @@ import { SystemListComponent } from './pages/organization/system-list/system-lis
 import { GroupListComponent } from './pages/organization/group-list/group-list';
 import { LoginPageComponent } from './pages/login/login';
 import { HomeComponent } from './pages/home/home';
+import { HashGeneratorComponent } from './pages/utilities/hash-generator/hash-generator.component';
+import { DocumentListComponent } from './pages/documents/document-list/document-list.component';
+import { DocumentFormComponent } from './pages/documents/document-form/document-form.component';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 
@@ -46,6 +49,16 @@ export const routes: Routes = [
     {
         path: 'hechos/nuevo',
         loadComponent: () => import('./pages/hecho-form/hecho-form').then(m => m.HechoFormComponent),
+        canActivate: [authGuard]
+    },
+    {
+        path: 'documents',
+        component: DocumentListComponent,
+        canActivate: [authGuard]
+    },
+    {
+        path: 'documents/new',
+        component: DocumentFormComponent,
         canActivate: [authGuard]
     },
     {
@@ -118,5 +131,10 @@ export const routes: Routes = [
         component: GroupListComponent,
         canActivate: [authGuard, roleGuard],
         data: { roles: ['admin'] }
+    },
+    {
+        path: 'hashes',
+        component: HashGeneratorComponent,
+        canActivate: [authGuard]
     },
 ];

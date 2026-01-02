@@ -132,6 +132,35 @@ export class AuthService {
         }
     }
 
+    /**
+     * EMERGENCY ONLY: Create an admin user if none exists/deleted.
+     * Uses the MAIN auth instance (so it logs you in automatically).
+     */
+    async createInitialAdmin(): Promise<void> {
+        try {
+            const email = 'admin@crev.local';
+            const password = 'admin123';
+
+            // Create user directly with main auth (will sign in automatically)
+            const credential = await createUserWithEmailAndPassword(this.auth, email, password);
+
+            const userProfile: User = {
+                uid: credential.user.uid,
+                username: 'admin',
+                displayName: 'Administrador Sistema',
+                roleIds: ['admin'],
+                isActive: true,
+                createdAt: Timestamp.now()
+            };
+
+            await this.createUserProfile(userProfile);
+            console.log('Admin recovered successfully');
+        } catch (error) {
+            console.error('Error creating initial admin:', error);
+            throw error;
+        }
+    }
+
     // ============================================
     // VERIFICACIÓN DE PERMISOS
     // ============================================

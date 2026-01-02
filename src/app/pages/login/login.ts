@@ -47,4 +47,17 @@ export class LoginPageComponent {
     togglePassword() {
         this.showPassword.update(v => !v);
     }
+
+    async recoverAdmin() {
+        try {
+            this.loadingService.show();
+            await this.authService.createInitialAdmin();
+            this.toastService.success('Admin restaurado. Ingresando...');
+            this.router.navigateByUrl('/');
+        } catch (error: any) {
+            this.toastService.error('Error: ' + error.message);
+        } finally {
+            this.loadingService.hide();
+        }
+    }
 }

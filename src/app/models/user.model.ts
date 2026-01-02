@@ -38,10 +38,13 @@ export type RoleName = typeof ROLE_NAMES[keyof typeof ROLE_NAMES];
 // Definición de Módulos (Alineados con el Navbar)
 // 'hechos' (antes registros), 'camaras', 'equipamiento', 'catalogos'
 // 'usuarios' y 'roles' (están bajo Configuración en el navbar, pero son permisos distintos)
-export type ModuleName = 'hechos' | 'registros' | 'camaras' | 'equipamiento' | 'catalogos' | 'usuarios' | 'roles';
+// Cabecera: 'hechos' (antes registros), 'camaras', 'equipamiento', 'catalogos'
+// Utilidades: 'documents' (Mesa de Entrada), 'utilities' (Hash Tool)
+// Configuración: 'usuarios', 'roles'
+export type ModuleName = 'hechos' | 'registros' | 'camaras' | 'equipamiento' | 'catalogos' | 'documents' | 'utilities' | 'usuarios' | 'roles';
 
 // Definición de Acciones
-export type ActionType = 'create' | 'read' | 'update' | 'delete' | 'export';
+export type ActionType = 'create' | 'read' | 'update' | 'delete' | 'export' | 'hash';
 
 // Estructura de Permiso
 export interface Permission {
@@ -67,6 +70,8 @@ export const DEFAULT_ROLES_CONFIG: Role[] = [
             { module: 'hechos', actions: ['read', 'create', 'update', 'delete', 'export'] },
             { module: 'camaras', actions: ['read', 'create', 'update', 'delete', 'export'] },
             { module: 'catalogos', actions: ['read', 'create', 'update', 'delete'] },
+            { module: 'documents', actions: ['read', 'create', 'update', 'delete'] },
+            { module: 'utilities', actions: ['read', 'hash'] },
             { module: 'usuarios', actions: ['read', 'create', 'update', 'delete'] },
             { module: 'roles', actions: ['read', 'create', 'update', 'delete'] }
         ]

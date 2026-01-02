@@ -25,6 +25,22 @@
                     <span>📝 Hechos</span>
                 </a>
 
+                <!-- Hash Tool -->
+                <a *appHasPermission="['utilities', 'read']" routerLink="/hashes"
+                    routerLinkActive="text-indigo-600 bg-indigo-50"
+                    class="group flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:text-indigo-600 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700 transition-all">
+                    <span class="mr-2 opacity-75 group-hover:opacity-100">🔐</span>
+                    Hash Tool
+                </a>
+
+                <!-- Mesa de Entrada -->
+                <a *appHasPermission="['documents', 'read']" routerLink="/documents"
+                    routerLinkActive="text-indigo-600 bg-indigo-50"
+                    class="group flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:text-indigo-600 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700 transition-all">
+                    <span class="mr-2 opacity-75 group-hover:opacity-100">📂</span>
+                    Mesa de Entrada
+                </a>
+
                 <!-- Equipamiento Dropdown -->
                 <div *appHasPermission="['equipamiento', 'read']" class="relative dropdown-menu">
                     <button (click)="toggleEquipMenu()"
@@ -217,6 +233,17 @@
             <a *appHasPermission="['hechos', 'read']" routerLink="/hechos" (click)="closeMenus()"
                 class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-600 transition-colors">📝
                 Hechos</a>
+
+            <!-- Hash Tool (Mobile) -->
+            <a *appHasPermission="['utilities', 'read']" routerLink="/hashes" (click)="closeMenus()"
+                class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-600 transition-colors">🔐 Hash
+                Tool</a>
+
+            <!-- Mesa de Entrada (Mobile) -->
+            <a *appHasPermission="['documents', 'read']" routerLink="/documents" (click)="closeMenus()"
+                class="block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-600 transition-colors">📂 Mesa
+                de Entrada</a>
+
 
             <!-- Equipamiento -->
             <ng-container *appHasPermission="['equipamiento', 'read']">
