@@ -15,9 +15,9 @@ from .models import (
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     fieldsets = BaseUserAdmin.fieldsets + (
-        ("Profile", {"fields": ("display_name", "roles", "org_groups")}),
+        ("Profile", {"fields": ("display_name", "org_unit", "roles", "org_groups")}),
     )
-    list_display = ("username", "display_name", "email", "is_active", "is_staff")
+    list_display = ("username", "display_name", "org_unit", "email", "is_active", "is_staff")
     search_fields = ("username", "display_name", "email")
     filter_horizontal = ("roles", "org_groups")
 

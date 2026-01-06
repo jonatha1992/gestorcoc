@@ -89,6 +89,7 @@ class CatalogItem(models.Model):
 class OrganizationalUnit(models.Model):
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True)
+    has_coc = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -113,6 +114,7 @@ class CctvSystem(models.Model):
     model = models.CharField(max_length=100, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     location = models.CharField(max_length=200, blank=True)
+    is_coc_room = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -155,6 +157,13 @@ class User(AbstractUser):
     display_name = models.CharField(max_length=150, blank=True)
     roles = models.ManyToManyField(Role, blank=True, related_name="users")
     org_groups = models.ManyToManyField(OrganizationalGroup, blank=True, related_name="users")
+    org_unit = models.ForeignKey(
+        OrganizationalUnit,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users",
+    )
 
     def __str__(self) -> str:
         return self.get_display_name()

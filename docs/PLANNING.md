@@ -65,6 +65,10 @@
 | 9 | Jerarquía de catálogos (ubicaciones, categorías) | Media | Completo |
 | 10 | Optimizar filtros con índices y select_related | Media | Completo |
 | 11 | Historial de cambios (auditoría extendida) | Baja | Pendiente |
+| 12 | Modelo de usuarios/roles por Sistema CCTV | Alta | Pendiente |
+| 13 | Campos extra en Sistemas (vendor/tipo/version) y flag COC | Alta | Pendiente |
+| 14 | Vincular Hechos a Sistema/Cámara (FK opcional) | Alta | Pendiente |
+| 15 | Asegurar que Registros filminos referencien Sistema COC | Alta | Pendiente |
 
 ---
 
@@ -98,6 +102,7 @@
 - [x] Vistas CRUD usuarios/roles
 - [ ] Vistas novedades de cámara
 - [ ] Dashboard cámaras con falla
+- [ ] Gestión de usuarios/perfiles por sistema CCTV
 
 ### Modelos
 - [x] `Camera`
@@ -112,6 +117,10 @@
 - [x] Migraciones Django listas
 - [x] Índices en campos de filtrado
 - [x] Campos de auditoría en entidades
+- [ ] Extender `CctvSystem` con vendor/tipo/version/flag COC
+- [ ] Extender `Hecho` con FK a sistema/cámara
+- [ ] Crear modelo de usuarios/roles por sistema CCTV
+- [ ] Forzar `FilmRecord` a vincular `org_system` cuando aplique
 
 ---
 
