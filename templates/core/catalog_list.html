@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Catalogos | CREV{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Catalogos</h1>
+            <p class="text-gray-500 mt-1">Gestion de catalogos y items.</p>
+        </div>
+        <a href="/catalogos/nuevo/" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Nuevo Catalogo</a>
+    </div>
+    <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Codigo</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Activo</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for catalog in object_list %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 text-sm text-gray-900">{{ catalog.name }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ catalog.code }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ catalog.is_active|yesno:"Si,No" }}</td>
+                    <td class="px-6 py-4 text-right space-x-3">
+                        <a href="/catalogos/{{ catalog.id }}/items/" class="text-gray-700 hover:text-gray-900">Items</a>
+                        <a href="/catalogos/{{ catalog.id }}/editar/" class="text-indigo-600 hover:text-indigo-900">Editar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="px-6 py-10 text-center text-gray-500 italic">No hay catalogos cargados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

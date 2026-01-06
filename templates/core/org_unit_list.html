@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Unidades | CREV{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Unidades</h1>
+            <p class="text-gray-500 mt-1">Gestion de unidades organizacionales.</p>
+        </div>
+        <a href="/organizacion/unidades/nueva/" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Nueva Unidad</a>
+    </div>
+    <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for unit in object_list %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 text-sm text-gray-900">{{ unit.name }}</td>
+                    <td class="px-6 py-4 text-right">
+                        <a href="/organizacion/unidades/{{ unit.id }}/editar/" class="text-indigo-600 hover:text-indigo-900">Editar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2" class="px-6 py-10 text-center text-gray-500 italic">No hay unidades cargadas.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -47,6 +47,23 @@ El diseño respeta el estándar agnóstico de Django ORM. Aunque se use **SQLite
 ---
 
 ## 5. Próximos Pasos Técnicos
-1.  Setup de Proyecto Django.
-2.  Creación de Apps: `core`, `inventory`, `documents`, `stats`.
-3.  Implementación de Base Templates con Sidebar y Estética Glass.
+1.  Configurar entorno Python 3.11.5+ y levantar el proyecto Django 5 (ver comandos debajo).
+2.  Usar las apps creadas (`core`, `inventory`, `documents`, `operations`, `utilities`) como base para nuevos módulos.
+3.  Extender templates heredando de `base.html` para mantener sidebar, permisos y estilo Tailwind.
+
+---
+
+## 6. Setup Rápido (Django 5)
+```bash
+python -m pip install -r requirements.txt
+python manage.py migrate
+python manage.py seed_roles
+python manage.py seed_catalogs
+python manage.py seed_demo_data  # opcional dev
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+### Verificación
+- Smoke tests: `python manage.py test`
+- Login por defecto: crear superusuario o usar `seed_demo_data` (admin/admin1234 por defecto).

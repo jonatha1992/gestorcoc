@@ -48,7 +48,8 @@ El sistema es una solución independiente (standalone) que integra múltiples fl
 | **Auditor/Visualizador** | Solo Lectura | Consulta de reportes, búsqueda histórica. | Bajo |
 
 ### 2.3 Entorno Operativo
-*   **Servidor de Aplicación**: Compatible con cualquier SO que soporte Python 3.10+ (Windows Server / Linux).
+*   **Servidor de Aplicación**: Compatible con cualquier SO que soporte **Python 3.11.5+** (Windows Server / Linux).
+*   **Framework**: **Django 5.x** (SSR, MVT) con DTL + Tailwind (CDN).
 *   **Cliente**: Navegadores Web Modernos (Chrome, Edge, Firefox).
 *   **Red**: Intranet Corporativa (LAN).
 
@@ -193,3 +194,47 @@ Se extenderá el modelo `AbstractUser` de Django.
 *   **ON DELETE PROTECT**:
     *   No se puede borrar un `User` si tiene `Hechos` cargados.
     *   No se puede borrar un `VMS` si tiene `Camaras` asignadas.
+
+---
+
+# PARTE C: Implementación Django 5.x (Estado Actual)
+
+## 1. Apps y Responsabilidades
+| App | Dominio | Modelos principales |
+| --- | --- | --- |
+| `core` | Usuarios, Roles, Catálogos, Organización | `User`, `Role`, `Catalog`, `CatalogItem`, `OrganizationalUnit`, `CctvSystem` |
+| `inventory` | Equipamiento y Cámaras | `Equipment`, `Camera`, `CameraUpdate` |
+| `documents` | Mesa de Entrada y Registros Fílmicos | `Document`, `DocumentAttachment`, `FilmRecord` |
+| `operations` | Hechos/Novedades | `Hecho` |
+| `utilities` | Herramientas de soporte | Hash Tool |
+
+## 2. Comandos Operativos
+```bash
+python -m pip install -r requirements.txt   # deps (Django 5)
+python manage.py migrate                    # base de datos
+python manage.py seed_roles                 # roles + permisos
+python manage.py seed_catalogs              # catálogos + ítems
+python manage.py seed_demo_data             # datos demo (opcional dev)
+python manage.py createsuperuser            # admin
+python manage.py runserver                  # levantar server
+python manage.py test                       # smoke tests
+```
+
+## 3. Seeds Incluidos
+- **Roles**: admin, turno_crev, turno_coc con permisos por módulo/acción.
+- **Catálogos**: Categorías, Ubicaciones, Estados Equipo, Tipos Cámara, Tipos Solicitud, Tipos Delito, Unidades, Organismos + ítems base.
+- **Demo (opcional)**: usuario admin, unidad CREV Central, sistema principal, equipo, cámara, expediente, registro fílmico y hecho de ejemplo.
+
+## 4. Consideraciones Técnicas
+- **Índices**: agregados en campos de filtrado frecuente (`status`, `estado`, `fecha_ingreso`, `nro_orden`, `fecha_intervencion`, `reference_number`).
+- **Permisos**: `ModulePermissionRequiredMixin` + tag `{% has_permission %}` en templates.
+- **Adjuntos**: `DocumentAttachment` permite múltiples archivos por documento; subida controlada desde `DocumentForm`.
+- **Auditoría**: campos `created_by/at`, `updated_by/at` donde aplica.
+
+## 5. Testing
+- Suite base Django: `python manage.py test` (8 pruebas smoke para auth/home, inventario, documentos con adjuntos, registros fílmicos, hechos y hash tool).
+
+## 6. Estándares
+- Código en inglés, UI en español.
+- PEP 8 + convenciones Django (apps separadas por dominio).
+- Tailwind vía CDN en `base.html` (sin build step).
