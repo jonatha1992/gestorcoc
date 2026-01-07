@@ -29,7 +29,7 @@ static/             # estáticos adicionales (opcional)
 - `User` extiende `AbstractUser` con `roles` y `org_groups`.
 - `Role` con `permissions` (module/actions) y flag `is_system`.
 - `Catalog`/`CatalogItem` para listas maestras (ubicaciones, categorías, estados, tipos).
-- `Equipment`, `Camera`, `CameraUpdate` (inventario).
+- `Equipment`, `EquipmentRegister`, `EquipmentRegisterItem`, `Camera`, `CameraUpdate`, `CameraInventoryRecord` (inventario).
 - `Document`, `DocumentAttachment`, `FilmRecord` (mesa de entrada y registros).
 - `Hecho` (novedades/operaciones).
 
@@ -37,6 +37,7 @@ static/             # estáticos adicionales (opcional)
 - `python manage.py seed_roles`: roles admin/turno_crev/turno_coc con permisos por módulo.
 - `python manage.py seed_catalogs`: catálogos base + ítems.
 - `python manage.py seed_demo_data`: crea admin demo, unidad CREV Central, sistema principal, equipo, cámara, expediente, registro fílmico y hecho de ejemplo.
+- `python manage.py import_inventory_files`: importa planillas ANEXO VI y CSV de cámaras (informacion/*.xlsx, informacion/*.csv, data/*.csv).
 
 ## Seguridad y Permisos
 - Autenticación nativa Django (sesiones).  

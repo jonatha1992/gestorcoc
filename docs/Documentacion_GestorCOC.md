@@ -419,6 +419,39 @@ Catálogos dinámicos para: Categorías, Ubicaciones, Estados Equipo, Tipos Cám
 
 > **Nota**: Las cámaras fijas de vigilancia (CCTV) se gestionan en el modelo `Camera`, no aquí.
 
+#### EquipmentRegister (planilla ANEXO VI) y EquipmentRegisterItem
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `source_name` | CharField(255) | Nombre del archivo importado |
+| `checksum` | CharField(64) | Hash del archivo para detectar cambios |
+| `service_date_text` | CharField(120) | Fecha en texto tal como viene en la planilla |
+| `service_date` | DateField (nullable) | Fecha parseada si se pudo extraer |
+| `service_order` / `deployment` / `allanamiento` / `police_procedure` / `other_notes` | CharField | Metadatos del servicio |
+| `raw_metadata` | JSONField | Datos crudos de cabecera |
+| `items` | FK → EquipmentRegisterItem | Líneas de equipamiento |
+
+**EquipmentRegisterItem**
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `register` | FK → EquipmentRegister | Planilla origen |
+| `section_label` | CharField(150) | Sección (ej: VIDEO N° 1) |
+| `description` | CharField(255) | Descripción del ítem |
+| `brand_model` / `serial_number` | CharField | Marca/Modelo y serie |
+| `units` | CharField(50) | Cantidad (texto libre) |
+| `unit_status` | CharField(80) | Estado de unidad (E/S, etc.) |
+| `delivered` | CharField(50) | Si se entregó (texto de la planilla) |
+| `observations` | CharField(255) | Observaciones |
+| `raw_row` | JSONField | Fila cruda para trazabilidad |
+
+**Importación rápida:**
+
+```bash
+python manage.py import_inventory_files  # usa informacion/*.xlsx y *.csv por defecto
+python manage.py import_inventory_files --equipment-path informacion/ENTREGA*.xlsx --camera-path informacion/EZEIZA*.csv
+```
+
 #### Camera
 
 | Campo | Tipo | Descripción |
@@ -445,6 +478,27 @@ Catálogos dinámicos para: Categorías, Ubicaciones, Estados Equipo, Tipos Cám
 | `reported_by` | CharField(150) | Quien reporta |
 | `resolved_at` | DateField | Fecha de resolución |
 | `status` | Enum(Abierta, Cerrada) | Estado |
+
+#### CameraInventoryRecord (export Avigilon)
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `source_name` | CharField(255) | Nombre del CSV importado |
+| `server_name` | CharField(120) | Servidor de Avigilon |
+| `device_name` | CharField(200) | Nombre de dispositivo |
+| `vendor` / `model` | CharField | Fabricante y modelo |
+| `location` | CharField(200) | Ubicación textual |
+| `logical_id` / `device_id` / `camera_id` | CharField | Identificadores de Avigilon |
+| `ip_address` / `mac_address` | IP/MAC de la cámara |
+| `firmware_version` / `firmware_required` | Versión reportada |
+| `serial_number` | CharField(120) | Número de serie |
+| `connected` / `visible` | Boolean | Estado de conectividad |
+| `error_indicators` / `state` | CharField | Indicadores de error y estado |
+| `bitrate_kbps` | Integer | Bitrate reportado (kbps) |
+| `resolution` / `quality` / `frame_rate` | CharField | Parámetros de video |
+| `encryption` / `retention` | CharField | Cifrado y retención |
+| `appearance_search` / `face_recognition` | CharField | Capacidades analíticas |
+| `raw_row` | JSONField | Fila completa del CSV |
 
 ---
 
