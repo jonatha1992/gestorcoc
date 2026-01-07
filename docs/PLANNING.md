@@ -2,28 +2,29 @@
 
 ## Estado Actual del Proyecto
 
-**Versión:** 0.0.0 (Desarrollo)  
-**Última Actualización:** Diciembre 2024
+**Versión:** 0.1.0 (Django SSR)  
+**Última Actualización:** Enero 2025
 
 ---
 
 ## ✅ Funcionalidades Implementadas
 
 ### Equipamiento
-- [x] CRUD completo de equipos
+- [x] CRUD de equipos (Django)
 - [x] Estados de equipo
-- [x] Integración con Firestore
+- [x] Índices y auditoría básica
 
 ### Registros Fílmicos
-- [x] CRUD completo de registros
+- [x] CRUD de registros
 - [x] Estados de registro
 - [x] Campos de información judicial
 
 ### Infraestructura
-- [x] Angular 21 standalone
-- [x] Firebase (Firestore)
-- [x] Tailwind CSS v4
-- [x] Responsive design
+- [x] Django 5 SSR (MVT)
+- [x] Tailwind via CDN
+- [x] RBAC por módulo/acción
+- [x] Seeds de roles, catálogos e inicial demo
+- [x] Smoke tests (`manage.py test`)
 
 ---
 
@@ -37,11 +38,11 @@
 
 | # | Tarea | Prioridad | Estado |
 |---|-------|-----------|--------|
-| 1 | Autenticación real (Email/Password) | Alta | Pendiente |
-| 2 | Roles/Permisos (RBAC) | Alta | Pendiente |
-| 3 | Reglas Firestore por rol | Alta | Pendiente |
-| 4 | ABM Maestros (catálogos + items) | Alta | Pendiente |
-| 5 | Migrar combos existentes a catálogos | Alta | Pendiente |
+| 1 | Autenticación Django + sesiones | Alta | Completo |
+| 2 | Roles/Permisos (RBAC) | Alta | Completo |
+| 3 | Seeds de catálogos + ítems base | Alta | Completo |
+| 4 | ABM Maestros (catálogos + items) | Alta | Completo |
+| 5 | Auditoría (created/updated by/at) | Alta | Completo |
 
 ---
 
@@ -50,7 +51,7 @@
 
 | # | Tarea | Prioridad | Estado |
 |---|-------|-----------|--------|
-| 6 | CRUD de Cámaras | Alta | Pendiente |
+| 6 | CRUD de Cámaras | Alta | Completo |
 | 7 | Novedades por cámara + historial | Alta | Pendiente |
 | 8 | Tablero de cámaras con falla | Media | Pendiente |
 
@@ -61,9 +62,13 @@
 
 | # | Tarea | Prioridad | Estado |
 |---|-------|-----------|--------|
-| 9 | Jerarquía de catálogos (ubicaciones, categorías) | Media | Pendiente |
-| 10 | Auditoría (createdBy, updatedBy) | Media | Pendiente |
-| 11 | Historial de cambios | Baja | Pendiente |
+| 9 | Jerarquía de catálogos (ubicaciones, categorías) | Media | Completo |
+| 10 | Optimizar filtros con índices y select_related | Media | Completo |
+| 11 | Historial de cambios (auditoría extendida) | Baja | Pendiente |
+| 12 | Modelo de usuarios/roles por Sistema CCTV | Alta | Pendiente |
+| 13 | Campos extra en Sistemas (vendor/tipo/version) y flag COC | Alta | Pendiente |
+| 14 | Vincular Hechos a Sistema/Cámara (FK opcional) | Alta | Pendiente |
+| 15 | Asegurar que Registros filminos referencien Sistema COC | Alta | Pendiente |
 
 ---
 
@@ -83,34 +88,39 @@
 ## 📋 Checklist de Implementación
 
 ### Nuevas Pantallas (UI)
-- [ ] Cámaras: Listado
-- [ ] Cámaras: Alta/Edición
+- [x] Cámaras: Listado
+- [x] Cámaras: Alta/Edición
 - [ ] Cámaras: Novedades
-- [ ] Maestros: Catálogos
-- [ ] Maestros: Ítems de catálogo
-- [ ] Seguridad: Usuarios
-- [ ] Seguridad: Roles/Permisos
+- [x] Maestros: Catálogos
+- [x] Maestros: Ítems de catálogo
+- [x] Seguridad: Usuarios
+- [x] Seguridad: Roles/Permisos
 
-### Nuevos Servicios
-- [ ] `camera.service`
-- [ ] `camera-update.service`
-- [ ] `catalog.service`
-- [ ] `auth.service`
-- [ ] Guards de rol/permiso
+### Servicios / Vistas Django
+- [x] Vistas CRUD cámaras/equipos
+- [x] Vistas CRUD catálogos/ítems
+- [x] Vistas CRUD usuarios/roles
+- [ ] Vistas novedades de cámara
+- [ ] Dashboard cámaras con falla
+- [ ] Gestión de usuarios/perfiles por sistema CCTV
 
-### Nuevos Modelos
-- [ ] `Camera`
-- [ ] `CameraUpdate`
-- [ ] `Catalog`
-- [ ] `CatalogItem`
-- [ ] `User`
-- [ ] `Role`
-- [ ] `Permission`
+### Modelos
+- [x] `Camera`
+- [x] `CameraUpdate`
+- [x] `Catalog`
+- [x] `CatalogItem`
+- [x] `User`
+- [x] `Role`
+- [x] `Permission`
 
-### Firestore
-- [ ] Crear colecciones nuevas
-- [ ] Definir reglas por rol
-- [ ] Campos de auditoría en todas las entidades
+### Base de Datos
+- [x] Migraciones Django listas
+- [x] Índices en campos de filtrado
+- [x] Campos de auditoría en entidades
+- [ ] Extender `CctvSystem` con vendor/tipo/version/flag COC
+- [ ] Extender `Hecho` con FK a sistema/cámara
+- [ ] Crear modelo de usuarios/roles por sistema CCTV
+- [ ] Forzar `FilmRecord` a vincular `org_system` cuando aplique
 
 ---
 
@@ -120,9 +130,9 @@
 > **No romper el histórico:** Guardar siempre IDs de catálogo (ej: `locationId`) y no el texto. Si cambia el nombre de una opción, no cambia el histórico.
 
 ### Convenciones
-- Archivos sin sufijo `.component`
-- Usar `inject()` para DI
-- Nombres en kebab-case
+- Código PEP 8, UI en español.
+- Templates heredan de `base.html`; permisos en mixins + tag `{% has_permission %}`.
+- Adjuntos de documentos en `/media/docs/%Y/%m/`.
 
 ### Commits
 ```

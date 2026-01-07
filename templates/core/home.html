@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio | CREV{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900">Inicio</h1>
+        <p class="text-gray-500 mt-1">Panel principal del sistema CREV.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <h2 class="text-sm font-semibold text-gray-500">Hechos</h2>
+            <p class="text-3xl font-bold text-gray-900">{{ stats.hechos }}</p>
+            <p class="text-xs text-gray-500">Incidentes registrados</p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <h2 class="text-sm font-semibold text-gray-500">Documentos</h2>
+            <p class="text-3xl font-bold text-gray-900">{{ stats.documents }}</p>
+            <p class="text-xs text-gray-500">Mesa de Entrada</p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <h2 class="text-sm font-semibold text-gray-500">Cámaras</h2>
+            <p class="text-3xl font-bold text-gray-900">{{ stats.camaras }}</p>
+            <p class="text-xs text-gray-500">Vigilancia</p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <h2 class="text-sm font-semibold text-gray-500">Equipos</h2>
+            <p class="text-3xl font-bold text-gray-900">{{ stats.equipos }}</p>
+            <p class="text-xs text-gray-500">Inventario</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,133 +1,107 @@
-# 📦 Angular Equipamiento - Sistema de Gestión CREV
+# Sistema de Gestión Integral CREV
 
-Sistema web para la gestión de equipamiento y registros fílmicos del Centro de Registros Especializados de Video (CREV).
+> **Plataforma Unificada de Operaciones, Documentación e Inventario.**
 
-## 🚀 Stack Tecnológico
+Este repositorio contiene el código fuente y la documentación técnica del Sistema de Gestión CREV. El sistema ha evolucionado hacia una arquitectura monolítica robusta basada en **Django**, diseñada para centralizar la gestión operativa con alta eficiencia y seguridad.
 
-| Tecnología | Versión | Propósito |
-|------------|---------|-----------|
-| [Angular](https://angular.dev/) | 21.0.0 | Framework Frontend |
-| [Firebase](https://firebase.google.com/) | 12.7.0 | Backend-as-a-Service |
-| [Tailwind CSS](https://tailwindcss.com/) | 4.1.18 | Framework de Estilos |
-| [Vitest](https://vitest.dev/) | 4.0.8 | Testing |
-| [TypeScript](https://www.typescriptlang.org/) | 5.9.2 | Lenguaje |
+---
 
-## 📋 Características
+## 🏗️ Arquitectura del Sistema
 
-### Módulo de Equipamiento
-- ✅ CRUD completo de equipos
-- ✅ Estados: Disponible, En Reparación, Entregado, Baja
-- ✅ Información detallada: marca, modelo, número de serie
+El sistema sigue una arquitectura **Web Monolítica (Server-Side Rendering)** basada en el patrón **MVT (Model-View-Template)** de Django. Se prioriza la simplicidad, la seguridad y el rendimiento.
 
-### Módulo de Registros Fílmicos
-- ✅ CRUD completo de registros
-- ✅ Estados: Pendiente, En Proceso, Finalizado
-- ✅ Información judicial completa
+| Componente | Tecnología | Descripción |
+| :--- | :--- | :--- |
+| **Backend** | **Python Django 5.x** | Núcleo lógico, seguridad, ORM y ruteo. |
+| **Frontend** | **Django Templates (DTL)** | Renderizado de vistas HTML desde el servidor. |
+| **Estilos** | **Tailwind CSS** | Framework de utilidades para replicar la estética "Tech/Glass". |
+| **Scripting** | **Vanilla JS / Alpine.js** | Interactividad ligera (modales, menús) sin frameworks pesados. |
+| **Base de Datos** | **SQLite** | Almacenamiento relacional local, portable y eficiente. |
 
-## 🛠️ Instalación
+---
 
-```bash
-# Clonar el repositorio
-git clone https://github.com/jonatha1992/equipamiento.git
-cd equipamiento
+## 👥 Actores y Roles
 
-# Instalar dependencias
-npm install
-```
+El sistema implementa un control de acceso basado en roles (RBAC):
 
-## 💻 Desarrollo
+1.  **Administrador**: Acceso total al panel de administración y configuración del sistema.
+2.  **Operador/Técnico**: Usuario principal. Carga novedades ("Hechos"), gestiona expedientes y actualiza inventarios.
+3.  **Visualizador**: Acceso de solo lectura para auditoría y consulta de reportes.
 
-```bash
-# Iniciar servidor de desarrollo
-ng serve
-# o
-npm start
-```
+---
 
-La aplicación estará disponible en `http://localhost:4200/`
+## 📦 Módulos Funcionales
 
-## 🧪 Testing
+### 1. Gestión de Novedades (Libro de Guardia Digital)
+Registro inmutable de eventos operativos diarios.
+*   **Funciones**: Alta de novedades, categorización (Seguridad, Mantenimiento), adjuntar evidencias multimedia.
+*   **Tecnología**: Formularios Django con validación server-side.
 
-```bash
-# Ejecutar tests unitarios
-ng test
-# o
-npm test
-```
+### 2. Mesa de Entrada (Documentación)
+Sistema de seguimiento de expedientes y notas oficiales.
+*   **Funciones**: Registro de Entradas/Salidas, asignación de prioridades, workflow de estados (Pendiente → Finalizado).
+*   **Datos**: Trazabilidad completa de remitentes, destinatarios y fechas.
 
-## 🏗️ Build
+### 3. Inventario y Equipamiento (VMS)
+Gestión de activos de videovigilancia.
+*   **Alcance**: Servidores de Grabación (VMS) y Cámaras IP asociadas.
+*   **Detalle**: Control de estado (Online/Offline), modelos, IPs y ubicación.
 
-```bash
-# Build de producción
-ng build
+### 4. Utilidades Técnicas
+Herramientas de soporte y verificación.
+*   **Hash Tool**: Verificación de integridad de archivos (MD5, SHA256) ejecutada en el servidor.
 
-# Build de desarrollo
-ng build --configuration development
-```
+### 5. Dashboard y Métricas
+Visualización centralizada de la operación.
+*   **Dashboard**: Gráficos e indicadores de Novedades de Cámaras y estado de Expedientes.
 
-Los archivos se generan en el directorio `dist/`.
+---
 
-## 📁 Estructura del Proyecto
+## 🗄️ Esquema de Base de Datos (SQLite)
 
-```
-src/
-├── app/
-│   ├── components/    # Componentes reutilizables
-│   ├── models/        # Interfaces y tipos
-│   ├── pages/         # Páginas/Vistas
-│   └── services/      # Servicios de datos
-├── environments/      # Configuración por ambiente
-└── styles.css         # Estilos globales
-```
+El modelo de datos relacional está diseñado para asegurar integridad referencial:
 
-## 📖 Documentación
+### Core & Auth
+*   Extensión del modelo `AbstractUser` de Django para gestión de roles y perfiles.
 
-| Documento | Descripción |
-|-----------|-------------|
-| [Arquitectura](docs/ARCHITECTURE.md) | Estructura del sistema y flujo de datos |
-| [Tech Stack](docs/TECH_STACK.md) | Tecnologías y dependencias |
-| [Planning](docs/PLANNING.md) | Roadmap y funcionalidades futuras |
-| [Firebase Setup](FIREBASE_SETUP.md) | Configuración de Firebase |
-| [Mobile Optimizations](MOBILE_OPTIMIZATIONS.md) | Optimizaciones para móviles |
+### Modelos Principales
+*   **`Hecho`**: Novedad operativa. Relación `Foreign Key` con `User` y `Categoria`.
+*   **`Expediente`**: Documento oficial. Posee `numero_referencia` único e integra múltiples `Adjuntos` (Relación 1 a N).
+*   **`VMS`** y **`Camara`**: Relación jerárquica (Un VMS tiene muchas Cámaras).
 
-## ☁️ Despliegue
+---
 
-### Firebase Hosting
+## 🚀 Guía de Instalación (Desarrollo)
 
-```bash
-# Instalar Firebase CLI
-npm install -g firebase-tools
+### Prerrequisitos
+*   **Python 3.10+**
+*   **Git**
 
-# Login
-firebase login
+### Pasos Iniciales
+1.  **Clonar repositorio**:
+    ```bash
+    git clone <repo-url>
+    cd equipamiento
+    ```
+2.  **Crear entorno virtual**:
+    ```bash
+    python -m venv venv
+    # Windows
+    venv\Scripts\activate
+    ```
+3.  **Instalar dependencias**:
+    ```bash
+    pip install django django-tailwind
+    ```
+4.  **Migraciones**:
+    ```bash
+    python manage.py migrate
+    ```
+5.  **Ejecutar Servidor**:
+    ```bash
+    python manage.py runserver
+    ```
 
-# Inicializar hosting
-firebase init hosting
+---
 
-# Build y deploy
-npm run build
-firebase deploy
-```
-
-La aplicación estará disponible en: `https://crev-system.web.app`
-
-## 🔧 Scripts Disponibles
-
-| Comando | Descripción |
-|---------|-------------|
-| `npm start` | Inicia servidor de desarrollo |
-| `npm run build` | Build de producción |
-| `npm run watch` | Build con watch mode |
-| `npm test` | Ejecuta tests unitarios |
-
-## 📝 Licencia
-
-Proyecto privado - Todos los derechos reservados.
-
-## 👥 Contribuir
-
-1. Fork el repositorio
-2. Crea una rama (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit tus cambios (`git commit -m 'feat: agregar nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abre un Pull Request
+> **Nota**: Este proyecto sustituye la versión anterior basada en Angular/Firebase, consolidando toda la lógica en un stack 100% Python.

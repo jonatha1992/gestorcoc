@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Items Catalogo | CREV{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Items de {{ catalog.name }}</h1>
+            <p class="text-gray-500 mt-1">Gestion de items por catalogo.</p>
+        </div>
+        <a href="/catalogos/{{ catalog.id }}/items/nuevo/" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Nuevo Item</a>
+    </div>
+    <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Codigo</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Orden</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Activo</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for item in object_list %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 text-sm text-gray-900">{{ item.name }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ item.code }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ item.order }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ item.is_active|yesno:"Si,No" }}</td>
+                    <td class="px-6 py-4 text-right">
+                        <a href="/catalogos/items/{{ item.id }}/editar/" class="text-indigo-600 hover:text-indigo-900">Editar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-6 py-10 text-center text-gray-500 italic">No hay items cargados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

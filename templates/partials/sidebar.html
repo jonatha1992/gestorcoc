@@ -1,0 +1,147 @@
+{% load permissions %}
+<aside class="h-screen flex flex-col bg-gray-900 border-r border-gray-800 text-gray-300 w-64 fixed left-0 top-0 z-50 shadow-2xl">
+    <div class="p-6 flex items-center gap-3 border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <span class="text-sm font-bold text-white">CR</span>
+        </div>
+        <div>
+            <h1 class="font-bold text-white tracking-tight">CREV</h1>
+            <p class="text-[10px] uppercase tracking-widest text-gray-500 font-semibold">System</p>
+        </div>
+    </div>
+
+    <div class="px-6 py-6">
+        <div class="flex items-center gap-3 mb-1">
+            <div class="w-10 h-10 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-sm font-bold text-gray-400">
+                {{ user.get_display_name|slice:":1"|upper }}
+            </div>
+            <div class="overflow-hidden">
+                <p class="text-sm font-bold text-white truncate">{{ user.get_display_name }}</p>
+                <p class="text-xs text-gray-500 truncate">{{ user.primary_role_name|default:"" }}</p>
+            </div>
+        </div>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto px-4 space-y-8 custom-scrollbar pb-6">
+        <div>
+            <h3 class="px-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Principal</h3>
+            <ul class="space-y-1">
+                <li>
+                    <a href="/home/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 hover:text-white transition-all border-l-2 border-transparent">
+                        Inicio
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div>
+            <h3 class="px-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Operaciones</h3>
+            <ul class="space-y-1">
+                {% has_permission 'hechos' 'read' as can_hechos %}
+                {% if can_hechos %}
+                <li>
+                    <a href="/hechos/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 hover:text-white transition-all border-l-2 border-transparent">
+                        Hechos
+                    </a>
+                </li>
+                {% endif %}
+
+                {% has_permission 'documents' 'read' as can_documents %}
+                {% if can_documents %}
+                <li>
+                    <a href="/documents/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 hover:text-white transition-all border-l-2 border-transparent">
+                        Mesa de Entrada
+                    </a>
+                </li>
+                {% endif %}
+
+                {% has_permission 'equipamiento' 'read' as can_equip %}
+                {% if can_equip %}
+                <li>
+                    <a href="/equipamiento/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 hover:text-white transition-all border-l-2 border-transparent">
+                        Equipamiento
+                    </a>
+                </li>
+                {% endif %}
+
+                {% has_permission 'registros' 'read' as can_records %}
+                {% if can_records %}
+                <li>
+                    <a href="/registros/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 hover:text-white transition-all border-l-2 border-transparent">
+                        Registros Filmicos
+                    </a>
+                </li>
+                {% endif %}
+
+                {% has_permission 'camaras' 'read' as can_camaras %}
+                {% if can_camaras %}
+                <li>
+                    <a href="/camaras/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 hover:text-white transition-all border-l-2 border-transparent">
+                        Camaras
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div>
+            <h3 class="px-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Utilidades</h3>
+            <ul class="space-y-1">
+                {% has_permission 'utilities' 'read' as can_utils %}
+                {% if can_utils %}
+                <li>
+                    <a href="/hashes/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 hover:text-white transition-all border-l-2 border-transparent">
+                        Hash Tool
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div>
+            <h3 class="px-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Configuracion</h3>
+            <ul class="space-y-1">
+                {% has_permission 'catalogos' 'read' as can_catalogs %}
+                {% if can_catalogs %}
+                <li>
+                    <a href="/catalogos/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 hover:text-white transition-all border-l-2 border-transparent">
+                        Catalogos
+                    </a>
+                </li>
+                {% endif %}
+
+                {% has_permission 'usuarios' 'read' as can_users %}
+                {% if can_users %}
+                <li>
+                    <a href="/usuarios/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 hover:text-white transition-all border-l-2 border-transparent">
+                        Usuarios
+                    </a>
+                </li>
+                {% endif %}
+
+                {% has_permission 'roles' 'read' as can_roles %}
+                {% if can_roles %}
+                <li>
+                    <a href="/roles/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 hover:text-white transition-all border-l-2 border-transparent">
+                        Roles
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if can_catalogs %}
+                <li>
+                    <a href="/organizacion/unidades/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 hover:text-white transition-all border-l-2 border-transparent">
+                        Organizacion
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <div class="p-4 border-t border-gray-800 bg-gray-900/50">
+        <a href="/logout/" class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-all">
+            Cerrar Sesion
+        </a>
+    </div>
+</aside>
