@@ -1,107 +1,70 @@
-# Sistema de Gestión Integral CREV
+# Sistema de Gestión Integral CREV / COC
 
-> **Plataforma Unificada de Operaciones, Documentación e Inventario.**
+> Plataforma unificada de operaciones, documentación, inventario y registros fílmicos, construida como monolito Django (SSR).
 
-Este repositorio contiene el código fuente y la documentación técnica del Sistema de Gestión CREV. El sistema ha evolucionado hacia una arquitectura monolítica robusta basada en **Django**, diseñada para centralizar la gestión operativa con alta eficiencia y seguridad.
+## Visión rápida
+- Django 5.x (MVT) con templates DTL + Tailwind vía CDN, sin build step de frontend.
+- Apps principales: `core` (usuarios/roles/catálogos), `operations` (hechos/novedades), `documents` (mesa de entrada y registros fílmicos), `inventory` (equipamiento y cámaras), `utilities` (hash tool).
+- Base de datos: SQLite en desarrollo; compatible con PostgreSQL a través del ORM.
+- Control de acceso por roles (RBAC) con mixins y tags de permiso en vistas/plantillas.
 
----
+## Módulos funcionales
+- **Novedades / Hechos**: Libro de guardia técnico y operativo.
+- **Mesa de Entrada**: Expedientes de entrada/salida con adjuntos y prioridades.
+- **Inventario CCTV**: VMS, equipos y cámaras con estados y ubicaciones.
+- **Registros fílmicos**: Solicitudes y trazabilidad de evidencia digital.
+- **Utilidades**: Hash tool (MD5/SHA256) para validar archivos.
+- **Dashboard**: Indicadores de novedades de cámaras y estado de expedientes.
 
-## 🏗️ Arquitectura del Sistema
+## Stack y arquitectura
+| Componente | Tecnología | Detalle |
+| --- | --- | --- |
+| Backend | Python 3.11+ / Django 5.x | SSR, MVT, ORM |
+| Templates | Django Template Language | Layout `base.html` + `partials/sidebar.html` |
+| Estilos | Tailwind CSS | Cargado por CDN |
+| JS | Vanilla JS | Interactividad ligera |
+| Datos | SQLite (dev) / PostgreSQL (prod) | `db.sqlite3` por defecto |
 
-El sistema sigue una arquitectura **Web Monolítica (Server-Side Rendering)** basada en el patrón **MVT (Model-View-Template)** de Django. Se prioriza la simplicidad, la seguridad y el rendimiento.
+## Puesta en marcha (desarrollo)
+1) Clonar y acceder al repo:
+```bash
+git clone <repo-url>
+cd gestorcoc
+```
+2) Crear y activar entorno virtual (ejemplo Unix):
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+3) Instalar dependencias Python:
+```bash
+pip install -r requirements.txt
+```
+4) Variables recomendadas (ejemplo dev):
+```bash
+export DJANGO_SECRET_KEY=dev-only-change-me
+export DJANGO_DEBUG=true
+# export DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+```
+5) Migraciones y datos iniciales:
+```bash
+python manage.py migrate
+python manage.py seed_roles
+python manage.py seed_catalogs
+python manage.py seed_demo_data  # opcional para datos de ejemplo (usa DJANGO_DEMO_ADMIN_PASSWORD o admin1234)
+python manage.py createsuperuser  # si no usas seed_demo_data o queres otro admin
+```
+6) Ejecutar servidor:
+```bash
+python manage.py runserver
+```
 
-| Componente | Tecnología | Descripción |
-| :--- | :--- | :--- |
-| **Backend** | **Python Django 5.x** | Núcleo lógico, seguridad, ORM y ruteo. |
-| **Frontend** | **Django Templates (DTL)** | Renderizado de vistas HTML desde el servidor. |
-| **Estilos** | **Tailwind CSS** | Framework de utilidades para replicar la estética "Tech/Glass". |
-| **Scripting** | **Vanilla JS / Alpine.js** | Interactividad ligera (modales, menús) sin frameworks pesados. |
-| **Base de Datos** | **SQLite** | Almacenamiento relacional local, portable y eficiente. |
+## Testing rápido
+```bash
+python manage.py test
+```
 
----
-
-## 👥 Actores y Roles
-
-El sistema implementa un control de acceso basado en roles (RBAC):
-
-1.  **Administrador**: Acceso total al panel de administración y configuración del sistema.
-2.  **Operador/Técnico**: Usuario principal. Carga novedades ("Hechos"), gestiona expedientes y actualiza inventarios.
-3.  **Visualizador**: Acceso de solo lectura para auditoría y consulta de reportes.
-
----
-
-## 📦 Módulos Funcionales
-
-### 1. Gestión de Novedades (Libro de Guardia Digital)
-Registro inmutable de eventos operativos diarios.
-*   **Funciones**: Alta de novedades, categorización (Seguridad, Mantenimiento), adjuntar evidencias multimedia.
-*   **Tecnología**: Formularios Django con validación server-side.
-
-### 2. Mesa de Entrada (Documentación)
-Sistema de seguimiento de expedientes y notas oficiales.
-*   **Funciones**: Registro de Entradas/Salidas, asignación de prioridades, workflow de estados (Pendiente → Finalizado).
-*   **Datos**: Trazabilidad completa de remitentes, destinatarios y fechas.
-
-### 3. Inventario y Equipamiento (VMS)
-Gestión de activos de videovigilancia.
-*   **Alcance**: Servidores de Grabación (VMS) y Cámaras IP asociadas.
-*   **Detalle**: Control de estado (Online/Offline), modelos, IPs y ubicación.
-
-### 4. Utilidades Técnicas
-Herramientas de soporte y verificación.
-*   **Hash Tool**: Verificación de integridad de archivos (MD5, SHA256) ejecutada en el servidor.
-
-### 5. Dashboard y Métricas
-Visualización centralizada de la operación.
-*   **Dashboard**: Gráficos e indicadores de Novedades de Cámaras y estado de Expedientes.
-
----
-
-## 🗄️ Esquema de Base de Datos (SQLite)
-
-El modelo de datos relacional está diseñado para asegurar integridad referencial:
-
-### Core & Auth
-*   Extensión del modelo `AbstractUser` de Django para gestión de roles y perfiles.
-
-### Modelos Principales
-*   **`Hecho`**: Novedad operativa. Relación `Foreign Key` con `User` y `Categoria`.
-*   **`Expediente`**: Documento oficial. Posee `numero_referencia` único e integra múltiples `Adjuntos` (Relación 1 a N).
-*   **`VMS`** y **`Camara`**: Relación jerárquica (Un VMS tiene muchas Cámaras).
-
----
-
-## 🚀 Guía de Instalación (Desarrollo)
-
-### Prerrequisitos
-*   **Python 3.10+**
-*   **Git**
-
-### Pasos Iniciales
-1.  **Clonar repositorio**:
-    ```bash
-    git clone <repo-url>
-    cd equipamiento
-    ```
-2.  **Crear entorno virtual**:
-    ```bash
-    python -m venv venv
-    # Windows
-    venv\Scripts\activate
-    ```
-3.  **Instalar dependencias**:
-    ```bash
-    pip install django django-tailwind
-    ```
-4.  **Migraciones**:
-    ```bash
-    python manage.py migrate
-    ```
-5.  **Ejecutar Servidor**:
-    ```bash
-    python manage.py runserver
-    ```
-
----
-
-> **Nota**: Este proyecto sustituye la versión anterior basada en Angular/Firebase, consolidando toda la lógica en un stack 100% Python.
+## Notas útiles
+- Archivos subidos se guardan en `media/`; los estáticos adicionales viven en `static/` y se sirven con `collectstatic` en despliegues productivos.
+- Los comandos de seed son idempotentes; podés ejecutarlos para sincronizar catálogos/roles sin borrar datos existentes.
+- Documentación ampliada en `docs/` (arquitectura, stack y requisitos del sistema).
