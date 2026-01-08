@@ -1,6 +1,6 @@
 # Documentación del Sistema GestorCOC v2.0
 
-> **Documento Unificado**: Este documento consolida la Especificación de Requisitos de Software (SRS), Ingeniería de Requisitos, Diseño de Base de Datos y Guía de Implementación Django. Puede exportarse a PDF o Word utilizando herramientas como Pandoc.
+> **Documento de Requisitos**: Este documento consolida la Especificación de Requisitos de Software (SRS) e Ingeniería de Requisitos del Sistema GestorCOC v2.0. Es agnóstico de tecnología y puede implementarse en cualquier plataforma.
 
 ---
 
@@ -11,9 +11,8 @@
 3. [Requisitos Funcionales del Sistema](#3-requisitos-funcionales-del-sistema)
 4. [Requisitos No Funcionales](#4-requisitos-no-funcionales)
 5. [Matriz de Trazabilidad](#5-matriz-de-trazabilidad)
-6. [Diseño de Base de Datos](#6-diseño-de-base-de-datos)
-7. [Implementación Django 5.x](#7-implementación-django-5x)
-8. [Relaciones Operativas CCTV/COC](#8-relaciones-operativas-cctvcoc)
+6. [Modelo de Datos Conceptual](#6-modelo-de-datos-conceptual)
+7. [Relaciones Operativas CCTV/COC](#7-relaciones-operativas-cctvcoc)
 
 ---
 
@@ -21,7 +20,7 @@
 
 ## 1.1 Propósito
 
-Este documento define formal y exhaustivamente los requisitos funcionales y no funcionales para la versión 2.0 del **Sistema GestorCOC**. Sirve como contrato de alcance entre los stakeholders y el equipo de desarrollo para la solución monolítica basada en **Django 5.x**.
+Este documento define formal y exhaustivamente los requisitos funcionales y no funcionales para la versión 2.0 del **Sistema GestorCOC**. Sirve como contrato de alcance entre los stakeholders y el equipo de desarrollo.
 
 El sistema centraliza la gestión técnica de cámaras, salas COC y el flujo administrativo de expedientes/solicitudes.
 
@@ -32,23 +31,23 @@ El Sistema **GestorCOC** es una plataforma web centralizada diseñada para optim
 1. **Gestión de Novedades Técnicas**: Registro de incidentes de hardware/software (Cámaras/VMS) para estadística y auditoría técnica.
 2. **Mesa de Entrada (Expedientes)**: Trazabilidad completa de documentación oficial (Entradas/Salidas).
 3. **Inventario Técnico (VMS)**: Control de activos de videovigilancia (Servidores, Equipos y Cámaras).
-4. **Registros Fílmicos**: Gestión de solicitudes de evidencia digital del COC.
+4. **Registros Fílmicos**: Gestión de solicitudes de evidencia digital del COC con trazabilidad de backups.
 5. **Utilidades de Integridad**: Herramientas criptográficas para validación de evidencia digital.
 6. **Módulo de Hechos (COC)**: Registro y seguimiento de intervenciones operativas.
+7. **Gestión de Personal COC**: Registro de dotación, ingresos/egresos y control de acceso del personal.
+8. **Requerimientos de Capacitación y Equipamiento**: Gestión de necesidades de cursos y equipamiento para el personal operativo.
+9. **Control de Acceso al COC**: Listado de personas autorizadas y registro de ingresos/egresos físicos a las instalaciones.
+10. **Sistema de Tickets/Solicitudes**: Generación de pedidos de COC/CREV hacia CEAC, DGT o CCO con seguimiento y trazabilidad.
 
-El sistema operará bajo una arquitectura **Monolítica (Server-Side Rendering)** utilizando **Django 5.x** y **SQLite** (con capacidad de migración transparente a PostgreSQL/MySQL).
+El sistema operará como una aplicación web centralizada accesible desde navegadores modernos.
 
 ## 1.3 Glosario Técnico
 
 | Término | Definición |
 |---------|------------|
 | **SRS** | Software Requirements Specification (Especificación de Requisitos de Software) |
-| **MVT** | Model-View-Template (Patrón de arquitectura de Django) |
-| **DTL** | Django Template Language (Motor de plantillas nativo) |
-| **SSR** | Server-Side Rendering (Renderizado en el servidor) |
 | **RBAC** | Role-Based Access Control (Control de Acceso Basado en Roles) |
 | **VMS** | Video Management System |
-| **ORM** | Object-Relational Mapping (Abstracción de Base de Datos) |
 | **KPI** | Key Performance Indicator (Indicadores de desempeño) |
 | **Mesa de Entrada** | Módulo de gestión documental |
 | **Novedad Técnica** | Registro de falla o cambio en equipamiento |
@@ -61,6 +60,8 @@ El sistema operará bajo una arquitectura **Monolítica (Server-Side Rendering)*
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
+│  ESTRUCTURA JERÁRQUICA INTERNA                                     │
+│                                                                     │
 │  ADMIN (Superusuario del Sistema)                                   │
 │  • Configuración global, gestión de usuarios, auditoría             │
 │  │                                                                  │
@@ -71,11 +72,32 @@ El sistema operará bajo una arquitectura **Monolítica (Server-Side Rendering)*
 │       └──► CREV (Centro de Monitoreo / Fiscalización)              │
 │            • Fiscaliza múltiples unidades COC                       │
 │            • Gestiona: Mesa de Entrada, Inventario                  │
+│            • Aprueba/rechaza requerimientos de COC                  │
 │            │                                                        │
 │            └──► COC (Unidades Operativas)                          │
 │                 • Operadores de guardia por turnos                  │
-│                 • Cargan: Hechos, Novedades, Registros Fílmicos    │
+│                 • Cargan: Hechos, Novedades, Registros              │
+│                 • Solicitan: Cursos, Equipamiento, Tickets          │
 │                 • Solo acceso a SU unidad                           │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  ÁREAS EXTERNAS (Sin acceso al sistema)                            │
+│                                                                     │
+│  ● DGT (Dirección de Gestión Tecnológica)                         │
+│    • Aprobación final de requerimientos de equipamiento/cursos    │
+│    • Gestión de recursos técnicos y capacitación                │
+│    • RECIBE: Notificaciones email de requerimientos y tickets     │
+│    • RESPONDE: Genera tickets/solicitudes hacia CEAC/CREV/COC     │
+│      (en respuesta a requerimientos recibidos)                    │
+│    • NO tiene usuarios ni acceso al sistema                       │
+│                                                                     │
+│  ● CCO (Centro de Control Operativo)                              │
+│    • Coordinación operativa general                             │
+│    • RECIBE: Notificaciones email de tickets                      │
+│    • RESPONDE: Genera tickets/solicitudes hacia CEAC/CREV/COC     │
+│      (en respuesta a consultas recibidas)                         │
+│    • NO tiene usuarios ni acceso al sistema                       │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -84,25 +106,41 @@ El sistema operará bajo una arquitectura **Monolítica (Server-Side Rendering)*
 | Clase de Usuario | Nivel Jerárquico | Responsabilidades | Alcance |
 |------------------|------------------|-------------------|---------|
 | **Administrador** | Sistema | Configuración global, gestión usuarios, auditoría | Todo el sistema |
+| **DGT** | Dirección Técnica | Aprobación final de requerimientos, gestión de recursos | Todo el sistema |
 | **Supervisor (CEAC)** | Alto Comando | Supervisión general, reportes consolidados | Todo el sistema (lectura) |
-| **Fiscalizador (CREV)** | Medio | Mesa de Entrada, Inventario, supervisión | Múltiples unidades asignadas |
-| **Operador (COC)** | Operativo | Hechos, Novedades Cámaras, Registros Fílmicos | Solo su unidad |
+| **Fiscalizador (CREV)** | Medio | Mesa de Entrada, Inventario, aprobación de requerimientos | Múltiples unidades asignadas |
+| **Operador (COC)** | Operativo | Hechos, Novedades, Registros, solicitud de requerimientos | Solo su unidad |
+
+### Áreas Externas (No tienen acceso al sistema)
+
+> **Importante**: DGT y CCO son áreas externas que **NO tienen usuarios ni acceso al sistema**. La comunicación es **bidireccional** vía email u otros medios externos.
+
+| Área Externa | Función | Interacción con el Sistema |
+|--------------|---------|------------------------------|
+| **DGT** (Dirección de Gestión Tecnológica) | Aprobación final de requerimientos, gestión de recursos técnicos | **RECIBE**: Email automático cuando CREV aprueba un requerimiento. **GENERA**: Su propio número de ticket (ej: DGT-2024-001) que envía en la respuesta. **SISTEMA**: Debe permitir registrar el número de ticket externo de DGT. |
+| **CCO** (Centro de Control Operativo) | Coordinación operativa general | **RECIBE**: Email automático cuando se crea un ticket para CCO. **GENERA**: Su propio número de ticket (ej: CCO-2024-001) que envía en la respuesta. **SISTEMA**: Debe permitir registrar el número de ticket externo de CCO. |
 
 ### Matriz de Acceso por Módulo
 
-| Módulo | Admin | CEAC (Supervisor) | CREV (Fiscalizador) | COC (Operador) |
-|--------|-------|-------------------|---------------------|----------------|
+| Módulo | Admin | CEAC | CREV | COC |
+|--------|-------|------|------|-----|
 | **Hechos** | ✅ CRUD global | 👁️ Lectura global | 👁️ Fiscaliza sus unidades | ✅ CRUD su unidad |
 | **Novedades Cámaras** | ✅ CRUD global | 👁️ Lectura global | 👁️ Fiscaliza sus unidades | ✅ CRUD su unidad |
 | **Registros Fílmicos** | ✅ CRUD global | 👁️ Lectura global | 👁️ Fiscaliza sus unidades | ✅ CRUD su unidad |
 | **Inventario/Equipamiento** | ✅ CRUD global | 👁️ Lectura global | ✅ Gestiona y asigna | ✅ CRUD su unidad |
 | **Usuarios CCTV** | ✅ CRUD global | 👁️ Lectura global | ✅ CRUD sus unidades | ✅ CRUD su unidad |
+| **Personal COC** | ✅ CRUD global | 👁️ Lectura global | ✅ CRUD sus unidades | 👁️ Lectura su unidad |
+| **Requerimientos Capacitación** | ✅ CRUD global | 👁️ Supervisa | ✅ Aprueba/Rechaza | ✅ Solicita |
+| **Control de Acceso/Ingreso** | ✅ CRUD global | 👁️ Lectura global | ✅ ABM personas + 👁️ Ingresos/Egresos | ✅ ABM personas + Registra ingresos |
+| **Sistema de Tickets** | ✅ CRUD global | ✅ Recibe/Responde | ✅ Crea/Recibe/Responde | ✅ Crea tickets |
 | **Hash (Utilidades)** | ✅ Acceso | ✅ Acceso | ✅ Acceso | ✅ Acceso |
-| **Mesa de Entrada** | ✅ CRUD global | 👁️ Lectura global | ✅ CRUD | ❌ Sin acceso |
+| **Mesa de Entrada** | ✅ CRUD global | ✅ CRUD | ❌ Sin acceso |
 | **Configuración** | ✅ Acceso total | ❌ Sin acceso | ❌ Sin acceso | ❌ Sin acceso |
 
-> **Nota sobre Equipamiento**: CREV gestiona y asigna equipamiento a las unidades. COC puede gestionar el equipamiento de su propia unidad.
-> **Nota sobre Usuarios CCTV**: CREV y COC pueden registrar usuarios de los sistemas CCTV de sus respectivas unidades.
+> **Nota sobre Control de Acceso**: 
+> - **COC**: Gestiona personas autorizadas de su unidad y registra ingresos/egresos de su sala
+> - **CREV**: Gestiona personas autorizadas de sus unidades supervisadas y **visualiza** todos los ingresos/egresos de esas unidades para supervisión
+> - **CEAC**: Visualiza globalmente para supervisión general
 
 ### Modelo de Pertenencia
 
@@ -123,8 +161,7 @@ OrganizationalGroup (uso dual)
 
 ## 1.6 Entorno Operativo
 
-* **Servidor de Aplicación**: Compatible con cualquier SO que soporte **Python 3.11.5+** (Windows Server / Linux)
-* **Framework**: **Django 5.x** (SSR, MVT) con DTL + Tailwind (CDN)
+* **Servidor**: Compatible con sistemas operativos Windows Server o Linux
 * **Cliente**: Navegadores Web Modernos (Chrome, Edge, Firefox)
 * **Red**: Intranet Corporativa (LAN)
 
@@ -256,6 +293,117 @@ OrganizationalGroup (uso dual)
 |----|-----------|
 | **FR-UTIL-001** | El sistema proveerá una interfaz para calcular hash (MD5, SHA256) de archivos subidos, validando su integridad |
 
+## 3.9 Módulo de Registros Fílmicos
+
+> Este módulo gestiona las solicitudes de evidencia digital (video) del COC, con trazabilidad completa del backup realizado.
+
+| ID | Requisito |
+|----|-----------|
+| **FR-FILM-001** | El sistema debe permitir registrar solicitudes de evidencia fílmica con número de asunto, orden, solicitante y causa judicial |
+| **FR-FILM-002** | Cada registro debe asociarse a una Unidad y opcionalmente a un Sistema CCTV específico |
+| **FR-FILM-003** | El sistema debe permitir indicar si se realizó backup del video (`has_backup`) |
+| **FR-FILM-004** | Si se realizó backup, el sistema debe registrar: fecha/hora inicio (`backup_from_date`), fecha/hora fin (`backup_to_date`), ubicación del backup (`backup_location`) y tamaño en MB/GB (`backup_size_mb`) |
+| **FR-FILM-005** | El sistema debe gestionar estados: Pendiente, En Proceso, Finalizado, Verificado |
+| **FR-FILM-006** | CREV debe poder verificar los registros fílmicos, registrando usuario verificador, fecha y observaciones |
+| **FR-FILM-007** | El sistema debe permitir filtrar por estado, unidad, tipo de solicitud, tipo de delito y rango de fechas |
+| **FR-FILM-008** | El dashboard debe mostrar cantidad de registros pendientes de verificación |
+
+## 3.10 Módulo de Requerimientos de Capacitación y Equipamiento
+
+> Este módulo permite gestionar las necesidades de capacitación (cursos) y equipamiento del personal operativo de COC.
+
+| ID | Requisito |
+|----|-----------|
+| **FR-REQ-001** | El sistema debe permitir registrar requerimientos de capacitación (cursos/entrenamientos) para el personal |
+| **FR-REQ-002** | El sistema debe permitir registrar requerimientos de equipamiento (uniformes, equipos, herramientas) para el personal |
+| **FR-REQ-003** | Cada requerimiento debe asociarse a una Unidad y opcionalmente a un empleado específico |
+| **FR-REQ-004** | El sistema debe gestionar estados: Solicitado, Aprobado_CREV, Aprobado_DGT, En_Proceso, Completado, Rechazado |
+| **FR-REQ-005** | El sistema debe implementar flujo de aprobación jerárquico: COC solicita → CREV aprueba/rechaza → DGT aprueba finalmente |
+| **FR-REQ-006** | El sistema debe permitir indicar prioridad (Baja, Media, Alta, Urgente) |
+| **FR-REQ-007** | El sistema debe registrar fechas: solicitud, aprobación CREV, aprobación DGT, completado |
+| **FR-REQ-008** | El sistema debe permitir adjuntar documentación de respaldo (cotizaciones, programas de curso, etc.) |
+| **FR-REQ-009** | El sistema debe generar reportes de requerimientos por unidad, tipo, estado y prioridad |
+| **FR-REQ-010** | El dashboard debe mostrar cantidad de requerimientos pendientes por nivel de aprobación |
+| **FR-REQ-011** | Para cursos: registrar nombre del curso, proveedor, duración estimada, cantidad de vacantes solicitadas |
+| **FR-REQ-012** | Para equipamiento: registrar tipo de equipo, cantidad solicitada, especificaciones técnicas |
+| **FR-REQ-013** | CREV puede agregar observaciones al aprobar/rechazar un requerimiento |
+| **FR-REQ-014** | El sistema debe generar un borrador de email cuando un requerimiento es aprobado por CREV y destinado a DGT |
+| **FR-REQ-015** | El borrador de email debe incluir: datos del requerimiento, justificación, documentación adjunta y espacio para que el usuario complete información adicional |
+| **FR-REQ-016** | El usuario debe poder revisar, completar y enviar el email manualmente desde el sistema |
+| **FR-REQ-017** | El sistema debe permitir registrar el número de ticket externo generado por DGT (ej: DGT-2024-001) cuando se recibe la respuesta |
+| **FR-REQ-018** | El sistema debe permitir registrar manualmente la aprobación/rechazo de DGT con observaciones y costo aprobado |
+
+## 3.11 Módulo de Gestión de Personal COC
+
+> Este módulo permite llevar un registro de la dotación de personal en cada COC, con control de ingresos, egresos y datos del personal.
+
+| ID | Requisito |
+|----|-----------|
+| **FR-PERS-001** | El sistema debe permitir registrar datos del personal: nombre completo, DNI, legajo, cargo/función |
+| **FR-PERS-002** | Cada empleado debe asociarse a una Unidad (COC) y opcionalmente a un Grupo Organizacional (turno) |
+| **FR-PERS-003** | El sistema debe registrar fecha de alta (ingreso) y opcionalmente fecha de baja (egreso) |
+| **FR-PERS-004** | El sistema debe permitir indicar estado del empleado: Activo, Licencia, Suspendido, Desvinculado |
+| **FR-PERS-005** | El sistema debe permitir registrar datos de contacto: teléfono, email, dirección |
+| **FR-PERS-006** | El sistema debe permitir adjuntar documentación del personal (CV, certificados, autorizaciones de seguridad) |
+| **FR-PERS-007** | El sistema debe generar reportes de dotación actual por unidad y turno |
+| **FR-PERS-008** | El sistema debe permitir filtrar por unidad, estado, cargo, turno y rango de fechas de ingreso |
+| **FR-PERS-009** | El sistema debe registrar historial de cambios de turno/unidad del empleado |
+| **FR-PERS-010** | El dashboard debe mostrar cantidad de personal activo, licenciado y alertas de falta de personal |
+| **FR-PERS-011** | El sistema debe permitir asociar un empleado a un usuario del sistema (opcional) para rastrear ingreso como operador |
+
+## 3.12 Módulo de Control de Acceso al COC
+
+> Este módulo gestiona el listado de personas autorizadas a ingresar físicamente a las instalaciones del COC y registra cada ingreso/egreso para control de seguridad.
+
+| ID | Requisito |
+|----|-----------|
+| **FR-ACC-001** | El sistema debe permitir registrar personas autorizadas para ingresar al COC (empleados, visitas recurrentes, proveedores, autoridades) |
+| **FR-ACC-002** | COC y CREV deben poder dar de alta, modificar y dar de baja personas autorizadas para sus respectivas unidades |
+| **FR-ACC-003** | Cada persona autorizada debe tener: nombre completo, DNI, tipo de acceso, unidad autorizada, vigencia de autorización |
+| **FR-ACC-004** | El sistema debe gestionar tipos de autorización: Permanente (empleados), Temporal (visitas), Proveedor, Autoridad |
+| **FR-ACC-005** | El sistema debe permitir establecer vigencia de la autorización (fecha desde/hasta) |
+| **FR-ACC-006** | El sistema debe registrar cada ingreso físico al COC: persona, fecha/hora ingreso, motivo |
+| **FR-ACC-007** | El sistema debe registrar cada egreso físico del COC: persona, fecha/hora egreso |
+| **FR-ACC-008** | El sistema debe calcular automáticamente el tiempo de permanencia (egreso - ingreso) |
+| **FR-ACC-009** | El sistema debe permitir registrar a quién visita la persona (empleado anfitrión) |
+| **FR-ACC-010** | El sistema debe generar reportes de: personas actualmente en el COC, historial de ingresos por fecha, tiempo promedio de visita |
+| **FR-ACC-011** | El sistema debe alertar cuando una persona intenta ingresar sin autorización vigente |
+| **FR-ACC-012** | El sistema debe permitir búsqueda rápida por DNI para registrar ingreso |
+| **FR-ACC-013** | El sistema debe mostrar dashboard con: personas actualmente dentro, ingresos del día, autorizaciones por vencer |
+| **FR-ACC-014** | COC solo puede gestionar personas autorizadas para su propia unidad |
+| **FR-ACC-015** | CREV puede gestionar personas autorizadas para todas las unidades que supervisa |
+| **FR-ACC-016** | CREV debe poder visualizar todos los ingresos/egresos de las unidades COC que supervisa en tiempo real |
+| **FR-ACC-017** | El sistema debe permitir a CREV filtrar ingresos/egresos por unidad, fecha, tipo de persona y estado (dentro/fuera) |
+
+## 3.13 Módulo de Sistema de Tickets/Solicitudes
+
+> Este módulo permite a COC y CREV generar tickets/solicitudes dirigidas a diferentes áreas (CEAC, DGT, CCO) para pedidos de soporte, recursos, reparaciones, etc.
+
+| ID | Requisito |
+|----|-----------|
+| **FR-TKT-001** | El sistema debe permitir crear tickets/solicitudes desde COC o CREV |
+| **FR-TKT-002** | Cada ticket debe tener: número único, solicitante, área destinataria, asunto, descripción, prioridad |
+| **FR-TKT-003** | El sistema debe permitir seleccionar área destinataria: CEAC, DGT (Dirección de Gestión Tecnológica), CCO (Centro de Control Operativo) |
+| **FR-TKT-004** | El sistema debe generar automáticamente un número de ticket secuencial por año (ej: TKT-2024-0001) |
+| **FR-TKT-005** | El sistema debe gestionar estados: Abierto, En_Proceso, Pendiente_Info, Resuelto, Cerrado, Cancelado |
+| **FR-TKT-006** | El sistema debe permitir clasificar tickets por tipo: Soporte_Técnico, Solicitud_Recursos, Reparación, Consulta, Reclamo, Otros |
+| **FR-TKT-007** | El sistema debe permitir asignar prioridad: Baja, Media, Alta, Crítica |
+| **FR-TKT-008** | El sistema debe registrar fecha/hora de creación, asignación, resolución y cierre |
+| **FR-TKT-009** | El sistema debe permitir adjuntar archivos al ticket (fotos, documentos, evidencias) |
+| **FR-TKT-010** | El sistema debe permitir agregar comentarios/respuestas al ticket por ambas partes |
+| **FR-TKT-011** | El sistema debe generar un borrador de email cuando se crea un ticket para áreas externas (DGT, CCO) |
+| **FR-TKT-012** | El borrador de email debe incluir: número de ticket interno, asunto, descripción, prioridad, archivos adjuntos y espacio para información adicional |
+| **FR-TKT-013** | El usuario debe poder revisar, completar y enviar el email manualmente desde el sistema |
+| **FR-TKT-014** | El sistema debe permitir registrar el número de ticket externo generado por DGT/CCO (ej: DGT-2024-001, CCO-2024-001) |
+| **FR-TKT-015** | El sistema debe permitir al área destinataria asignar el ticket a un responsable específico |
+| **FR-TKT-016** | El sistema debe calcular automáticamente tiempo de respuesta y tiempo de resolución |
+| **FR-TKT-017** | El sistema debe generar reportes de tickets por: área, estado, prioridad, tipo, tiempo promedio de resolución |
+| **FR-TKT-018** | El dashboard debe mostrar: tickets abiertos, tickets críticos pendientes, tiempo promedio de resolución por área |
+| **FR-TKT-019** | El sistema debe permitir buscar tickets por número interno o número de ticket externo (DGT/CCO) |
+| **FR-TKT-020** | El sistema debe enviar alertas automáticas cuando un ticket crítico lleva más de X horas sin respuesta |
+| **FR-TKT-021** | El sistema debe permitir vincular un ticket con otros registros del sistema (Hechos, Novedades, Equipamiento) |
+| **FR-TKT-022** | Para áreas externas: el sistema debe permitir registrar manualmente las respuestas recibidas vía email |
+
 ---
 
 # 4. Requisitos No Funcionales
@@ -263,7 +411,7 @@ OrganizationalGroup (uso dual)
 ## 4.1 Rendimiento
 
 * **NFR-PERF-01**: El tiempo de respuesta del servidor para vistas estándar no debe exceder los 500ms
-* **NFR-PERF-02**: Las consultas a base de datos deben estar optimizadas (`select_related`) para evitar el problema N+1
+* **NFR-PERF-02**: Las consultas a base de datos deben estar optimizadas para evitar consultas múltiples innecesarias (problema N+1)
 
 ## 4.2 Seguridad
 
@@ -272,444 +420,90 @@ OrganizationalGroup (uso dual)
 
 ## 4.3 Mantenibilidad y Escalabilidad
 
-* **NFR-MAINT-01**: El código debe seguir el estándar **PEP 8** de Python
-* **NFR-MAINT-02**: La estructura del proyecto debe separar responsabilidades en "Apps" de Django
-* **NFR-SCAL-01**: Todo acceso a datos debe ser vía Django ORM para garantizar migración futura a PostgreSQL/MySQL
+* **NFR-MAINT-01**: El código debe seguir estándares de codificación definidos para el lenguaje utilizado
+* **NFR-MAINT-02**: La estructura del proyecto debe separar responsabilidades en módulos bien definidos
+* **NFR-SCAL-01**: El sistema debe ser capaz de migrar entre diferentes motores de base de datos sin cambios significativos en el código
 
 ---
 
 # 5. Matriz de Trazabilidad
 
-| Requerimiento Usuario | Implementación Técnica | Validación |
+| Requerimiento Usuario | Requisito Funcional | Validación |
 |-----------------------|------------------------|------------|
 | UR-01 (Cámaras caídas) | Dashboard Maestro (SR-DASH-01, SR-DASH-02) | Test Visual |
 | UR-02 (Alertas expedientes) | Alarmas de Expediente pendiente | Verificación Horaria |
-| UR-03 (Carga móvil) | Tailwind Responsive (UI-02) | Test Mobile |
+| UR-03 (Carga móvil) | Diseño responsive (UI-02) | Test Mobile |
 | UR-04 (Grupo y tiempo resolución) | Campos en Hecho (SR-HEC-02/03) | Reporte COC |
 | UR-05 (Permisos por unidad) | Roles + Unidades en usuarios (FR-AUTH-003) | Prueba de permisos |
 
 ---
 
-# 6. Diseño de Base de Datos
+# 6. Relaciones Operativas CCTV/COC
 
-## 6.1 Diagrama de Modelos (Estado Actual)
+## 6.1 Jerarquía Organizacional
 
-### App: `core` - Usuarios, Roles y Organización
-
-#### Role
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `name` | CharField(50) | Nombre único del rol |
-| `description` | TextField | Descripción del rol |
-| `is_system` | BooleanField | Si es rol del sistema |
-| `is_active` | BooleanField | Estado activo |
-| `permissions` | JSONField | Lista de permisos asignados |
-| `created_at` / `updated_at` | DateTime | Auditoría |
-
-#### Catalog / CatalogItem
-
-Catálogos dinámicos para: Categorías, Ubicaciones, Estados Equipo, Tipos Cámara, Tipos Solicitud, Tipos Delito, Unidades, Organismos.
-
-#### AuditLog (NUEVO - Auditoría del Sistema)
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `user` | FK → User | Usuario que realizó la acción |
-| `action` | Enum(CREATE, UPDATE, DELETE, LOGIN, LOGOUT) | Tipo de acción |
-| `model_name` | CharField(100) | Modelo afectado (ej: "Hecho", "Equipment") |
-| `object_id` | IntegerField | ID del objeto afectado |
-| `object_repr` | CharField(255) | Representación legible del objeto |
-| `changes` | JSONField | Detalle de cambios (antes/después) |
-| `ip_address` | GenericIPAddress | IP del cliente |
-| `user_agent` | CharField(255) | Navegador/dispositivo |
-| `timestamp` | DateTimeField(auto_now_add) | Fecha y hora de la acción |
-
-> **Nota**: El AuditLog se genera automáticamente mediante signals de Django para todas las operaciones CRUD en modelos críticos.
-
-#### OrganizationalUnit
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `name` | CharField(150) | Nombre de la unidad |
-| `description` | TextField | Descripción |
-| `has_coc` | BooleanField | Si tiene Sala COC |
-| `created_by` | FK → User | Usuario creador |
-
-#### CctvSystem
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `unit` | FK → OrganizationalUnit | Unidad a la que pertenece |
-| `name` | CharField(150) | Nombre del sistema |
-| `brand` | CharField(100) | Marca (Hikvision, Dahua, etc.) |
-| `model` | CharField(100) | Modelo |
-| `ip_address` | GenericIPAddress | Dirección IP |
-| `location` | CharField(200) | Ubicación física |
-| `is_coc_room` | BooleanField | Si es sistema de Sala COC |
-
-#### CctvSystemUser (NUEVO - Usuarios de Sistemas CCTV)
-
-> **Importante**: Este modelo NO es para autenticación en el sistema GestorCOC. Es para **registrar y gestionar las credenciales** de acceso a los sistemas CCTV físicos (VMS, NVR, DVR) de cada unidad.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `cctv_system` | FK → CctvSystem | Sistema CCTV al que pertenece esta cuenta |
-| `username` | CharField(100) | Nombre de usuario en el sistema CCTV |
-| `role_in_system` | Enum(ADMIN, OPERATOR, VIEWER) | Nivel de acceso en el sistema CCTV |
-| `assigned_to` | FK → User (nullable) | Usuario GestorCOC que usa esta cuenta (opcional) |
-| `description` | TextField | Descripción o propósito de la cuenta |
-| `password_hint` | CharField(100) | Pista de contraseña (NO la contraseña real) |
-| `is_active` | BooleanField | Si la cuenta está activa |
-| `last_password_change` | DateField | Última vez que se cambió la contraseña |
-| `created_at` / `updated_at` | DateTime | Auditoría |
-
-**Casos de uso:**
-
-* Inventariar todas las cuentas de acceso a cada sistema CCTV
-* Saber quién tiene acceso a qué sistema
-* Registrar cuándo se cambiaron las contraseñas
-* Auditar qué usuarios GestorCOC están asignados a qué cuentas de sistema
-
-#### OrganizationalGroup
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `name` | CharField(150) | Nombre del grupo |
-| `units` | M2M → OrganizationalUnit | Unidades asociadas |
-| `systems` | M2M → CctvSystem | Sistemas asociados |
-| `role` | FK → Role | Rol asociado |
-
-#### User (extiende AbstractUser)
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `display_name` | CharField(150) | Nombre para mostrar |
-| `roles` | M2M → Role | Roles asignados |
-| `org_groups` | M2M → OrganizationalGroup | Grupos organizacionales |
-| `org_unit` | FK → OrganizationalUnit | Unidad principal |
-
----
-
-### App: `inventory` - Equipamiento y Cámaras
-
-#### Equipment
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `name` | CharField(200) | Nombre del equipo |
-| `category` | FK → CatalogItem | Categoría |
-| `location` | FK → CatalogItem | Ubicación |
-| `parent_equipment` | FK → self | Equipo contenedor |
-| `serial_number` | CharField(120) | Número de serie |
-| `brand` / `model` | CharField(120) | Marca y modelo |
-| `status` | Enum(Disponible, En Reparacion, Entregado, Baja) | Estado |
-| `org_unit` | FK → OrganizationalUnit | Unidad |
-
-**Categorías de Equipamiento:**
-
-| Categoría | Ejemplos |
-|-----------|----------|
-| **Computadoras** | PCs de monitoreo, laptops |
-| **Cámaras Portátiles** | Mochilas de cámara, cámaras corporales |
-| **Video Cámaras** | Handycams, cámaras de grabación |
-| **Accesorios** | Trípodes, soportes, cables |
-| **Almacenamiento** | Discos extraíbles, memorias USB, DVDs |
-| **Comunicaciones** | Radios, intercomunicadores |
-
-> **Nota**: Las cámaras fijas de vigilancia (CCTV) se gestionan en el modelo `Camera`, no aquí.
-
-#### EquipmentRegister (planilla ANEXO VI) y EquipmentRegisterItem
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `source_name` | CharField(255) | Nombre del archivo importado |
-| `checksum` | CharField(64) | Hash del archivo para detectar cambios |
-| `service_date_text` | CharField(120) | Fecha en texto tal como viene en la planilla |
-| `service_date` | DateField (nullable) | Fecha parseada si se pudo extraer |
-| `service_order` / `deployment` / `allanamiento` / `police_procedure` / `other_notes` | CharField | Metadatos del servicio |
-| `raw_metadata` | JSONField | Datos crudos de cabecera |
-| `items` | FK → EquipmentRegisterItem | Líneas de equipamiento |
-
-**EquipmentRegisterItem**
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `register` | FK → EquipmentRegister | Planilla origen |
-| `section_label` | CharField(150) | Sección (ej: VIDEO N° 1) |
-| `description` | CharField(255) | Descripción del ítem |
-| `brand_model` / `serial_number` | CharField | Marca/Modelo y serie |
-| `units` | CharField(50) | Cantidad (texto libre) |
-| `unit_status` | CharField(80) | Estado de unidad (E/S, etc.) |
-| `delivered` | CharField(50) | Si se entregó (texto de la planilla) |
-| `observations` | CharField(255) | Observaciones |
-| `raw_row` | JSONField | Fila cruda para trazabilidad |
-
-**Importación rápida:**
-
-```bash
-python manage.py import_inventory_files  # usa informacion/*.xlsx y *.csv por defecto
-python manage.py import_inventory_files --equipment-path informacion/ENTREGA*.xlsx --camera-path informacion/EZEIZA*.csv
-```
-
-#### Camera
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `name` | CharField(200) | Nombre de la cámara |
-| `location` | FK → CatalogItem | Ubicación |
-| `camera_type` | FK → CatalogItem | Tipo de cámara |
-| `status` | Enum(Operativa, Con Falla, Fuera de Servicio, Mantenimiento) | Estado |
-| `ip_address` | GenericIPAddress | Dirección IP |
-| `serial_number` | CharField(120) | Serie |
-| `brand` / `model` | CharField(120) | Marca y modelo |
-| `installation_date` | DateField | Fecha instalación |
-| `org_unit` | FK → OrganizationalUnit | Unidad |
-| `org_system` | FK → CctvSystem | Sistema CCTV |
-
-#### CameraUpdate (Novedades de Cámara)
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `camera` | FK → Camera | Cámara afectada |
-| `update_type` | Enum(Falla, Reparacion, Mantenimiento, Observacion) | Tipo |
-| `description` | TextField | Descripción |
-| `date` | DateField | Fecha del evento |
-| `reported_by` | CharField(150) | Quien reporta |
-| `resolved_at` | DateField | Fecha de resolución |
-| `status` | Enum(Abierta, Cerrada) | Estado |
-
-#### CameraInventoryRecord (export Avigilon)
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `source_name` | CharField(255) | Nombre del CSV importado |
-| `server_name` | CharField(120) | Servidor de Avigilon |
-| `device_name` | CharField(200) | Nombre de dispositivo |
-| `vendor` / `model` | CharField | Fabricante y modelo |
-| `location` | CharField(200) | Ubicación textual |
-| `logical_id` / `device_id` / `camera_id` | CharField | Identificadores de Avigilon |
-| `ip_address` / `mac_address` | IP/MAC de la cámara |
-| `firmware_version` / `firmware_required` | Versión reportada |
-| `serial_number` | CharField(120) | Número de serie |
-| `connected` / `visible` | Boolean | Estado de conectividad |
-| `error_indicators` / `state` | CharField | Indicadores de error y estado |
-| `bitrate_kbps` | Integer | Bitrate reportado (kbps) |
-| `resolution` / `quality` / `frame_rate` | CharField | Parámetros de video |
-| `encryption` / `retention` | CharField | Cifrado y retención |
-| `appearance_search` / `face_recognition` | CharField | Capacidades analíticas |
-| `raw_row` | JSONField | Fila completa del CSV |
-
----
-
-### App: `documents` - Mesa de Entrada y Registros Fílmicos
-
-#### Document (Expediente)
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `doc_type` | Enum(ENTRADA, SALIDA) | Tipo de documento |
-| `date` | DateField | Fecha |
-| `reference_number` | CharField(120) | Número de referencia (único) |
-| `sender` | CharField(150) | Remitente |
-| `recipient` | CharField(150) | Destinatario |
-| `subject` | CharField(200) | Asunto |
-| `description` | TextField | Descripción |
-| `status` | Enum(PENDIENTE, EN_PROCESO, ARCHIVADO, FINALIZADO) | Estado |
-| `priority` | Enum(BAJA, MEDIA, ALTA) | Prioridad |
-
-#### DocumentAttachment
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `document` | FK → Document | Documento padre |
-| `file` | FileField | Archivo (upload to docs/%Y/%m/) |
-| `original_name` | CharField(255) | Nombre original |
-
-#### FilmRecord (Registro Fílmico)
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `nro_asunto` | CharField(120) | Número de asunto |
-| `nro_orden` | CharField(120) | Número de orden |
-| `fecha_ingreso` | DateField | Fecha de ingreso |
-| `tipo_solicitud` | FK → CatalogItem | Tipo de solicitud |
-| `solicitante` | CharField(150) | Solicitante |
-| `causa_judicial` | CharField(200) | Causa judicial |
-| `tipo_delito` | FK → CatalogItem | Tipo de delito |
-| `estado` | Enum(Pendiente, En Proceso, Finalizado, Verificado) | Estado |
-| `org_unit` | FK → OrganizationalUnit | Unidad |
-| `org_system` | FK → CctvSystem | Sistema CCTV |
-| `has_backup` | BooleanField | Si se realizó backup del video |
-| `backup_from_date` | DateTimeField | Fecha/hora inicio del video respaldado |
-| `backup_to_date` | DateTimeField | Fecha/hora fin del video respaldado |
-| `backup_location` | CharField(255) | Ubicación del backup (carpeta, disco, etc.) |
-| `backup_size_mb` | DecimalField | Tamaño del backup (almacenado en MB). En el frontend el usuario selecciona MB o GB |
-| `verified_by` | FK → User (nullable) | Usuario CREV que verificó |
-| `verified_at` | DateTimeField (nullable) | Fecha de verificación |
-| `verification_notes` | TextField | Observaciones de verificación |
-
----
-
-### App: `operations` - Hechos/Novedades COC
-
-#### Hecho
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `nro_orden` | PositiveIntegerField | Número de orden (indexado) |
-| `fecha_intervencion` | DateTimeField | Fecha/hora de intervención (indexado) |
-| `novedad` | CharField(200) | Descripción breve |
-| `quien_detecta` | Enum(Guardia de Prevencion, Centro Monitoreo) | Detector |
-| `elementos` | CharField(200) | Elementos involucrados |
-| `sector` | CharField(200) | Sector |
-| `solucionado_coc` | BooleanField | Si se solucionó en COC |
-| `genero_causa` | BooleanField | Si generó causa judicial |
-| `status` | Enum(Abierto, Cerrado) | Estado (indexado) |
-| `cctv_system` | FK → CctvSystem | Sistema CCTV relacionado |
-| `camera` | FK → Camera | Cámara relacionada |
-| `resolved_group` | FK → OrganizationalGroup | Grupo que resolvió |
-| `org_unit` | FK → OrganizationalUnit | Unidad/COC (indexado) |
-| `resolved_at` | DateTimeField | Fecha de resolución |
-| `resolved_by` | FK → User | Usuario que resolvió |
-| **`minutos_resolucion`** | Propiedad calculada | `resolved_at - fecha_intervencion` |
-| **`tiempo_resolucion_legible`** | Propiedad calculada | Formato "Xh Ym" |
-
----
-
-## 6.2 Índices de Base de Datos
-
-| Modelo | Campos Indexados |
-|--------|------------------|
-| Equipment | `status`, `category` |
-| Camera | `status`, `location`, `org_unit` |
-| Document | `reference_number`, `status`, `priority` |
-| FilmRecord | `estado`, `fecha_ingreso` |
-| Hecho | `fecha_intervencion`, `nro_orden`, `status`, `org_unit` |
-
-## 6.3 Integridad de Datos
-
-* **ON DELETE CASCADE**: Si se borra un `Document`, se borran sus `DocumentAttachment`
-* **ON DELETE PROTECT**: No se puede borrar un `CctvSystem` si tiene `Camera` asignadas
-* **ON DELETE SET_NULL**: Referencias opcionales (user auditoría, ubicación, etc.)
-
----
-
-# 7. Implementación Django 5.x
-
-## 7.1 Apps y Responsabilidades
-
-| App | Dominio | Modelos principales |
-|-----|---------|---------------------|
-| `core` | Usuarios, Roles, Catálogos, Organización | Role, Catalog, CatalogItem, OrganizationalUnit, CctvSystem, OrganizationalGroup, User |
-| `inventory` | Equipamiento y Cámaras | Equipment, Camera, CameraUpdate |
-| `documents` | Mesa de Entrada y Registros Fílmicos | Document, DocumentAttachment, FilmRecord |
-| `operations` | Hechos/Novedades | Hecho |
-| `utilities` | Herramientas de soporte | Hash Tool |
-
-## 7.2 Comandos Operativos
-
-```bash
-# Instalación de dependencias
-python -m pip install -r requirements.txt
-
-# Base de datos
-python manage.py migrate
-
-# Seeds iniciales
-python manage.py seed_roles          # Roles + permisos
-python manage.py seed_catalogs       # Catálogos + ítems
-python manage.py seed_demo_data      # Datos demo (opcional dev)
-
-# Administración
-python manage.py createsuperuser     # Crear admin
-
-# Ejecución
-python manage.py runserver           # Servidor desarrollo
-
-# Testing
-python manage.py test                # Suite de pruebas
-```
-
-## 7.3 Seeds Incluidos
-
-* **Roles**: `admin`, `turno_crev`, `turno_coc` con permisos por módulo/acción
-* **Catálogos**: Categorías, Ubicaciones, Estados Equipo, Tipos Cámara, Tipos Solicitud, Tipos Delito, Unidades, Organismos + ítems base
-* **Demo (opcional)**: Usuario admin, unidad CREV Central, sistema principal, equipo, cámara, expediente, registro fílmico y hecho de ejemplo
-
-## 7.4 Consideraciones Técnicas
-
-* **Índices**: Agregados en campos de filtrado frecuente
-* **Permisos**: `ModulePermissionRequiredMixin` + tag `{% has_permission %}` en templates
-* **Adjuntos**: `DocumentAttachment` permite múltiples archivos por documento
-* **Auditoría**: Campos `created_by/at`, `updated_by/at` donde aplica
-
-## 7.5 Estándares de Código
-
-* Código en inglés, UI en español
-* PEP 8 + convenciones Django (apps separadas por dominio)
-* Tailwind vía CDN en `base.html` (sin build step)
-
----
-
-# 8. Relaciones Operativas CCTV/COC
-
-## 8.1 Jerarquía Organizacional
-
-```
+```o v
 CEAC (Administración Central)
 │
 └── CREV (Centro de Monitoreo y Fiscalización)
     │
-    ├── OrganizationalGroup (Turno CREV Mañana, Turno CREV Tarde, etc.)
-    │   └── units[] → [Unidad A, Unidad B, ...] (unidades a fiscalizar)
+    ├── Grupos de Turno (Mañana, Tarde, Noche)
+    │   └── Unidades Supervisadas [Unidad A, Unidad B, ...]
     │
-    └── COC / OrganizationalUnit (Unidades Operativas)
-        ├── has_coc: true/false (si tiene Sala COC)
-        ├── CctvSystem[] (Sistemas CCTV: Hikvision, Dahua, etc.)
-        │   ├── brand, model, ip_address
-        │   └── Camera[] (Cámaras del sistema)
-        │       └── CameraUpdate[] (Novedades)
-        ├── Equipment[] (Equipamiento: NVR, VMS, switches, storage)
-        ├── Hecho[] (Hechos/Intervenciones)
-        │   └── resolved_group (grupo que resolvió)
-        └── FilmRecord[] (Registros fílmicos)
+    └── COC / Unidades Operativas
+        ├── Sala COC (opcional)
+        ├── Sistemas CCTV (Hikvision, Dahua, etc.)
+        │   └── Cámaras de Vigilancia
+        ├── Equipamiento (NVR, VMS, switches, storage)
+        ├── Hechos/Intervenciones Operativas
+        └── Registros Fílmicos (Evidencia Digital)
 ```
 
-## 8.2 Flujo de Trabajo por Rol
+## 6.2 Flujo de Trabajo por Rol
 
 ### Operador COC (Nivel Operativo)
 
-1. **Inicio de turno**: Accede al sistema con su usuario asignado a una `OrganizationalUnit`
-2. **Carga de Hechos**: Registra intervenciones, asociando automáticamente a su unidad
+1. **Inicio de turno**: Accede al sistema con su usuario asignado a una Unidad Organizacional
+2. **Carga de Hechos**: Registra intervenciones operativas, asociando automáticamente a su unidad
 3. **Novedades de Cámaras**: Reporta fallas/reparaciones de cámaras de su unidad
-4. **Registros Fílmicos**: Gestiona solicitudes de evidencia de su unidad
+4. **Registros Fílmicos**: Gestiona solicitudes de evidencia digital de su unidad
+5. **Control de Acceso**: Registra ingresos y egresos de personas a las instalaciones del COC
 
 ### Fiscalizador CREV (Nivel Supervisión)
 
-1. **Monitoreo**: Ve dashboard consolidado de TODAS las unidades a su cargo
-2. **Mesa de Entrada**: Gestiona documentos oficiales (entradas/salidas)
-3. **Inventario**: Administra equipamiento y cámaras de sus unidades
-4. **Fiscalización**: Revisa Hechos, Novedades y Registros de las unidades
+1. **Monitoreo**: Visualiza dashboard consolidado de todas las unidades a su cargo
+2. **Mesa de Entrada**: Gestiona documentación oficial (expedientes de entrada/salida)
+3. **Inventario**: Administra equipamiento y cámaras de sus unidades supervisadas
+4. **Fiscalización**: Revisa y verifica Hechos, Novedades y Registros creados por las unidades COC
+5. **Gestión de Personal**: Administra dotación y requerimientos de las unidades
 
 ### Administrador CEAC (Nivel Global)
 
-1. **Configuración**: Gestiona usuarios, roles, catálogos
-2. **Auditoría**: Acceso a logs y reportes de todo el sistema
-3. **Reportes consolidados**: KPIs globales de todas las unidades
+1. **Configuración**: Gestiona usuarios, roles, permisos y catálogos del sistema
+2. **Auditoría**: Acceso completo a logs y reportes de auditoría de todo el sistema
+3. **Reportes Consolidados**: Visualiza KPIs y métricas globales de todas las unidades
+4. **Supervisión General**: Acceso de lectura a todos los módulos operativos
 
-## 8.3 Lógica de Filtrado Automático
+## 6.3 Reglas de Filtrado de Datos
 
-| Rol | Filtrado Aplicado |
-|-----|------------------|
-| **COC** | `queryset.filter(org_unit=request.user.org_unit)` |
-| **CREV** | `queryset.filter(org_unit__in=request.user.get_supervised_units())` |
-| **CEAC** | Sin filtro (acceso global) |
+### Por Rol
 
-> El método `get_supervised_units()` obtiene todas las unidades de los grupos del usuario:
-> `user.org_groups.values_list('units', flat=True)`
+| Rol | Alcance de Datos | Descripción |
+|-----|------------------|-------------|
+| **COC** | Solo su unidad | Ve únicamente datos de la unidad a la que pertenece |
+| **CREV** | Sus unidades supervisadas | Ve datos de todas las unidades que tiene asignadas en sus grupos |
+| **CEAC** | Todo el sistema | Acceso global sin filtros |
+| **Admin** | Todo el sistema | Acceso administrativo completo |
+
+### Principios de Filtrado
+
+* Los operadores COC solo pueden ver y modificar datos de su propia unidad organizacional
+* Los fiscalizadores CREV ven datos agregados de las múltiples unidades que supervisan
+* El sistema aplica filtrado automático basándose en la unidad del usuario y sus grupos asignados
+* Las auditorías registran todas las operaciones con usuario, fecha/hora e IP de origen
 
 ---
 
 > **Última actualización**: Enero 2026  
-> **Versión**: 2.1.0
+> **Versión**: 2.0  
+> **Tipo**: Especificación de Requisitos de Software (SRS)
