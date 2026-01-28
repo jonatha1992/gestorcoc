@@ -1,0 +1,185 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block page_title %}Home Page{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Welcome Card -->
+    <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 lg:p-10 mb-8 shadow-xl">
+        <h2 class="text-3xl lg:text-4xl font-bold text-white mb-2">
+            Bienvenido al Sistema GestorCOC
+        </h2>
+        <p class="text-blue-50 text-lg lg:text-xl">
+            Centro de Gestión y Operaciones
+        </p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Assets Card -->
+        <a href="{% url 'assets:list' %}"
+            class="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-blue-500 block">
+            <div class="flex items-start gap-4">
+                <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4">
+                        </path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Assets</h3>
+                    <p class="text-3xl font-bold text-gray-900 mb-1">{{ assets_count|default:"0" }}</p>
+                    <p class="text-sm text-gray-600">Equipamiento Registrado</p>
+                </div>
+            </div>
+        </a>
+
+        <!-- Novedades Card -->
+        <a href="{% url 'novedades:list' %}"
+            class="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-green-500 block">
+            <div class="flex items-start gap-4">
+                <div class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+                        </path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Novedades</h3>
+                    <p class="text-3xl font-bold text-gray-900 mb-1">{{ novedades_count|default:"0" }}</p>
+                    <p class="text-sm text-gray-600">Reportes Activos</p>
+                </div>
+            </div>
+        </a>
+
+        <!-- Personnel Card -->
+        <a href="{% url 'personnel:list' %}"
+            class="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-purple-500 block">
+            <div class="flex items-start gap-4">
+                <div class="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg class="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
+                        </path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Personal</h3>
+                    <p class="text-3xl font-bold text-gray-900 mb-1">{{ personnel_count|default:"0" }}</p>
+                    <p class="text-sm text-gray-600">Miembros del Equipo</p>
+                </div>
+            </div>
+        </a>
+
+        <!-- Tasks Card (Placeholder) -->
+        <div
+            class="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4 border-orange-500">
+            <div class="flex items-start gap-4">
+                <div class="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg class="w-7 h-7 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4">
+                        </path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Tareas</h3>
+                    <p class="text-3xl font-bold text-gray-900 mb-1">0</p>
+                    <p class="text-sm text-gray-600">Pendientes Hoy</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="mb-8">
+        <h3 class="text-2xl font-bold text-gray-900 mb-6">Acceso Rápido</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <!-- New Asset -->
+            <a href="{% url 'assets:create' %}"
+                class="bg-white rounded-xl p-6 text-center shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-blue-500 group">
+                <div
+                    class="w-14 h-14 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">Nuevo
+                    Asset</h4>
+                <p class="text-sm text-gray-600">Registrar nuevo equipamiento</p>
+            </a>
+
+            <!-- New Novedad -->
+            <a href="{% url 'novedades:create' %}"
+                class="bg-white rounded-xl p-6 text-center shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-green-500 group">
+                <div
+                    class="w-14 h-14 mx-auto mb-4 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
+                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">Nueva
+                    Novedad</h4>
+                <p class="text-sm text-gray-600">Reportar incidencia o novedad</p>
+            </a>
+
+            <!-- Add Personnel -->
+            <a href="{% url 'personnel:create' %}"
+                class="bg-white rounded-xl p-6 text-center shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-purple-500 group">
+                <div
+                    class="w-14 h-14 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg">
+                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z">
+                        </path>
+                    </svg>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
+                    Agregar Personal</h4>
+                <p class="text-sm text-gray-600">Registrar nuevo miembro</p>
+            </a>
+
+            <!-- View Reports -->
+            <a href="{% url 'novedades:list' %}"
+                class="bg-white rounded-xl p-6 text-center shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-orange-500 group">
+                <div
+                    class="w-14 h-14 mx-auto mb-4 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg">
+                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">Ver
+                    Novedades</h4>
+                <p class="text-sm text-gray-600">Bitácora de reportes</p>
+            </a>
+        </div>
+    </div>
+
+
+    <!-- Recent Activity -->
+    <div class="bg-white rounded-xl p-6 lg:p-8 shadow-md">
+        <h3 class="text-2xl font-bold text-gray-900 mb-6">Actividad Reciente</h3>
+        <div class="space-y-4">
+            <div class="flex items-start gap-4 p-4 rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <p class="text-base font-medium text-gray-900 mb-1">Sistema iniciado correctamente</p>
+                    <p class="text-sm text-gray-500">Hace unos momentos</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
