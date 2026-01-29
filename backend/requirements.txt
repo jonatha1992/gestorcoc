@@ -1,0 +1,11 @@
+Django>=4.2
+psycopg2-binary  # For Postgres support (optional dev)
+oracledb         # For Oracle support
+requests
+django-tailwind
+django-browser-reload
+faker            # For data seeding
+django-cors-headers
+djangorestframework
+django-filter
+drf-spectacular
