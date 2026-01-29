@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'assets',
     'novedades',
     'personnel',
+    'records',
 ]
 
 MIDDLEWARE = [

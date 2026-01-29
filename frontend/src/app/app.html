@@ -66,6 +66,17 @@
         <span *ngIf="!isSidebarCollapsed" class="ml-3 font-medium">Personal</span>
       </a>
 
+      <a routerLink="/records" routerLinkActive="bg-primary-600 text-white shadow-lg shadow-primary-600/20"
+        class="flex items-center p-3 rounded-xl transition-all duration-200 hover:bg-slate-800 hover:text-white group">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transition-colors group-hover:text-primary-400"
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+        <span *ngIf="!isSidebarCollapsed" class="ml-3 font-medium">Registros Fílmicos</span>
+      </a>
+
       <div class="pt-6 pb-2 px-2">
         <div class="h-px bg-slate-800 w-full"></div>
       </div>

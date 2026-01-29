@@ -6,6 +6,9 @@ class Person(TimeStampedModel):
     last_name = models.CharField(max_length=100)
     badge_number = models.CharField(max_length=20, unique=True, help_text="Legajo")
     role = models.CharField(max_length=50, default='OPERATOR')
+    rank = models.CharField(max_length=100, blank=True, null=True, help_text="Jerarquía")
+    unit = models.CharField(max_length=100, blank=True, null=True, help_text="Unidad de Revista")
+    guard_group = models.CharField(max_length=50, blank=True, null=True, help_text="Grupo de Guardia")
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
