@@ -4,7 +4,7 @@ from .models import System, Server, Camera, CameramanGear, Unit
 class UnitSerializer(serializers.ModelSerializer):
     class Meta:
         model = Unit
-        fields = ['id', 'name', 'code']
+        fields = ['id', 'name', 'code', 'parent']
 
 class CameraSerializer(serializers.ModelSerializer):
     server_name = serializers.CharField(source='server.name', read_only=True)

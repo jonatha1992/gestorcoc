@@ -4,6 +4,7 @@ from faker import Faker
 from assets.models import System, Camera, Server, CameramanGear, Unit
 from personnel.models import Person
 from novedades.models import Novedad
+from records.models import FilmRecord, Catalog
 
 class Command(BaseCommand):
     help = 'Seeds the database with mock data for prototyping'
@@ -13,6 +14,8 @@ class Command(BaseCommand):
         self.stdout.write('Clearing old data...')
         
         # Order matters!
+        Catalog.objects.all().delete()
+        FilmRecord.objects.all().delete()
         Novedad.objects.all().delete()
         Person.objects.all().delete()
         Camera.objects.all().delete()
@@ -23,25 +26,30 @@ class Command(BaseCommand):
 
         self.stdout.write('Seeding data...')
 
-        # 1. Units & Systems
+        # 1. Units (Hierarchy: CREV is parent of COCs)
+        crev_obj, _ = Unit.objects.get_or_create(name='CREV', code='CREV')
+        
         units_data = [
-            {'name': 'Aeroparque', 'code': 'AEP'},
-            {'name': 'Ezeiza', 'code': 'EZE'},
-            {'name': 'San Fernando', 'code': 'FDO'},
-            {'name': 'Bahía Blanca', 'code': 'BHI'},
-            {'name': 'Mar del Plata', 'code': 'MDQ'},
-            {'name': 'CREV', 'code': 'CREV'},
+            {'name': 'Aeroparque', 'code': 'AEP', 'parent': crev_obj},
+            {'name': 'Ezeiza', 'code': 'EZE', 'parent': crev_obj},
+            {'name': 'San Fernando', 'code': 'FDO', 'parent': crev_obj},
+            {'name': 'Bahía Blanca', 'code': 'BHI', 'parent': crev_obj},
+            {'name': 'Mar del Plata', 'code': 'MDQ', 'parent': crev_obj},
         ]
 
-        created_units = {}
+        created_units = {'CREV': crev_obj}
         created_systems = []
 
         for u_data in units_data:
             # Create Unit
-            unit_obj, _ = Unit.objects.get_or_create(name=u_data['name'], code=u_data['code'])
+            unit_obj, _ = Unit.objects.get_or_create(
+                name=u_data['name'], 
+                code=u_data['code'],
+                defaults={'parent': u_data['parent']}
+            )
             created_units[u_data['code']] = unit_obj
             
-            # Create Main CCTV System for this Unit
+            # Create Main CCTV System for this Unit (COCs only)
             sys_name = f"CCTV {u_data['name']}"
             if u_data['code'] == 'AEP': sys_name = "Milestone AEP"
             if u_data['code'] == 'EZE': sys_name = "Avigilon EZE"

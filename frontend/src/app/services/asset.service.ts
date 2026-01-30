@@ -12,12 +12,48 @@ export class AssetService {
         return this.api.get<any[]>('api/systems/');
     }
 
+    createSystem(data: any): Observable<any> {
+        return this.api.post<any>('api/systems/', data);
+    }
+
+    updateSystem(id: number, data: any): Observable<any> {
+        return this.api.put<any>(`api/systems/${id}/`, data);
+    }
+
+    deleteSystem(id: number): Observable<any> {
+        return this.api.delete<any>(`api/systems/${id}/`);
+    }
+
     getCameras(): Observable<any[]> {
         return this.api.get<any[]>('api/cameras/');
     }
 
+    createCamera(data: any): Observable<any> {
+        return this.api.post<any>('api/cameras/', data);
+    }
+
+    updateCamera(id: number, data: any): Observable<any> {
+        return this.api.put<any>(`api/cameras/${id}/`, data);
+    }
+
+    deleteCamera(id: number): Observable<any> {
+        return this.api.delete<any>(`api/cameras/${id}/`);
+    }
+
     getServers(): Observable<any[]> {
         return this.api.get<any[]>('api/servers/');
+    }
+
+    createServer(data: any): Observable<any> {
+        return this.api.post<any>('api/servers/', data);
+    }
+
+    updateServer(id: number, data: any): Observable<any> {
+        return this.api.put<any>(`api/servers/${id}/`, data);
+    }
+
+    deleteServer(id: number): Observable<any> {
+        return this.api.delete<any>(`api/servers/${id}/`);
     }
 
     getCameramanGear(): Observable<any[]> {

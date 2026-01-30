@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AssetService } from '../services/asset.service';
+import { ApiService } from '../services/api.service';
 import { LoadingService } from '../services/loading.service';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../services/toast.service';
@@ -59,7 +60,12 @@ import { ToastService } from '../services/toast.service';
             </button>
         </div>
         
-        @if (activeTab === 'gear') {
+        @if (activeTab === 'cctv') {
+            <button (click)="openSystemModal()" class="mr-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                Nuevo Sistema
+            </button>
+        } @else {
             <button (click)="openGearModal()" class="mr-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                 Nuevo Equipo
@@ -69,98 +75,129 @@ import { ToastService } from '../services/toast.service';
 
       <!-- CCTV Content -->
       @if (activeTab === 'cctv') {
-      <div class="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        @for (system of systems; track system.id) {
-          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-md">
-            <!-- System Header (Clickable) -->
-            <div (click)="toggleSystem(system.id)" class="bg-slate-50/80 hover:bg-slate-100 cursor-pointer px-6 py-4 border-b border-slate-100 flex items-center justify-between transition-colors select-none">
-              <div class="flex items-center gap-4">
-                 <!-- Chevron -->
-                <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" [class.rotate-180]="isSystemExpanded(system.id)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                
-                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md shadow-indigo-200">
-                  {{ system.system_type === 'CCTV' ? 'C' : 'N' }}
-                </div>
-                <div>
-                  <h2 class="text-lg font-bold text-slate-800">{{ system.name }}</h2>
-                  <div class="flex items-center gap-4 text-xs text-slate-500 font-medium mt-0.5">
-                    <span class="flex items-center gap-1.5">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                      {{ system.location }}
-                    </span>
-                    <span class="flex items-center gap-1.5">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
-                      {{ system.servers?.length || 0 }} Servidores
-                    </span>
-                    <span class="flex items-center gap-1.5">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                      {{ system.camera_count }} Cámaras
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <span [class]="system.is_active ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-700 border-slate-200'" 
-                    class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border">
-                {{ system.is_active ? 'Activo' : 'Inactivo' }}
-              </span>
+      <div class="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        @for (unitGroup of groupedSystems; track unitGroup.unitId) {
+          <div class="space-y-4">
+            <div class="flex items-center gap-2 px-2">
+              <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+              <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">{{ unitGroup.unitName }} ({{ unitGroup.unitCode }})</h3>
+              <div class="h-px bg-slate-200 flex-grow ml-2"></div>
             </div>
 
-            <!-- Content (Collapsible) -->
-            @if (isSystemExpanded(system.id)) {
-                <div class="p-6 bg-white animate-in slide-in-from-top-2 duration-200">
-                <div class="grid grid-cols-1 gap-4">
-                    @for (server of system.servers; track server.id) {
-                    <div class="border border-slate-200 rounded-xl overflow-hidden">
-                        <!-- Server Sub-Header (Clickable) -->
-                        <div (click)="toggleServer(server.id)" class="bg-slate-50/50 hover:bg-slate-100/80 cursor-pointer px-4 py-3 border-b border-slate-100 flex items-center justify-between transition-colors select-none">
-                            <div class="flex items-center gap-3">
-                                <svg class="w-4 h-4 text-slate-400 transition-transform duration-300" [class.rotate-180]="isServerExpanded(server.id)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
-                                <span class="font-bold text-slate-700 text-sm">{{ server.name }}</span>
-                                <span class="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-mono border border-slate-300">{{ server.ip_address }}</span>
-                            </div>
-                            <span class="text-xs font-semibold text-slate-500">{{ server.cameras?.length }} Cámaras</span>
-                        </div>
-
-                        <!-- Cameras (Collapsible) -->
-                         @if (isServerExpanded(server.id)) {
-                            <div class="overflow-x-auto bg-white animate-in slide-in-from-top-1 duration-150">
-                            <table class="w-full text-left text-sm">
-                                <thead class="bg-slate-50/50 text-[10px] uppercase text-slate-400 font-bold tracking-wider">
-                                    <tr>
-                                        <th class="px-4 py-2">Nombre</th>
-                                        <th class="px-4 py-2">IP</th>
-                                        <th class="px-4 py-2">Resolución</th>
-                                        <th class="px-4 py-2 text-right">Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-50">
-                                @for (camera of server.cameras; track camera.id) {
-                                    <tr class="hover:bg-slate-50 transition-colors">
-                                    <td class="px-4 py-2 font-medium text-slate-700 w-1/3">
-                                        <div class="flex items-center gap-2">
-                                        <div [class]="camera.status === 'ONLINE' ? 'bg-emerald-500 shadow-emerald-200 shadow-sm' : 'bg-rose-500 shadow-rose-200 shadow-sm'" class="w-2 h-2 rounded-full"></div>
-                                        {{ camera.name }}
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-2 text-slate-500 font-mono text-xs">{{ camera.ip_address }}</td>
-                                    <td class="px-4 py-2 text-slate-600 text-xs">{{ camera.resolution }}</td>
-                                    <td class="px-4 py-2 text-right">
-                                        <span [class]="camera.status === 'ONLINE' ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : 'text-rose-700 bg-rose-50 border-rose-100'" 
-                                            class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border">
-                                        {{ camera.status === 'ONLINE' ? 'ONLINE' : 'OFFLINE' }}
-                                        </span>
-                                    </td>
-                                    </tr>
-                                }
-                                </tbody>
-                            </table>
-                            </div>
-                         }
+            @for (system of unitGroup.systems; track system.id) {
+              <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-md">
+                <!-- System Header (Clickable) -->
+                <div class="bg-slate-50/80 hover:bg-slate-100 px-6 py-4 border-b border-slate-100 flex items-center justify-between transition-colors select-none group">
+                  <div (click)="toggleSystem(system.id)" class="flex items-center gap-4 cursor-pointer flex-grow">
+                     <!-- Chevron -->
+                    <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" [class.rotate-180]="isSystemExpanded(system.id)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                    
+                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md shadow-indigo-200">
+                      {{ system.system_type === 'CCTV' ? 'C' : 'N' }}
                     </div>
-                    }
+                    <div>
+                      <h2 class="text-lg font-bold text-slate-800">{{ system.name }}</h2>
+                      <div class="flex items-center gap-4 text-xs text-slate-500 font-medium mt-0.5">
+                        <span class="flex items-center gap-1.5">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
+                          {{ system.servers?.length || 0 }} Servidores
+                        </span>
+                        <span class="flex items-center gap-1.5">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                          {{ system.camera_count }} Cámaras
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center gap-3">
+                    <span [class]="system.is_active ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-700 border-slate-200'" 
+                          class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border">
+                      {{ system.is_active ? 'Activo' : 'Inactivo' }}
+                    </span>
+                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button (click)="editSystem(system)" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
+                      <button (click)="deleteSystem(system)" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                    </div>
+                  </div>
                 </div>
-                </div>
+
+                <!-- Content (Collapsible) -->
+                @if (isSystemExpanded(system.id)) {
+                    <div class="p-6 bg-white animate-in slide-in-from-top-2 duration-200">
+                      <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Infraestructura del Sistema</h4>
+                        <button (click)="openServerModal(system.id)" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                          Nuevo Servidor
+                        </button>
+                      </div>
+                      <div class="grid grid-cols-1 gap-4">
+                          @for (server of system.servers; track server.id) {
+                          <div class="border border-slate-200 rounded-xl overflow-hidden group/server">
+                              <!-- Server Sub-Header (Clickable) -->
+                              <div class="bg-slate-50/50 hover:bg-slate-100/80 px-4 py-3 border-b border-slate-100 flex items-center justify-between transition-colors select-none">
+                                  <div (click)="toggleServer(server.id)" class="flex items-center gap-3 cursor-pointer flex-grow">
+                                      <svg class="w-4 h-4 text-slate-400 transition-transform duration-300" [class.rotate-180]="isServerExpanded(server.id)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                      <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
+                                      <span class="font-bold text-slate-700 text-sm">{{ server.name }}</span>
+                                      <span class="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-mono border border-slate-300">{{ server.ip_address }}</span>
+                                  </div>
+                                  <div class="flex items-center gap-4">
+                                    <div class="flex items-center gap-1 opacity-0 group-hover/server:opacity-100 transition-opacity">
+                                      <button (click)="editServer(server)" class="p-1 text-slate-400 hover:text-indigo-600"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
+                                      <button (click)="deleteServer(server)" class="p-1 text-slate-400 hover:text-rose-600"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                                    </div>
+                                    <span class="text-xs font-semibold text-slate-500">{{ server.cameras?.length }} Cámaras</span>
+                                  </div>
+                              </div>
+
+                              <!-- Cameras (Collapsible) -->
+                               @if (isServerExpanded(server.id)) {
+                                  <div class="overflow-x-auto bg-white animate-in slide-in-from-top-1 duration-150">
+                                  <div class="p-3 bg-slate-50/30 border-b border-slate-100 flex justify-end">
+                                    <button (click)="openCameraModal(server.id)" class="text-[10px] font-bold text-indigo-600 flex items-center gap-1">
+                                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                                      Nuevas Cámaras
+                                    </button>
+                                  </div>
+                                  <table class="w-full text-left text-xs">
+                                      <thead class="bg-slate-50/50 text-[10px] uppercase text-slate-400 font-bold tracking-wider border-b border-slate-100">
+                                          <tr>
+                                              <th class="px-4 py-2">Nombre</th>
+                                              <th class="px-4 py-2 text-center">Res</th>
+                                              <th class="px-4 py-2 text-right">Acciones</th>
+                                          </tr>
+                                      </thead>
+                                      <tbody class="divide-y divide-slate-50">
+                                      @for (camera of server.cameras; track camera.id) {
+                                          <tr class="hover:bg-slate-50 transition-colors group/cam">
+                                          <td class="px-4 py-2 font-medium text-slate-700">
+                                              <div class="flex items-center gap-2">
+                                              <div [class]="camera.status === 'ONLINE' ? 'bg-emerald-500 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200'" class="w-1.5 h-1.5 rounded-full"></div>
+                                              {{ camera.name }}
+                                              <span class="text-[9px] text-slate-400 font-mono">{{ camera.ip_address }}</span>
+                                              </div>
+                                          </td>
+                                          <td class="px-4 py-2 text-slate-500 text-center">{{ camera.resolution }}</td>
+                                          <td class="px-4 py-2 text-right">
+                                              <div class="flex items-center justify-end gap-1 opacity-0 group-hover/cam:opacity-100 transition-opacity">
+                                                <button (click)="editCamera(camera)" class="p-1 text-slate-400 hover:text-indigo-600"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
+                                                <button (click)="deleteCamera(camera)" class="p-1 text-slate-400 hover:text-rose-600"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                                              </div>
+                                          </td>
+                                          </tr>
+                                      }
+                                      </tbody>
+                                  </table>
+                                  </div>
+                               }
+                          </div>
+                          }
+                      </div>
+                    </div>
+                }
+              </div>
             }
           </div>
         } @empty {
@@ -236,50 +273,103 @@ import { ToastService } from '../services/toast.service';
         </div>
       }
 
-      <!-- Modal -->
-      @if (showGearModal) {
+      <!-- Modals (CCTV) -->
+      @if (showSystemModal) {
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
                 <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                    <h3 class="font-bold text-lg text-slate-800">{{ currentGear.id ? 'Editar' : 'Nuevo' }} Equipo</h3>
-                    <button (click)="closeGearModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <h3 class="font-bold text-lg text-slate-800">{{ currentSystem.id ? 'Editar' : 'Nuevo' }} Sistema</h3>
+                    <button (click)="closeSystemModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
-                
                 <div class="p-6 space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Nombre del Equipo</label>
-                        <input [(ngModel)]="currentGear.name" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium" placeholder="Ej: Cámara Sony A7">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                        <input [(ngModel)]="currentSystem.name" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Ej: Milestone AEP">
                     </div>
-                    
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Número de Serie</label>
-                        <input [(ngModel)]="currentGear.serial_number" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono text-sm" placeholder="S/N...">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Estado</label>
-                        <select [(ngModel)]="currentGear.condition" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                            <option value="NEW">Nuevo</option>
-                            <option value="GOOD">Bueno</option>
-                            <option value="FAIR">Regular</option>
-                            <option value="POOR">Malo</option>
-                            <option value="BROKEN">Roto</option>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Unidad</label>
+                        <select [(ngModel)]="currentSystem.unit_id" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+                            @for (unit of units; track unit.id) {
+                                <option [value]="unit.id">{{ unit.name }} ({{ unit.code }})</option>
+                            }
                         </select>
                     </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Asignado a (Opcional)</label>
-                         <input [(ngModel)]="currentGear.assigned_to" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="Nombre del responsable">
+                    <div class="flex items-center gap-2">
+                        <input [(ngModel)]="currentSystem.is_active" type="checkbox" id="sys-active" class="w-4 h-4 text-indigo-600 rounded">
+                        <label for="sys-active" class="text-sm font-medium text-slate-700">Activo</label>
                     </div>
                 </div>
-
                 <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                    <button (click)="closeGearModal()" class="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
-                    <button (click)="saveGear()" [disabled]="!currentGear.name" class="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                        Guardar
+                    <button (click)="closeSystemModal()" class="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg">Cancelar</button>
+                    <button (click)="saveSystem()" class="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Guardar</button>
+                </div>
+            </div>
+        </div>
+      }
+
+      @if (showServerModal) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 class="font-bold text-lg text-slate-800">{{ currentServer.id ? 'Editar' : 'Nuevo' }} Servidor</h3>
+                    <button (click)="closeServerModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                        <input [(ngModel)]="currentServer.name" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Ej: SRV-01">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">IP</label>
+                        <input [(ngModel)]="currentServer.ip_address" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono" placeholder="10.x.y.z">
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                    <button (click)="closeServerModal()" class="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg">Cancelar</button>
+                    <button (click)="saveServer()" class="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Guardar</button>
+                </div>
+            </div>
+        </div>
+      }
+
+      @if (showCameraModal) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 class="font-bold text-lg text-slate-800">{{ currentCamera.id ? 'Editar' : 'Nuevas' }} Cámaras</h3>
+                    <button (click)="closeCameraModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                        <input [(ngModel)]="currentCamera.name" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Ej: CAM-01">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">IP</label>
+                        <input [(ngModel)]="currentCamera.ip_address" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono" placeholder="10.x.y.z">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Resolución</label>
+                        <input [(ngModel)]="currentCamera.resolution" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Ej: 1080p">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                        <select [(ngModel)]="currentCamera.status" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+                            <option value="ONLINE">ONLINE</option>
+                            <option value="OFFLINE">OFFLINE</option>
+                            <option value="MAINTENANCE">Mantenimiento</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                    <button (click)="closeCameraModal()" class="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg">Cancelar</button>
+                    <button (click)="saveCamera()" class="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Guardar</button>
                 </div>
             </div>
         </div>
@@ -290,8 +380,12 @@ import { ToastService } from '../services/toast.service';
 })
 export class AssetsComponent implements OnInit {
   private assetService = inject(AssetService);
+  private apiService = inject(ApiService);
   loadingService = inject(LoadingService);
+  private toastService = inject(ToastService);
   systems: any[] = [];
+  units: any[] = [];
+  groupedSystems: { unitId: number, unitName: string, unitCode: string, systems: any[] }[] = [];
   gear: any[] = [];
   totalCameras = 0;
   totalServers = 0;
@@ -319,6 +413,14 @@ export class AssetsComponent implements OnInit {
         this.totalCameras = data.reduce((acc: number, sys: any) => acc + (sys.camera_count || 0), 0);
         this.totalServers = data.reduce((acc: number, sys: any) => acc + (sys.servers?.length || 0), 0);
 
+        // Fetch Units for grouping and forms
+        this.apiService.get<any[]>('api/units/').subscribe({
+          next: (units) => {
+            this.units = units;
+            this.groupSystems();
+          }
+        });
+
         // Fetch Gear
         this.assetService.getCameramanGear().subscribe({
           next: (gearData) => {
@@ -328,7 +430,6 @@ export class AssetsComponent implements OnInit {
           error: (err) => {
             console.error('Error fetching gear:', err);
             this.loadingService.hide();
-            // Don't block main view if gear fails
           }
         });
       },
@@ -338,6 +439,30 @@ export class AssetsComponent implements OnInit {
         this.loadingService.hide();
       }
     });
+  }
+
+  groupSystems() {
+    const groups: { [id: number]: any } = {};
+
+    // Units that are not "top-level" (parents) but actually COCs
+    const cocUnits = this.units.filter(u => u.parent !== null || u.code !== 'CREV');
+
+    this.systems.forEach(sys => {
+      const unit = sys.unit;
+      if (!unit) return;
+
+      if (!groups[unit.id]) {
+        groups[unit.id] = {
+          unitId: unit.id,
+          unitName: unit.name,
+          unitCode: unit.code,
+          systems: []
+        };
+      }
+      groups[unit.id].systems.push(sys);
+    });
+
+    this.groupedSystems = Object.values(groups);
   }
 
   toggleSystem(id: number) {
@@ -364,10 +489,168 @@ export class AssetsComponent implements OnInit {
     return this.expandedServerIds.has(id);
   }
 
+  // System CRUD
+  showSystemModal = false;
+  currentSystem: any = {};
+
+  openSystemModal() {
+    this.currentSystem = { is_active: true };
+    this.showSystemModal = true;
+  }
+
+  editSystem(sys: any) {
+    this.currentSystem = { ...sys, unit_id: sys.unit?.id };
+    this.showSystemModal = true;
+  }
+
+  closeSystemModal() {
+    this.showSystemModal = false;
+    this.currentSystem = {};
+  }
+
+  saveSystem() {
+    this.loadingService.show();
+    const obs = this.currentSystem.id ?
+      this.assetService.updateSystem(this.currentSystem.id, this.currentSystem) :
+      this.assetService.createSystem(this.currentSystem);
+
+    obs.subscribe({
+      next: () => {
+        this.toastService.success(this.currentSystem.id ? 'Sistema actualizado' : 'Sistema creado');
+        this.refreshData();
+        this.closeSystemModal();
+      },
+      error: () => {
+        this.toastService.error('Error al guardar sistema');
+        this.loadingService.hide();
+      }
+    });
+  }
+
+  deleteSystem(sys: any) {
+    if (!confirm(`¿Eliminar sistema ${sys.name}?`)) return;
+    this.loadingService.show();
+    this.assetService.deleteSystem(sys.id).subscribe({
+      next: () => {
+        this.toastService.success('Sistema eliminado');
+        this.refreshData();
+      },
+      error: () => {
+        this.toastService.error('Error al eliminar sistema');
+        this.loadingService.hide();
+      }
+    });
+  }
+
+  // Server CRUD
+  showServerModal = false;
+  currentServer: any = {};
+
+  openServerModal(systemId: number) {
+    this.currentServer = { system: systemId, is_active: true };
+    this.showServerModal = true;
+  }
+
+  editServer(srv: any) {
+    this.currentServer = { ...srv };
+    this.showServerModal = true;
+  }
+
+  closeServerModal() {
+    this.showServerModal = false;
+    this.currentServer = {};
+  }
+
+  saveServer() {
+    this.loadingService.show();
+    const obs = this.currentServer.id ?
+      this.assetService.updateServer(this.currentServer.id, this.currentServer) :
+      this.assetService.createServer(this.currentServer);
+
+    obs.subscribe({
+      next: () => {
+        this.toastService.success('Servidor guardado');
+        this.refreshData();
+        this.closeServerModal();
+      },
+      error: () => {
+        this.toastService.error('Error al guardar servidor');
+        this.loadingService.hide();
+      }
+    });
+  }
+
+  deleteServer(srv: any) {
+    if (!confirm(`¿Eliminar servidor ${srv.name}?`)) return;
+    this.loadingService.show();
+    this.assetService.deleteServer(srv.id).subscribe({
+      next: () => {
+        this.toastService.success('Servidor eliminado');
+        this.refreshData();
+      },
+      error: () => {
+        this.toastService.error('Error al eliminar servidor');
+        this.loadingService.hide();
+      }
+    });
+  }
+
+  // Camera CRUD
+  showCameraModal = false;
+  currentCamera: any = {};
+
+  openCameraModal(serverId: number) {
+    this.currentCamera = { server: serverId, status: 'ONLINE' };
+    this.showCameraModal = true;
+  }
+
+  editCamera(cam: any) {
+    this.currentCamera = { ...cam };
+    this.showCameraModal = true;
+  }
+
+  closeCameraModal() {
+    this.showCameraModal = false;
+    this.currentCamera = {};
+  }
+
+  saveCamera() {
+    this.loadingService.show();
+    const obs = this.currentCamera.id ?
+      this.assetService.updateCamera(this.currentCamera.id, this.currentCamera) :
+      this.assetService.createCamera(this.currentCamera);
+
+    obs.subscribe({
+      next: () => {
+        this.toastService.success('Cámara guardada');
+        this.refreshData();
+        this.closeCameraModal();
+      },
+      error: () => {
+        this.toastService.error('Error al guardar cámara');
+        this.loadingService.hide();
+      }
+    });
+  }
+
+  deleteCamera(cam: any) {
+    if (!confirm(`¿Eliminar cámara ${cam.name}?`)) return;
+    this.loadingService.show();
+    this.assetService.deleteCamera(cam.id).subscribe({
+      next: () => {
+        this.toastService.success('Cámara eliminada');
+        this.refreshData();
+      },
+      error: () => {
+        this.toastService.error('Error al eliminar cámara');
+        this.loadingService.hide();
+      }
+    });
+  }
+
   // Gear CRUD Logic
   showGearModal = false;
   currentGear: any = {};
-  toastService = inject(ToastService);
 
   openGearModal() {
     this.currentGear = { condition: 'GOOD' }; // Default
