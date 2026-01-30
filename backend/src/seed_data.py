@@ -13,7 +13,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from django.contrib.auth.models import User
-from assets.models import System, Camera
+from assets.models import System, Server, Camera, Unit
 from novedades.models import Novedad
 from personnel.models import Person
 from records.models import FilmRecord, Catalog
@@ -21,7 +21,27 @@ from records.models import FilmRecord, Catalog
 fake = Faker(['es_ES'])
 
 def seed():
+    print("Clearing existing data...")
+    Catalog.objects.all().delete()
+    FilmRecord.objects.all().delete()
+    Novedad.objects.all().delete()
+    Camera.objects.all().delete()
+    Server.objects.all().delete()
+    System.objects.all().delete()
+    Person.objects.all().delete()
+    User.objects.exclude(username='admin').delete()
+    Unit.objects.all().delete()
+    
     print("Seeding database with mock data...")
+    
+    # --- 0.1 Units ---
+    print("Creating Units...")
+    unit_eze, _ = Unit.objects.get_or_create(name='COC Ezeiza', defaults={'code': 'EZE'})
+    unit_aep, _ = Unit.objects.get_or_create(name='COC Aeroparque', defaults={'code': 'AEP'})
+    unit_crep, _ = Unit.objects.get_or_create(name='CREP Central', defaults={'code': 'CREP'})
+    unit_cor, _ = Unit.objects.get_or_create(name='COC Córdoba', defaults={'code': 'COR'})
+    
+    units = [unit_eze, unit_aep, unit_crep, unit_cor]
     
     # --- 0. Admin and Specific Users ---
     print("Creating Specific Users...")
@@ -32,9 +52,9 @@ def seed():
         print("Created superuser: admin/admin123")
 
     specific_users = [
-        {'username': 'coc_operador_1', 'role': 'OPERATOR', 'rank': 'Oficial Primero', 'unit': 'COC Ezeiza'},
-        {'username': 'coc_operador_2', 'role': 'OPERATOR', 'rank': 'Oficial de Guardia', 'unit': 'COC Aeroparque'},
-        {'username': 'crep_fiscalizador', 'role': 'SUPERVISOR', 'rank': 'Comisionado', 'unit': 'CREP Central'},
+        {'username': 'coc_operador_1', 'role': 'OPERATOR', 'rank': 'Oficial Primero', 'unit': unit_eze},
+        {'username': 'coc_operador_2', 'role': 'OPERATOR', 'rank': 'Oficial de Guardia', 'unit': unit_aep},
+        {'username': 'crep_fiscalizador', 'role': 'SUPERVISOR', 'rank': 'Comisionado', 'unit': unit_crep},
     ]
 
     for u_info in specific_users:
@@ -71,37 +91,59 @@ def seed():
                 'last_name': fake.last_name(),
                 'role': random.choice(roles),
                 'rank': random.choice(['Oficial', 'Suboficial', 'Cabo']),
-                'unit': random.choice(['COC Ezeiza', 'COC Aeroparque', 'COC Cordoba'])
+                'unit': random.choice(units)
             }
         )
         people.append(p)
     
     # --- 2. Assets ---
-    print("Creating Systems and Cameras...")
-    locations = ['EZE-T1', 'EZE-T2', 'EZE-PK', 'AEP-T1', 'AEP-T2']
-    systems = []
-    for i in range(5):
-        s, created = System.objects.get_or_create(
-            name=f"VMS-{locations[i % len(locations)]}-{i+1:02d}",
-            defaults={
-                'location': locations[i % len(locations)],
-                'ip_address': f"10.116.80.{100 + i}",
-                'is_active': True
-            }
-        )
-        systems.append(s)
-        
-        # Add cameras to each system
-        for j in range(8):
-            Camera.objects.get_or_create(
-                name=f"CAM-{s.name}-L{j+1:02d}",
-                system=s,
+    print("Creating Systems, Servers and Cameras...")
+    
+    # Topology definition
+    locations = [unit_eze, unit_aep] # Ezeiza, Aeroparque
+    system_types = ['Milestone', 'Avigilon']
+    
+    systems_list = []
+
+    for unit_obj in locations:
+        for sys_type in system_types:
+            # Create System
+            s_name = f"{sys_type} {unit_obj.code}"
+            s, _ = System.objects.get_or_create(
+                name=s_name,
                 defaults={
-                    'ip_address': f"10.116.80.{100 + i}.{j+10}",
-                    'status': random.choice(['ONLINE', 'ONLINE', 'ONLINE', 'OFFLINE']),
-                    'resolution': random.choice(['1080p', '4MP', '5MP', '12MP'])
+                    'system_type': 'CCTV',
+                    'unit': unit_obj,
+                    'is_active': True
                 }
             )
+            systems_list.append(s)
+            
+            # Create 8 Servers per System
+            for i in range(8):
+                srv_name = f"SRV-{unit_obj.code}-{sys_type[:3].upper()}-{i+1:02d}"
+                srv, _ = Server.objects.get_or_create(
+                    name=srv_name,
+                    system=s,
+                    defaults={
+                        # Unique IP generation logic
+                        'ip_address': f"10.{100 + locations.index(unit_obj)}.{systems_list.index(s) + 10}.{i+1}",
+                        'is_active': True
+                    }
+                )
+
+                # Create 20 Cameras per Server
+                for j in range(20):
+                    cam_name = f"CAM-{srv_name}-{j+1:02d}"
+                    Camera.objects.get_or_create(
+                        name=cam_name,
+                        server=srv,
+                        defaults={
+                            'ip_address': f"{srv.ip_address}.{j+50}",
+                            'status': random.choice(['ONLINE', 'ONLINE', 'ONLINE', 'ONLINE', 'OFFLINE']),
+                            'resolution': random.choice(['1080p', '4MP', '5MP', '4K'])
+                        }
+                    )
             
     all_cameras = list(Camera.objects.all())
     
@@ -123,8 +165,8 @@ def seed():
             end_time=end,
             description=f"Oficio Judicial Nro {fake.numerify(text='####/2026')} - Requerimiento de Evidencia",
             record_type=random.choice(['VD', 'VD', 'IM']),
-            is_verified=random.choice([True, False]),
-            verification_hash=fake.sha256() if random.random() > 0.4 else None
+            is_integrity_verified=random.choice([True, False]),
+            file_hash=fake.sha256() if random.random() > 0.4 else None
         )
         records.append(r)
         

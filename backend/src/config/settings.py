@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'novedades',
     'personnel',
     'records',
+    'hechos',
 ]
 
 MIDDLEWARE = [

@@ -15,8 +15,7 @@ import { PersonnelService } from '../services/personnel.service';
       <!-- Welcome Header -->
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 class="text-3xl font-bold text-slate-800">Dashboard</h1>
-          <p class="text-slate-500 mt-1">Resumen general del estado operativo del COC.</p>
+           <!-- Title moved to top header -->
         </div>
         <div class="flex items-center gap-3">
           <!-- COC Filter -->
@@ -41,7 +40,7 @@ import { PersonnelService } from '../services/personnel.service';
       </div>
 
       <!-- Stats Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-indigo-50 rounded-xl text-indigo-600">
@@ -58,13 +57,27 @@ import { PersonnelService } from '../services/personnel.service';
 
         <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
           <div class="flex items-center gap-4">
+            <div class="p-3 bg-blue-50 rounded-xl text-blue-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-slate-500">Servidores</p>
+              <h3 class="text-2xl font-bold text-slate-800">{{ filteredServersCount() }}</h3>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+          <div class="flex items-center gap-4">
             <div class="p-3 bg-emerald-50 rounded-xl text-emerald-600">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
             <div>
-              <p class="text-sm font-medium text-slate-500">Cámaras Activas</p>
+              <p class="text-sm font-medium text-slate-500">Cámaras Online</p>
               <h3 class="text-2xl font-bold text-slate-800">{{ filteredCamerasOnline() }}/{{ filteredCamerasTotal() }}</h3>
             </div>
           </div>
@@ -78,7 +91,7 @@ import { PersonnelService } from '../services/personnel.service';
               </svg>
             </div>
             <div>
-              <p class="text-sm font-medium text-slate-500">Novedades Abiertas</p>
+              <p class="text-sm font-medium text-slate-500">Fallas Abiertas</p>
               <h3 class="text-2xl font-bold text-slate-800">{{ stats().openNovedades }}</h3>
             </div>
           </div>
@@ -92,7 +105,7 @@ import { PersonnelService } from '../services/personnel.service';
               </svg>
             </div>
             <div>
-              <p class="text-sm font-medium text-slate-500">Personal Activo</p>
+              <p class="text-sm font-medium text-slate-500">Personal</p>
               <h3 class="text-2xl font-bold text-slate-800">{{ stats().personnelActive }}</h3>
             </div>
           </div>
@@ -149,6 +162,18 @@ import { PersonnelService } from '../services/personnel.service';
                 <p class="text-slate-500 text-sm">Ver inventario</p>
               </div>
             </a>
+
+            <a routerLink="/integrity" class="group flex items-center p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-amber-200 transition-all">
+              <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 21a11.955 11.955 0 01-9.618-7.016m19.236 0a11.92 11.92 0 00-1.092-3.118m-17.052 3.118A11.92 11.92 0 013.86 10.882m16.248-3.118A11.955 11.955 0 0012 3a11.955 11.955 0 00-8.108 3.118M15 10a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <div class="ml-4">
+                <p class="font-bold text-slate-800 text-lg">Integridad</p>
+                <p class="text-slate-500 text-sm">Validar hashes</p>
+              </div>
+            </a>
           </div>
 
           <!-- Critical Summary Mini -->
@@ -172,6 +197,7 @@ export class HomeComponent implements OnInit {
 
   // Raw Signals
   systems = signal<any[]>([]);
+  servers = signal<any[]>([]);
   cameras = signal<any[]>([]);
   novedades = signal<any[]>([]);
   people = signal<any[]>([]);
@@ -185,10 +211,13 @@ export class HomeComponent implements OnInit {
     return this.systems().filter(s => s.id == this.selectedCoc()).length;
   });
 
+  filteredServersCount = computed(() => {
+    if (this.selectedCoc() === 'ALL') return this.servers().length;
+    return this.servers().filter(s => s.system == this.selectedCoc()).length;
+  });
+
   filteredCamerasTotal = computed(() => {
     if (this.selectedCoc() === 'ALL') return this.cameras().length;
-    // Assuming camera has system (id) property based on serializer
-    // In serializer we saw 'system': 1.
     return this.cameras().filter(c => c.system == this.selectedCoc()).length;
   });
 
@@ -219,6 +248,7 @@ export class HomeComponent implements OnInit {
 
   refreshData() {
     this.assetService.getSystems().subscribe(data => this.systems.set(data));
+    this.assetService.getServers().subscribe(data => this.servers.set(data));
     this.assetService.getCameras().subscribe(data => this.cameras.set(data));
     this.novedadService.getNovedades().subscribe(data => this.novedades.set(data));
     this.personnelService.getPeople().subscribe(data => this.people.set(data));

@@ -1,17 +1,29 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from rest_framework import viewsets
-from .models import System, Camera
-from .serializers import SystemSerializer, CameraSerializer
+from .models import System, Server, Camera, CameramanGear, Unit
+from .serializers import SystemSerializer, ServerSerializer, CameraSerializer, CameramanGearSerializer, UnitSerializer
 
+
+class UnitViewSet(viewsets.ModelViewSet):
+    queryset = Unit.objects.all()
+    serializer_class = UnitSerializer
 
 class SystemViewSet(viewsets.ModelViewSet):
     queryset = System.objects.all()
     serializer_class = SystemSerializer
 
+class ServerViewSet(viewsets.ModelViewSet):
+    queryset = Server.objects.all()
+    serializer_class = ServerSerializer
+
 class CameraViewSet(viewsets.ModelViewSet):
     queryset = Camera.objects.all()
     serializer_class = CameraSerializer
+
+class CameramanGearViewSet(viewsets.ModelViewSet):
+    queryset = CameramanGear.objects.all()
+    serializer_class = CameramanGearSerializer
 
 # Legacy views (if needed for templates)
 def home(request):

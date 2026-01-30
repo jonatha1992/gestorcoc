@@ -7,16 +7,12 @@ import { AssetService } from '../services/asset.service';
 import { PersonnelService } from '../services/personnel.service';
 
 @Component({
-    selector: 'app-records',
-    standalone: true,
-    imports: [CommonModule, FormsModule],
-    template: `
+  selector: 'app-records',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
     <div class="space-y-6 animate-in slide-in-from-bottom-2 duration-500">
-      <div class="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div>
-          <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Registros Fílmicos</h2>
-          <p class="text-slate-500 text-sm mt-1">Gestión de evidencia digital y trazabilidad de copias de seguridad.</p>
-        </div>
+      <div class="flex justify-end items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <button (click)="showForm.set(true)" 
                 class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-md shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98]">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -203,79 +199,79 @@ import { PersonnelService } from '../services/personnel.service';
       }
     </div>
   `,
-    providers: [RecordsService, AssetService, PersonnelService]
+  providers: [RecordsService, AssetService, PersonnelService]
 })
 export class RecordsComponent implements OnInit {
-    private recordsService = inject(RecordsService);
-    private assetService = inject(AssetService);
-    private personnelService = inject(PersonnelService);
-    private toastService = inject(ToastService);
+  private recordsService = inject(RecordsService);
+  private assetService = inject(AssetService);
+  private personnelService = inject(PersonnelService);
+  private toastService = inject(ToastService);
 
-    records = signal<any[]>([]);
-    cameras = signal<any[]>([]);
-    people = signal<any[]>([]);
-    showForm = signal(false);
+  records = signal<any[]>([]);
+  cameras = signal<any[]>([]);
+  people = signal<any[]>([]);
+  showForm = signal(false);
 
-    verifiedCount = signal(0);
-    pendingCount = signal(0);
+  verifiedCount = signal(0);
+  pendingCount = signal(0);
 
-    newRecord: any = {
-        description: '',
-        camera: '',
-        record_type: 'VD',
-        start_time: '',
-        end_time: '',
-        operator: '',
-        is_verified: false
-    };
+  newRecord: any = {
+    description: '',
+    camera: '',
+    record_type: 'VD',
+    start_time: '',
+    end_time: '',
+    operator: '',
+    is_verified: false
+  };
 
-    ngOnInit() {
+  ngOnInit() {
+    this.loadData();
+    this.loadMetadata();
+  }
+
+  loadData() {
+    this.recordsService.getRecords().subscribe({
+      next: (data) => {
+        this.records.set(data);
+        this.updateStats();
+      },
+      error: (err) => this.toastService.show('Error al cargar registros', 'error')
+    });
+  }
+
+  loadMetadata() {
+    this.assetService.getCameras().subscribe(data => this.cameras.set(data));
+    this.personnelService.getPeople().subscribe(data => this.people.set(data));
+  }
+
+  updateStats() {
+    const v = this.records().filter(r => r.is_verified).length;
+    this.verifiedCount.set(v);
+    this.pendingCount.set(this.records().length - v);
+  }
+
+  saveRecord() {
+    this.recordsService.createRecord(this.newRecord).subscribe({
+      next: () => {
+        this.toastService.show('Requerimiento registrado', 'success');
+        this.showForm.set(false);
+        this.resetForm();
         this.loadData();
-        this.loadMetadata();
-    }
+      },
+      error: () => this.toastService.show('Error al registrar evidencia', 'error')
+    });
+  }
 
-    loadData() {
-        this.recordsService.getRecords().subscribe({
-            next: (data) => {
-                this.records.set(data);
-                this.updateStats();
-            },
-            error: (err) => this.toastService.show('Error al cargar registros', 'error')
-        });
-    }
-
-    loadMetadata() {
-        this.assetService.getCameras().subscribe(data => this.cameras.set(data));
-        this.personnelService.getPeople().subscribe(data => this.people.set(data));
-    }
-
-    updateStats() {
-        const v = this.records().filter(r => r.is_verified).length;
-        this.verifiedCount.set(v);
-        this.pendingCount.set(this.records().length - v);
-    }
-
-    saveRecord() {
-        this.recordsService.createRecord(this.newRecord).subscribe({
-            next: () => {
-                this.toastService.show('Requerimiento registrado', 'success');
-                this.showForm.set(false);
-                this.resetForm();
-                this.loadData();
-            },
-            error: () => this.toastService.show('Error al registrar evidencia', 'error')
-        });
-    }
-
-    resetForm() {
-        this.newRecord = {
-            description: '',
-            camera: '',
-            record_type: 'VD',
-            start_time: '',
-            end_time: '',
-            operator: '',
-            is_verified: false
-        };
-    }
+  resetForm() {
+    this.newRecord = {
+      description: '',
+      camera: '',
+      record_type: 'VD',
+      start_time: '',
+      end_time: '',
+      operator: '',
+      is_verified: false
+    };
+  }
 }
