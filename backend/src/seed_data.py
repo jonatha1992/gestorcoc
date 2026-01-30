@@ -99,51 +99,57 @@ def seed():
     # --- 2. Assets ---
     print("Creating Systems, Servers and Cameras...")
     
+    
     # Topology definition
-    locations = [unit_eze, unit_aep] # Ezeiza, Aeroparque
-    system_types = ['Milestone', 'Avigilon']
+    locations = [unit_eze, unit_aep]
+    topology_map = {
+        'EZE': ['Avigilon'],
+        'AEP': ['Milestone']
+    }
     
     systems_list = []
 
     for unit_obj in locations:
-        for sys_type in system_types:
-            # Create System
-            s_name = f"{sys_type} {unit_obj.code}"
-            s, _ = System.objects.get_or_create(
-                name=s_name,
-                defaults={
-                    'system_type': 'CCTV',
-                    'unit': unit_obj,
-                    'is_active': True
-                }
-            )
-            systems_list.append(s)
-            
-            # Create 8 Servers per System
-            for i in range(8):
-                srv_name = f"SRV-{unit_obj.code}-{sys_type[:3].upper()}-{i+1:02d}"
-                srv, _ = Server.objects.get_or_create(
-                    name=srv_name,
-                    system=s,
+        if unit_obj.code in topology_map:
+            allowed_systems = topology_map[unit_obj.code]
+            for sys_type in allowed_systems:
+                # Create System
+                s_name = f"{sys_type} {unit_obj.code}"
+                s, _ = System.objects.get_or_create(
+                    name=s_name,
                     defaults={
-                        # Unique IP generation logic
-                        'ip_address': f"10.{100 + locations.index(unit_obj)}.{systems_list.index(s) + 10}.{i+1}",
+                        'system_type': 'CCTV',
+                        'unit': unit_obj,
                         'is_active': True
                     }
                 )
-
-                # Create 20 Cameras per Server
-                for j in range(20):
-                    cam_name = f"CAM-{srv_name}-{j+1:02d}"
-                    Camera.objects.get_or_create(
-                        name=cam_name,
-                        server=srv,
+                systems_list.append(s)
+                
+                # Create 8 Servers per System
+                for i in range(8):
+                    srv_name = f"SRV-{unit_obj.code}-{sys_type[:3].upper()}-{i+1:02d}"
+                    srv, _ = Server.objects.get_or_create(
+                        name=srv_name,
+                        system=s,
                         defaults={
-                            'ip_address': f"{srv.ip_address}.{j+50}",
-                            'status': random.choice(['ONLINE', 'ONLINE', 'ONLINE', 'ONLINE', 'OFFLINE']),
-                            'resolution': random.choice(['1080p', '4MP', '5MP', '4K'])
+                            # Unique IP generation logic
+                            'ip_address': f"10.{100 + locations.index(unit_obj)}.{systems_list.index(s) + 10}.{i+1}",
+                            'is_active': True
                         }
                     )
+
+                    # Create 20 Cameras per Server
+                    for j in range(20):
+                        cam_name = f"CAM-{srv_name}-{j+1:02d}"
+                        Camera.objects.get_or_create(
+                            name=cam_name,
+                            server=srv,
+                            defaults={
+                                'ip_address': f"{srv.ip_address}.{j+50}",
+                                'status': random.choice(['ONLINE', 'ONLINE', 'ONLINE', 'ONLINE', 'OFFLINE']),
+                                'resolution': random.choice(['1080p', '4MP', '5MP', '4K'])
+                            }
+                        )
             
     all_cameras = list(Camera.objects.all())
     
