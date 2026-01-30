@@ -5,6 +5,8 @@ import { ApiService } from '../services/api.service';
 import { LoadingService } from '../services/loading.service';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../services/toast.service';
+import { forkJoin } from 'rxjs';
+import { finalize, timeout } from 'rxjs/operators';
 
 @Component({
   selector: 'app-assets',
@@ -76,7 +78,13 @@ import { ToastService } from '../services/toast.service';
       <!-- CCTV Content -->
       @if (activeTab === 'cctv') {
       <div class="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        @for (unitGroup of groupedSystems; track unitGroup.unitId) {
+        @if (isLoadingCctv) {
+          <div class="flex flex-col items-center justify-center p-12 space-y-4">
+            <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+            <p class="text-slate-500 font-medium animate-pulse">Cargando sistemas...</p>
+          </div>
+        } @else {
+          @for (unitGroup of groupedSystems; track unitGroup.unitId) {
           <div class="space-y-4">
             <div class="flex items-center gap-2 px-2">
               <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
@@ -190,20 +198,17 @@ import { ToastService } from '../services/toast.service';
                                       }
                                       </tbody>
                                   </table>
-                                  </div>
+                                </div>
                                }
                           </div>
                           }
                       </div>
-                    </div>
+                  </div>
                 }
               </div>
             }
           </div>
-        } @empty {
-          <div class="bg-white p-12 text-center rounded-2xl border-2 border-dashed border-slate-200">
-             <p class="text-slate-400 italic font-medium">No se encontraron sistemas configurados.</p>
-          </div>
+          }
         }
       </div>
       }
@@ -374,7 +379,6 @@ import { ToastService } from '../services/toast.service';
             </div>
         </div>
       }
-    </div>
   `,
   providers: [AssetService]
 })
@@ -391,6 +395,7 @@ export class AssetsComponent implements OnInit {
   totalServers = 0;
   error: string | null = null;
   activeTab: 'cctv' | 'gear' = 'cctv';
+  isLoadingCctv = false;
 
   expandedSystemIds = new Set<number>();
   expandedServerIds = new Set<number>();
@@ -400,43 +405,43 @@ export class AssetsComponent implements OnInit {
   }
 
   refreshData() {
-    // this.isLoading = true;
+    this.isLoadingCctv = true;
     this.loadingService.show();
     this.error = null;
 
-    // ForkJoin or separate calls? Let's do separate for now or chained.
-    // Ideally use forkJoin from RxJS but let's keep it simple.
+    forkJoin({
+      systems: this.assetService.getSystems(),
+      units: this.apiService.get<any[]>('api/units/'),
+      gear: this.assetService.getCameramanGear()
+    }).pipe(
+      timeout(15000), // Timeout after 15 seconds
+      finalize(() => {
+        this.isLoadingCctv = false;
+        this.loadingService.hide();
+      })
+    ).subscribe({
+      next: (results) => {
+        // Process Systems
+        if (results.systems) {
+          this.systems = results.systems;
+          this.totalCameras = this.systems.reduce((acc: number, sys: any) => acc + (sys.camera_count || 0), 0);
+          this.totalServers = this.systems.reduce((acc: number, sys: any) => acc + (sys.servers?.length || 0), 0);
+        }
 
-    this.assetService.getSystems().subscribe({
-      next: (data) => {
-        this.systems = data;
-        this.totalCameras = data.reduce((acc: number, sys: any) => acc + (sys.camera_count || 0), 0);
-        this.totalServers = data.reduce((acc: number, sys: any) => acc + (sys.servers?.length || 0), 0);
+        // Process Units
+        if (results.units) {
+          this.units = results.units;
+          this.groupSystems();
+        }
 
-        // Fetch Units for grouping and forms
-        this.apiService.get<any[]>('api/units/').subscribe({
-          next: (units) => {
-            this.units = units;
-            this.groupSystems();
-          }
-        });
-
-        // Fetch Gear
-        this.assetService.getCameramanGear().subscribe({
-          next: (gearData) => {
-            this.gear = gearData;
-            this.loadingService.hide();
-          },
-          error: (err) => {
-            console.error('Error fetching gear:', err);
-            this.loadingService.hide();
-          }
-        });
+        // Process Gear
+        if (results.gear) {
+          this.gear = results.gear;
+        }
       },
       error: (err) => {
-        console.error('AssetsComponent: Error fetching systems:', err);
-        this.error = 'No se pudieron cargar los datos.';
-        this.loadingService.hide();
+        console.error('Error loading assets:', err);
+        this.error = 'No se pudieron cargar los datos. Verifique la conexión.';
       }
     });
   }
