@@ -379,6 +379,52 @@ import { finalize, timeout } from 'rxjs/operators';
             </div>
         </div>
       }
+
+      <!-- Gear Modal -->
+      @if (showGearModal) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 class="font-bold text-lg text-slate-800">{{ currentGear.id ? 'Editar' : 'Nuevo' }} Equipo</h3>
+                    <button (click)="closeGearModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Nombre del equipo</label>
+                        <input [(ngModel)]="currentGear.name" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ej: Cámara Sony Alpha">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Número de Serie</label>
+                        <input [(ngModel)]="currentGear.serial_number" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ej: SN-12345678">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Asignado a</label>
+                        <input [(ngModel)]="currentGear.assigned_to" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Nombre del operador">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Estado del equipo</label>
+                        <select [(ngModel)]="currentGear.condition" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="NEW">Nuevo</option>
+                            <option value="GOOD">Bueno</option>
+                            <option value="FAIR">Regular</option>
+                            <option value="POOR">Malo</option>
+                            <option value="BROKEN">Roto</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input [(ngModel)]="currentGear.is_active" type="checkbox" id="gear-active" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500">
+                        <label for="gear-active" class="text-sm font-medium text-slate-700">Activo</label>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                    <button (click)="closeGearModal()" class="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
+                    <button (click)="saveGear()" class="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors">Guardar</button>
+                </div>
+            </div>
+        </div>
+      }
   `,
   providers: [AssetService]
 })
@@ -658,7 +704,7 @@ export class AssetsComponent implements OnInit {
   currentGear: any = {};
 
   openGearModal() {
-    this.currentGear = { condition: 'GOOD' }; // Default
+    this.currentGear = { condition: 'GOOD', is_active: true };
     this.showGearModal = true;
   }
 
