@@ -16,7 +16,7 @@
             "django": true,
             "autoStartBrowser": false,
             "program": "manage.py",
-            "python": "${workspaceFolder}/backend/src/.venv/Scripts/python.exe",
+            "python": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
             "cwd": "${workspaceFolder}/backend/src",
             "console": "integratedTerminal",
             "env": {

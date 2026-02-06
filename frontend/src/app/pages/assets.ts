@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AssetService } from '../services/asset.service';
 import { ApiService } from '../services/api.service';
@@ -6,7 +6,7 @@ import { LoadingService } from '../services/loading.service';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../services/toast.service';
 import { forkJoin } from 'rxjs';
-import { finalize, timeout } from 'rxjs/operators';
+import { timeout } from 'rxjs/operators';
 
 @Component({
   selector: 'app-assets',
@@ -26,8 +26,14 @@ import { finalize, timeout } from 'rxjs/operators';
           <span class="px-4 py-1.5 bg-emerald-100 text-emerald-700 rounded-xl text-sm font-bold shadow-sm">
             {{ totalCameras }} Cámaras
           </span>
-          <button (click)="refreshData()" class="ml-2 p-2.5 hover:bg-slate-100 text-slate-500 hover:text-indigo-600 rounded-full transition-all active:scale-95" title="Recargar Inventario">
-             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          <button 
+            (click)="refreshData()" 
+            [disabled]="isLoadingCctv || isLoadingGear"
+            [class.opacity-50]="isLoadingCctv || isLoadingGear"
+            [class.cursor-not-allowed]="isLoadingCctv || isLoadingGear"
+            class="ml-2 p-2.5 hover:bg-slate-100 text-slate-500 hover:text-indigo-600 rounded-full transition-all active:scale-95 disabled:hover:bg-transparent disabled:active:scale-100" 
+            title="Recargar Inventario">
+             <svg [class.animate-spin]="isLoadingCctv || isLoadingGear" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
           </button>
         </div>
       </div>
@@ -82,6 +88,15 @@ import { finalize, timeout } from 'rxjs/operators';
           <div class="flex flex-col items-center justify-center p-12 space-y-4">
             <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
             <p class="text-slate-500 font-medium animate-pulse">Cargando sistemas...</p>
+          </div>
+        } @else if (groupedSystems.length === 0) {
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-12 text-center">
+            <svg class="w-16 h-16 mx-auto text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+            <p class="text-slate-500 font-medium mb-2">No hay sistemas registrados</p>
+            <p class="text-slate-400 text-sm mb-4">Crea tu primer sistema CCTV para comenzar</p>
+            <button (click)="openSystemModal()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors shadow-sm">
+              Crear Sistema
+            </button>
           </div>
         } @else {
           @for (unitGroup of groupedSystems; track unitGroup.unitId) {
@@ -215,19 +230,26 @@ import { finalize, timeout } from 'rxjs/operators';
 
       <!-- Gear Content -->
       @if (activeTab === 'gear') {
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-slate-50 border-b border-slate-200">
-                        <tr>
-                            <th class="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Equipo</th>
-                            <th class="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Serial</th>
-                            <th class="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Asignado a</th>
-                            <th class="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Estado</th>
-                            <th class="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs text-right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
+        <div class="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          @if (isLoadingGear) {
+            <div class="flex flex-col items-center justify-center p-12 space-y-4">
+              <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+              <p class="text-slate-500 font-medium animate-pulse">Cargando equipamiento...</p>
+            </div>
+          } @else {
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div class="overflow-x-auto">
+                  <table class="w-full text-left text-sm">
+                      <thead class="bg-slate-50 border-b border-slate-200">
+                          <tr>
+                              <th class="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Equipo</th>
+                              <th class="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Serial</th>
+                              <th class="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Asignado a</th>
+                              <th class="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Estado</th>
+                              <th class="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs text-right">Acciones</th>
+                          </tr>
+                      </thead>
+                      <tbody class="divide-y divide-slate-100">
                         @for (item of gear; track item.id) {
                             <tr class="hover:bg-slate-50 transition-colors">
                                 <td class="px-6 py-4">
@@ -275,6 +297,8 @@ import { finalize, timeout } from 'rxjs/operators';
                     </tbody>
                 </table>
             </div>
+          </div>
+        }
         </div>
       }
 
@@ -379,6 +403,52 @@ import { finalize, timeout } from 'rxjs/operators';
             </div>
         </div>
       }
+
+      <!-- Gear Modal -->
+      @if (showGearModal) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 class="font-bold text-lg text-slate-800">{{ currentGear.id ? 'Editar' : 'Nuevo' }} Equipo</h3>
+                    <button (click)="closeGearModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                        <input [(ngModel)]="currentGear.name" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Ej: Chaleco Prensa">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Número de Serie</label>
+                        <input [(ngModel)]="currentGear.serial_number" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono" placeholder="Ej: CHK-001">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Asignado a</label>
+                        <input [(ngModel)]="currentGear.assigned_to" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Nombre del camarógrafo">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                        <select [(ngModel)]="currentGear.condition" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+                            <option value="NEW">Nuevo</option>
+                            <option value="GOOD">Bueno</option>
+                            <option value="FAIR">Regular</option>
+                            <option value="POOR">Malo</option>
+                            <option value="BROKEN">Roto</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input [(ngModel)]="currentGear.is_active" type="checkbox" id="gear-active" class="w-4 h-4 text-indigo-600 rounded">
+                        <label for="gear-active" class="text-sm font-medium text-slate-700">Activo</label>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                    <button (click)="closeGearModal()" class="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg">Cancelar</button>
+                    <button (click)="saveGear()" class="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Guardar</button>
+                </div>
+            </div>
+        </div>
+      }
   `,
   providers: [AssetService]
 })
@@ -387,6 +457,7 @@ export class AssetsComponent implements OnInit {
   private apiService = inject(ApiService);
   loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
+  private cdr = inject(ChangeDetectorRef);
   systems: any[] = [];
   units: any[] = [];
   groupedSystems: { unitId: number, unitName: string, unitCode: string, systems: any[] }[] = [];
@@ -396,6 +467,7 @@ export class AssetsComponent implements OnInit {
   error: string | null = null;
   activeTab: 'cctv' | 'gear' = 'cctv';
   isLoadingCctv = false;
+  isLoadingGear = false;
 
   expandedSystemIds = new Set<number>();
   expandedServerIds = new Set<number>();
@@ -406,6 +478,7 @@ export class AssetsComponent implements OnInit {
 
   refreshData() {
     this.isLoadingCctv = true;
+    this.isLoadingGear = true;
     this.loadingService.show();
     this.error = null;
 
@@ -414,11 +487,7 @@ export class AssetsComponent implements OnInit {
       units: this.apiService.get<any[]>('api/units/'),
       gear: this.assetService.getCameramanGear()
     }).pipe(
-      timeout(15000), // Timeout after 15 seconds
-      finalize(() => {
-        this.isLoadingCctv = false;
-        this.loadingService.hide();
-      })
+      timeout(30000)
     ).subscribe({
       next: (results) => {
         // Process Systems
@@ -438,10 +507,20 @@ export class AssetsComponent implements OnInit {
         if (results.gear) {
           this.gear = results.gear;
         }
+
+        this.isLoadingCctv = false;
+        this.isLoadingGear = false;
+        this.loadingService.hide();
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading assets:', err);
-        this.error = 'No se pudieron cargar los datos. Verifique la conexión.';
+        this.error = 'No se pudieron cargar los datos. Verifique la conexión al servidor.';
+        this.toastService.error('Error al cargar los datos');
+        this.isLoadingCctv = false;
+        this.isLoadingGear = false;
+        this.loadingService.hide();
+        this.cdr.detectChanges();
       }
     });
   }
@@ -454,7 +533,21 @@ export class AssetsComponent implements OnInit {
 
     this.systems.forEach(sys => {
       const unit = sys.unit;
-      if (!unit) return;
+
+      // Si no tiene unidad, crear un grupo "Sin Unidad"
+      if (!unit) {
+        const noUnitKey = -1; // Key especial para sistemas sin unidad
+        if (!groups[noUnitKey]) {
+          groups[noUnitKey] = {
+            unitId: noUnitKey,
+            unitName: 'Sin Unidad Asignada',
+            unitCode: 'N/A',
+            systems: []
+          };
+        }
+        groups[noUnitKey].systems.push(sys);
+        return;
+      }
 
       if (!groups[unit.id]) {
         groups[unit.id] = {

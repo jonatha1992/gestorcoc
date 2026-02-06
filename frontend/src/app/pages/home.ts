@@ -11,17 +11,17 @@ import { PersonnelService } from '../services/personnel.service';
   standalone: true,
   imports: [RouterLink, CommonModule, FormsModule],
   template: `
-    <div class="space-y-8">
+<div class="space-y-5">
       <!-- Welcome Header -->
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
            <!-- Title moved to top header -->
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
           <!-- COC Filter -->
           <div class="relative">
             <select [ngModel]="selectedCoc()" (ngModelChange)="selectedCoc.set($event)" 
-              class="appearance-none bg-white border border-slate-200 text-slate-700 py-2 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium shadow-sm transition-all cursor-pointer hover:border-indigo-300">
+              class="appearance-none bg-white border border-slate-200 text-slate-700 py-1.5 pl-3 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium shadow-sm transition-all cursor-pointer hover:border-indigo-300">
               <option value="ALL">Todo el Equipamiento</option>
               @for (system of systems(); track system.id) {
                 <option [value]="system.id">{{ system.name }}</option>
@@ -32,72 +32,72 @@ import { PersonnelService } from '../services/personnel.service';
             </div>
           </div>
 
-          <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+          <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
             Sistema Operativo
           </span>
         </div>
       </div>
 
-      <!-- Stats Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-          <div class="flex items-center gap-4">
-            <div class="p-3 bg-indigo-50 rounded-xl text-indigo-600">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+<!-- Stats Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
             <div>
-              <p class="text-sm font-medium text-slate-500">Sistemas</p>
-              <h3 class="text-2xl font-bold text-slate-800">{{ filteredSystemsCount() }}</h3>
+              <p class="text-xs font-medium text-slate-500">Sistemas</p>
+              <h3 class="text-xl font-bold text-slate-800">{{ filteredSystemsCount() }}</h3>
             </div>
           </div>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-          <div class="flex items-center gap-4">
-            <div class="p-3 bg-blue-50 rounded-xl text-blue-600">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
               </svg>
             </div>
             <div>
-              <p class="text-sm font-medium text-slate-500">Servidores</p>
-              <h3 class="text-2xl font-bold text-slate-800">{{ filteredServersCount() }}</h3>
+              <p class="text-xs font-medium text-slate-500">Servidores</p>
+              <h3 class="text-xl font-bold text-slate-800">{{ filteredServersCount() }}</h3>
             </div>
           </div>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-          <div class="flex items-center gap-4">
-            <div class="p-3 bg-emerald-50 rounded-xl text-emerald-600">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
             <div>
-              <p class="text-sm font-medium text-slate-500">Cámaras Online</p>
-              <h3 class="text-2xl font-bold text-slate-800">{{ filteredCamerasOnline() }}/{{ filteredCamerasTotal() }}</h3>
+              <p class="text-xs font-medium text-slate-500">Cámaras Online</p>
+              <h3 class="text-xl font-bold text-slate-800">{{ filteredCamerasOnline() }}/{{ filteredCamerasTotal() }}</h3>
             </div>
           </div>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-          <div class="flex items-center gap-4">
-            <div class="p-3 bg-rose-50 rounded-xl text-rose-600">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-rose-50 rounded-lg text-rose-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
             <div>
-              <p class="text-sm font-medium text-slate-500">Fallas Abiertas</p>
-              <h3 class="text-2xl font-bold text-slate-800">{{ stats().openNovedades }}</h3>
+              <p class="text-xs font-medium text-slate-500">Fallas Abiertas</p>
+              <h3 class="text-xl font-bold text-slate-800">{{ stats().openNovedades }}</h3>
             </div>
           </div>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-amber-50 rounded-xl text-amber-600">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

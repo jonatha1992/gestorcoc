@@ -1,4 +1,4 @@
-# AI Coding Assistant Instructions for GestorCOC
+﻿# AI Coding Assistant Instructions for GestorCOC
 
 ## Project Overview
 GestorCOC is a Django-based monolithic web application for managing CCTV systems, operations, and documentation in security control centers. It serves multiple organizational units with role-based access control.
@@ -14,7 +14,7 @@ GestorCOC is a Django-based monolithic web application for managing CCTV systems
 
 ### Core App (Authentication & Organization)
 - Custom User model extending AbstractUser with roles/groups
-- Organizational hierarchy: Units → Systems → Cameras
+- Organizational hierarchy: Units  Systems  Cameras
 - Catalog system for dropdowns (locations, categories, types)
 - Custom RBAC with JSON-based permissions
 - Audit mixins for all models (created_by, updated_by, timestamps)
@@ -22,19 +22,19 @@ GestorCOC is a Django-based monolithic web application for managing CCTV systems
 ### Data Models Relationships
 ```
 OrganizationalUnit
-├── CctvSystem (has_coc_room flag)
-│   └── Camera (status: Online/Issue/Offline/Maintenance)
-└── Equipment (categorized, with QR codes)
+ CctvSystem (has_coc_room flag)
+    Camera (status: Online/Issue/Offline/Maintenance)
+ Equipment (categorized, with QR codes)
 
 Operations (Hechos/Incidents)
-├── Linked to CctvSystem/Camera
-├── Resolved by groups/users
-└── Status tracking with resolution times
+ Linked to CctvSystem/Camera
+ Resolved by groups/users
+ Status tracking with resolution times
 
 Documents
-├── Official records (Entrada/Salida)
-├── Film records for evidence requests
-└── File attachments with integrity checks
+ Official records (Entrada/Salida)
+ Film records for evidence requests
+ File attachments with integrity checks
 ```
 
 ## Development Patterns
@@ -86,7 +86,7 @@ class MyView(ModulePermissionRequiredMixin):
 ### Document Workflow
 1. Entry/Exit classification
 2. Priority assignment (Baja/Media/Alta)
-3. Status progression (Pendiente → En Proceso → Finalizado)
+3. Status progression (Pendiente  En Proceso  Finalizado)
 4. Attachment handling
 
 ## Commands & Setup
@@ -139,5 +139,12 @@ python manage.py test
 - Static files collection
 - Database backups
 - Media file handling
-- Permission synchronization</content>
-<parameter name="filePath">c:\Repositorio\gestorcoc\.github\copilot-instructions.md
+- Permission synchronization
+
+## GitHub Copilot Skills
+This project includes 10 specialized skills for enhanced development assistance:
+- architect-pro, devops-engine, uml-docs-architect, data-excel-pro
+- creative-innovator, tester-pro, refactor-pro, performance-tuner
+- lead-reviewer, security-guardian
+
+See `.github/skills/` for detailed skill definitions.
