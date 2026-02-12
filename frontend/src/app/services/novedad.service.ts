@@ -19,4 +19,11 @@ export class NovedadService {
     deleteNovedad(id: number): Observable<any> {
         return this.api.delete<any>(`api/novedades/${id}/`);
     }
+<<<<<<< HEAD
+=======
+
+    updateNovedad(id: number, data: any): Observable<any> {
+        return this.api.put<any>(`api/novedades/${id}/`, data);
+    }
+>>>>>>> dev
 }

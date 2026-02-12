@@ -1,1 +1,15 @@
+<<<<<<< HEAD
 frontend/node_modules/
+=======
+backend/src/.venv/
+backend/src/venv/
+frontend/node_modules/
+__pycache__/
+*.pyc
+frontend/.angular/
+backend/.venv/
+frontend/.angular/
+frontend/dist
+.github/copilot-instructions.md
+frontend/.angular/cache/21.1.2/gestor-coc/.tsbuildinfo
+>>>>>>> dev

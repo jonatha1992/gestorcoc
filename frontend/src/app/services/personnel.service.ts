@@ -11,4 +11,19 @@ export class PersonnelService {
     getPeople(): Observable<any[]> {
         return this.api.get<any[]>('api/people/');
     }
+<<<<<<< HEAD
+=======
+
+    createPerson(person: any): Observable<any> {
+        return this.api.post<any>('api/people/', person);
+    }
+
+    updatePerson(id: number, person: any): Observable<any> {
+        return this.api.put<any>(`api/people/${id}/`, person);
+    }
+
+    deletePerson(id: number): Observable<any> {
+        return this.api.delete<any>(`api/people/${id}/`);
+    }
+>>>>>>> dev
 }
