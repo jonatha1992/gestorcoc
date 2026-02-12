@@ -13,5 +13,9 @@ app_name = 'assets'
 
 urlpatterns = [
     path('', include(router.urls)),
-    # path('', views.home, name='home'),
+    # Rutas de vistas de template (UI)
+    path('assets/', views.asset_list, name='list'),
+    path('assets/create/', views.asset_create, name='create'),
+    path('assets/<int:pk>/', views.asset_detail, name='detail'),
+    path('assets/<int:pk>/edit/', views.asset_update, name='update'),
 ]

@@ -9,5 +9,9 @@ app_name = 'personnel'
 
 urlpatterns = [
     path('', include(router.urls)),
-    # path('', views.home, name='home'),
+    # Rutas de vistas de template (UI)
+    path('people/', views.person_list, name='list'),
+    path('people/create/', views.person_create, name='create'),
+    path('people/<int:pk>/', views.person_detail, name='detail'),
+    path('people/<int:pk>/edit/', views.person_update, name='update'),
 ]
