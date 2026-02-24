@@ -35,15 +35,17 @@ export class App {
     } else if (url.includes('/novedades')) {
       this.pageTitle = 'Libro de Novedades';
     } else if (url.includes('/hechos')) {
-      this.pageTitle = 'Bitácora Operativa';
+      this.pageTitle = 'Bitacora Operativa';
     } else if (url.includes('/personnel')) {
-      this.pageTitle = 'Gestión de Personal';
+      this.pageTitle = 'Gestion de Personal';
     } else if (url.includes('/records')) {
-      this.pageTitle = 'Registros Fílmicos';
+      this.pageTitle = 'Registros Filmicos';
     } else if (url.includes('/integrity')) {
-      this.pageTitle = 'Verificación de Integridad';
+      this.pageTitle = 'Verificacion de Integridad';
+    } else if (url.includes('/informes')) {
+      this.pageTitle = 'Generador de Informes';
     } else if (url.includes('/settings')) {
-      this.pageTitle = 'Configuración';
+      this.pageTitle = 'Configuracion';
     } else {
       this.pageTitle = 'Dashboard';
     }

@@ -5,9 +5,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import FilmRecord, Catalog
-from .serializers import FilmRecordSerializer, CatalogSerializer
+from .serializers import (
+    FilmRecordSerializer,
+    CatalogSerializer,
+    VideoReportPayloadSerializer,
+)
 from .services import IntegrityService
 
 class FilmRecordViewSet(viewsets.ModelViewSet):
@@ -135,21 +140,29 @@ class IntegrityReportView(views.APIView):
 
     def post(self, request, *args, **kwargs):
         file_obj = request.FILES.get('file')
-        algorithm = request.data.get('algorithm', 'all').lower()
+        algorithm = request.data.get('algorithm', 'sha256').lower()
+        allowed_algorithms = {'sha256', 'sha512', 'sha3', 'all'}
 
         if not file_obj:
             return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+        if algorithm not in allowed_algorithms:
+            return Response(
+                {"error": "Algoritmo no soportado. Use: sha256, sha512 o sha3."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         hashes = {}
         try:
-            if algorithm in ['md5', 'all']:
-                hashes['MD5'] = IntegrityService.calculate_file_hash(file_obj, 'md5')
-            
-            # Reset file pointer for next read
-            file_obj.seek(0)
-            
             if algorithm in ['sha256', 'all']:
                 hashes['SHA256'] = IntegrityService.calculate_file_hash(file_obj, 'sha256')
+                file_obj.seek(0)
+
+            if algorithm in ['sha512', 'all']:
+                hashes['SHA512'] = IntegrityService.calculate_file_hash(file_obj, 'sha512')
+                file_obj.seek(0)
+
+            if algorithm in ['sha3', 'all']:
+                hashes['SHA-3'] = IntegrityService.calculate_file_hash(file_obj, 'sha3')
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -161,4 +174,72 @@ class IntegrityReportView(views.APIView):
             filename=f"integrity_report_{file_obj.name}.pdf",
             content_type='application/pdf'
         )
+
+
+class IntegritySummaryReportView(views.APIView):
+    """
+    Genera un PDF resumen con todos los hashes calculados en la UI.
+
+    POST /api/integrity-summary-report/
+    Body:
+    {
+      "entries": [
+        {"name":"file1.mp4","size":1234,"algorithm":"SHA-256","hash":"...","time_ms":12}
+      ]
+    }
+    """
+
+    def post(self, request, *args, **kwargs):
+        payload = request.data if isinstance(request.data, dict) else {}
+        entries = payload.get("entries", [])
+
+        if not isinstance(entries, list) or len(entries) == 0:
+            return Response(
+                {"error": "Debe enviar una lista no vacia en 'entries'."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        pdf_buffer = IntegrityService.generate_integrity_summary_pdf(entries)
+        return FileResponse(
+            pdf_buffer,
+            as_attachment=True,
+            filename="integrity_report_resumen.pdf",
+            content_type='application/pdf'
+        )
+
+
+class VideoAnalysisReportView(views.APIView):
+    """
+    Genera informe DOCX de analisis de video a partir de un formulario.
+
+    POST /api/video-analysis-report/
+    Body: JSON con campos del formulario.
+    """
+
+    def post(self, request, *args, **kwargs):
+        try:
+            payload = request.data if isinstance(request.data, dict) else {}
+
+            # Backward compatibility: payload plano anterior.
+            if payload and 'report_data' not in payload:
+                payload = {'report_data': payload, 'frames': []}
+
+            serializer = VideoReportPayloadSerializer(data=payload)
+            serializer.is_valid(raise_exception=True)
+
+            buffer, filename = IntegrityService.generate_video_analysis_docx(serializer.validated_data)
+            return FileResponse(
+                buffer,
+                as_attachment=True,
+                filename=filename,
+                content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        except Exception as exc:
+            if isinstance(exc, ValidationError):
+                return Response({"errors": exc.detail}, status=status.HTTP_400_BAD_REQUEST)
+            if isinstance(exc, FileNotFoundError):
+                return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            if isinstance(exc, RuntimeError):
+                return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": f"Error al generar informe: {str(exc)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

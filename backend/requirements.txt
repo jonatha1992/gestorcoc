@@ -10,3 +10,5 @@ djangorestframework
 django-filter
 drf-spectacular
 reportlab
+python-docx
+Pillow

@@ -1,28 +1,32 @@
 import { Injectable } from '@angular/core';
 import * as CryptoJS from 'crypto-js';
 
+export type SupportedHashAlgorithm = 'sha256' | 'sha512' | 'sha3';
+
 @Injectable({
     providedIn: 'root'
 })
 export class HashService {
 
-    async hashFile(file: File): Promise<{ md5: string, sha1: string, sha256: string, sha512: string, time: number }> {
+    async hashFile(file: File, algorithm: SupportedHashAlgorithm): Promise<{ hash: string, time: number }> {
         const startTime = performance.now();
         const arrayBuffer = await file.arrayBuffer();
         const wordArray = this.arrayBufferToWordArray(arrayBuffer);
 
-        const result = {
-            md5: CryptoJS.MD5(wordArray).toString(CryptoJS.enc.Hex).toUpperCase(),
-            sha1: CryptoJS.SHA1(wordArray).toString(CryptoJS.enc.Hex).toUpperCase(),
-            sha256: CryptoJS.SHA256(wordArray).toString(CryptoJS.enc.Hex).toUpperCase(),
-            sha512: CryptoJS.SHA512(wordArray).toString(CryptoJS.enc.Hex).toUpperCase(),
-            time: 0
-        };
+        let hash = '';
+        if (algorithm === 'sha256') {
+            hash = CryptoJS.SHA256(wordArray).toString(CryptoJS.enc.Hex).toUpperCase();
+        } else if (algorithm === 'sha512') {
+            hash = CryptoJS.SHA512(wordArray).toString(CryptoJS.enc.Hex).toUpperCase();
+        } else {
+            hash = CryptoJS.SHA3(wordArray, { outputLength: 256 }).toString(CryptoJS.enc.Hex).toUpperCase();
+        }
 
         const endTime = performance.now();
-        result.time = Math.round(endTime - startTime);
-
-        return result;
+        return {
+            hash,
+            time: Math.round(endTime - startTime)
+        };
     }
 
     private arrayBufferToWordArray(ab: ArrayBuffer): CryptoJS.lib.WordArray {

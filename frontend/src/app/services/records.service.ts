@@ -30,4 +30,10 @@ export class RecordsService {
             responseType: 'blob'
         });
     }
+
+    generateIntegritySummaryReport(entries: any[]): Observable<Blob> {
+        return this.http.post('http://localhost:8000/api/integrity-summary-report/', { entries }, {
+            responseType: 'blob'
+        });
+    }
 }
