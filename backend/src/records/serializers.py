@@ -1,9 +1,30 @@
 from rest_framework import serializers
+from django.conf import settings
 import base64
 import binascii
 from .models import FilmRecord, Catalog
 from assets.models import Camera
 from personnel.models import Person
+
+
+def _video_report_max_frames():
+    return int(getattr(settings, 'VIDEO_REPORT_MAX_FRAMES', 20))
+
+
+def _video_report_max_frame_size_bytes():
+    return int(getattr(settings, 'VIDEO_REPORT_MAX_FRAME_SIZE_BYTES', 5 * 1024 * 1024))
+
+
+def _video_report_max_total_bytes():
+    return int(getattr(settings, 'VIDEO_REPORT_MAX_TOTAL_BYTES', 40 * 1024 * 1024))
+
+
+def _bytes_to_mb_label(size_bytes):
+    mb = size_bytes / (1024 * 1024)
+    if float(mb).is_integer():
+        return str(int(mb))
+    return f"{mb:.1f}".rstrip('0').rstrip('.')
+
 
 class FilmRecordSerializer(serializers.ModelSerializer):
     """
@@ -87,17 +108,27 @@ class VideoReportDataSerializer(serializers.Serializer):
     report_date = serializers.DateField(input_formats=['%Y-%m-%d'])
     destinatarios = serializers.CharField(max_length=200)
     tipo_informe = serializers.CharField(max_length=200)
+    unidad = serializers.CharField(max_length=200, required=False, allow_blank=True)
     numero_informe = serializers.CharField(max_length=50)
     grado = serializers.CharField(max_length=100)
     operador = serializers.CharField(max_length=100)
+    # Legacy compatibility: accepted if sent by older clients, ignored by report generation.
+    dni = serializers.CharField(max_length=20, required=False, allow_blank=True, write_only=True)
     lup = serializers.CharField(max_length=30)
     sistema = serializers.CharField(max_length=100)
+    material_filmico = serializers.CharField(required=False, allow_blank=True)
     prevencion_sumaria = serializers.CharField(max_length=100)
     caratula = serializers.CharField(max_length=500)
     fiscalia = serializers.CharField(max_length=300)
     fiscal = serializers.CharField(max_length=120)
     denunciante = serializers.CharField(max_length=120)
-    vuelo = serializers.CharField(max_length=40)
+    vuelo = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    empresa_aerea = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    destino = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    fecha_hecho = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    unidad_aeroportuaria = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    asiento = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    aeropuerto = serializers.CharField(max_length=200, required=False, allow_blank=True)
     objeto_denunciado = serializers.CharField(max_length=200)
     desarrollo = serializers.CharField(required=False, allow_blank=True)
     conclusion = serializers.CharField(required=False, allow_blank=True)
@@ -106,7 +137,6 @@ class VideoReportDataSerializer(serializers.Serializer):
 
 class VideoReportFrameSerializer(serializers.Serializer):
     ALLOWED_MIME_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
-    MAX_FILE_SIZE = 5 * 1024 * 1024
 
     id_temp = serializers.CharField(max_length=100)
     file_name = serializers.CharField(max_length=255)
@@ -129,25 +159,27 @@ class VideoReportFrameSerializer(serializers.Serializer):
         except (ValueError, binascii.Error):
             raise serializers.ValidationError("Imagen en base64 invalida.")
 
-        if len(raw) > self.MAX_FILE_SIZE:
-            raise serializers.ValidationError("Cada fotograma no puede superar 5 MB.")
+        max_frame_size = _video_report_max_frame_size_bytes()
+        if len(raw) > max_frame_size:
+            raise serializers.ValidationError(
+                f"Cada fotograma no puede superar {_bytes_to_mb_label(max_frame_size)} MB."
+            )
         return value
 
 
 class VideoReportPayloadSerializer(serializers.Serializer):
-    MAX_FRAMES = 20
-    MAX_TOTAL_BYTES = 40 * 1024 * 1024
-
     report_data = VideoReportDataSerializer()
     frames = VideoReportFrameSerializer(many=True, required=False, default=list)
 
     def validate_frames(self, value):
-        if len(value) > self.MAX_FRAMES:
-            raise serializers.ValidationError("No puede adjuntar mas de 20 fotogramas.")
+        max_frames = _video_report_max_frames()
+        if len(value) > max_frames:
+            raise serializers.ValidationError(f"No puede adjuntar mas de {max_frames} fotogramas.")
         return value
 
     def validate(self, attrs):
         frames = attrs.get('frames', [])
+        max_total_bytes = _video_report_max_total_bytes()
         total_bytes = 0
         orders = set()
 
@@ -156,9 +188,12 @@ class VideoReportPayloadSerializer(serializers.Serializer):
             payload = data.split(',', 1)[1] if ',' in data else data
             raw = base64.b64decode(payload, validate=True)
             total_bytes += len(raw)
-            if total_bytes > self.MAX_TOTAL_BYTES:
+            if total_bytes > max_total_bytes:
                 raise serializers.ValidationError({
-                    'frames': "El tamano total de fotogramas no puede superar 40 MB."
+                    'frames': (
+                        "El tamano total de fotogramas no puede superar "
+                        f"{_bytes_to_mb_label(max_total_bytes)} MB."
+                    )
                 })
 
             order = frame.get('order')
@@ -168,4 +203,19 @@ class VideoReportPayloadSerializer(serializers.Serializer):
                 })
             orders.add(order)
 
+        return attrs
+
+
+class VideoReportImproveTextSerializer(serializers.Serializer):
+    desarrollo = serializers.CharField(required=False, allow_blank=True, max_length=12000)
+    conclusion = serializers.CharField(required=False, allow_blank=True, max_length=12000)
+    api_key = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        desarrollo = (attrs.get('desarrollo') or '').strip()
+        conclusion = (attrs.get('conclusion') or '').strip()
+        if not desarrollo and not conclusion:
+            raise serializers.ValidationError(
+                "Debe enviar texto en 'desarrollo' o 'conclusion' para mejorar con IA."
+            )
         return attrs

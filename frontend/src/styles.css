@@ -16,12 +16,68 @@
 
 :root {
   --sidebar-width: 260px;
+  --field-bg: #ffffff;
+  --field-text: #0f172a;
+  --field-border: #94a3b8;
+  --field-border-hover: #64748b;
+  --field-focus: #2563eb;
+  --field-placeholder: #475569;
+  --field-disabled-bg: #e2e8f0;
+  --field-disabled-text: #334155;
+  --field-invalid: #dc2626;
 }
 
 body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background-color: #f8fafc;
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+select,
+textarea {
+  background-color: var(--field-bg);
+  color: var(--field-text);
+  border-color: var(--field-border);
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):hover,
+select:hover,
+textarea:hover {
+  border-color: var(--field-border-hover);
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file'])::placeholder,
+textarea::placeholder {
+  color: var(--field-placeholder);
+  opacity: 1;
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--field-focus);
+  box-shadow: 0 0 0 1px var(--field-focus);
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file'])[disabled],
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file'])[readonly],
+select[disabled],
+textarea[disabled],
+textarea[readonly] {
+  background-color: var(--field-disabled-bg);
+  color: var(--field-disabled-text);
+  border-color: var(--field-border);
+  opacity: 1;
+}
+
+input[data-invalid='true'],
+select[data-invalid='true'],
+textarea[data-invalid='true'],
+.field-invalid {
+  border-color: var(--field-invalid) !important;
+  box-shadow: 0 0 0 1px var(--field-invalid) !important;
 }
 
 @keyframes slide-in {

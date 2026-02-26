@@ -6,6 +6,7 @@ from .views import (
     IntegrityReportView,
     IntegritySummaryReportView,
     VideoAnalysisReportView,
+    VideoAnalysisImproveTextView,
 )
 
 router = DefaultRouter()
@@ -17,4 +18,5 @@ urlpatterns = [
     path('integrity-check/', IntegrityReportView.as_view(), name='integrity-check'),
     path('integrity-summary-report/', IntegritySummaryReportView.as_view(), name='integrity-summary-report'),
     path('video-analysis-report/', VideoAnalysisReportView.as_view(), name='video-analysis-report'),
+    path('video-analysis-improve-text/', VideoAnalysisImproveTextView.as_view(), name='video-analysis-improve-text'),
 ]

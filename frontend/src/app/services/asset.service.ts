@@ -2,11 +2,22 @@ import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
 import { Observable } from 'rxjs';
 
+export interface Unit {
+    id: number;
+    name: string;
+    code: string;
+    parent: number | null;
+}
+
 @Injectable({
     providedIn: 'root'
 })
 export class AssetService {
     constructor(private api: ApiService) { }
+
+    getUnits(): Observable<Unit[]> {
+        return this.api.get<Unit[]>('api/units/');
+    }
 
     getSystems(): Observable<any[]> {
         return this.api.get<any[]>('api/systems/');

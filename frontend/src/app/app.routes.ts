@@ -1,12 +1,12 @@
 import { Routes } from '@angular/router';
-import { HomeComponent } from './pages/home';
-import { AssetsComponent } from './pages/assets';
-import { NovedadesComponent } from './pages/novedades';
-import { PersonnelComponent } from './pages/personnel';
-import { RecordsComponent } from './pages/records';
-import { HashComponent } from './pages/hash';
+import { HomeComponent } from './pages/home/home';
+import { AssetsComponent } from './pages/assets/assets';
+import { NovedadesComponent } from './pages/novedades/novedades';
+import { PersonnelComponent } from './pages/personnel/personnel';
+import { RecordsComponent } from './pages/records/records';
+import { HashComponent } from './pages/hash/hash';
 import { HechosComponent } from './pages/hechos/hechos';
-import { InformesComponent } from './pages/informes';
+import { InformesComponent } from './pages/informes/informes';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },

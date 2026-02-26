@@ -1,0 +1,258 @@
+<div class="space-y-6">
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <div class="flex space-x-4 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700">
+        <span class="font-semibold text-slate-500 mr-2">Algoritmos:</span>
+        <label class="flex items-center cursor-pointer">
+          <input type="checkbox" class="mr-2 rounded text-indigo-600 focus:ring-indigo-500"
+            [checked]="isAlgorithmSelected('sha256')" (change)="toggleAlgorithm('sha256')">
+          SHA-256
+        </label>
+        <label class="flex items-center cursor-pointer">
+          <input type="checkbox" class="mr-2 rounded text-indigo-600 focus:ring-indigo-500"
+            [checked]="isAlgorithmSelected('sha512')" (change)="toggleAlgorithm('sha512')">
+          SHA-512
+        </label>
+        <label class="flex items-center cursor-pointer">
+          <input type="checkbox" class="mr-2 rounded text-indigo-600 focus:ring-indigo-500"
+            [checked]="isAlgorithmSelected('sha3')" (change)="toggleAlgorithm('sha3')">
+          SHA-3
+        </label>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <button (click)="clearAll()"
+        class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-rose-600 transition-colors uppercase cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+        Limpiar Todo
+      </button>
+
+      <button (click)="reportInput.click()"
+        class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-lg shadow-sm hover:shadow transition-all transform hover:-translate-y-0.5 cursor-pointer uppercase"
+        title="Sube un reporte HTML para verificar hashes">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Cargar Informe
+      </button>
+      <input #reportInput type="file" accept=".html" (change)="onReportSelect($event)" class="hidden">
+
+      <button (click)="downloadSummaryReport()" [disabled]="files().length === 0"
+        class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none rounded-lg shadow-sm hover:shadow transition-all transform hover:-translate-y-0.5 cursor-pointer uppercase">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Descargar PDF
+      </button>
+      <button (click)="downloadHtmlReport()" [disabled]="files().length === 0"
+        class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none rounded-lg shadow-sm hover:shadow transition-all transform hover:-translate-y-0.5 cursor-pointer uppercase">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+        </svg>
+        Descargar HTML
+      </button>
+    </div>
+  </div>
+
+  <div (dragover)="$event.preventDefault(); isOver = true" (dragleave)="isOver = false" (drop)="onFileDrop($event)"
+    [class.border-indigo-500]="isOver" [class.bg-indigo-50]="isOver"
+    class="relative border-2 border-dashed border-slate-200 rounded-3xl p-8 transition-all text-center group cursor-pointer hover:border-indigo-400 hover:bg-slate-50">
+    <input #fileInput type="file" (change)="onFileSelect($event)" multiple class="hidden">
+    <input #folderInput type="file" (change)="onFileSelect($event)" webkitdirectory directory multiple class="hidden">
+
+    <div class="flex flex-col items-center gap-3">
+      <div
+        class="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+      </div>
+      <div>
+        <p class="text-base font-bold text-slate-800">Arrastra archivos o carpetas aquí</p>
+        <div class="flex gap-4 justify-center mt-3">
+          <button type="button" (click)="fileInput.click(); $event.stopPropagation()"
+            class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold shadow-sm hover:shadow hover:bg-indigo-700 transition-all transform hover:-translate-y-0.5 cursor-pointer">
+            Seleccionar archivos
+          </button>
+          <button type="button" (click)="folderInput.click(); $event.stopPropagation()"
+            class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold shadow-sm hover:shadow hover:bg-emerald-700 transition-all transform hover:-translate-y-0.5 cursor-pointer">
+            Seleccionar carpeta
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sección de Reporte Base (solo visible si hay items cargados) -->
+  @if (loadedReportItems().length > 0) {
+  <div class="mb-8">
+    <div class="flex items-center justify-between mb-4 px-2">
+      <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Reporte Base
+      </h2>
+      <span class="text-sm font-medium text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
+        {{ loadedReportItems().length }} hashes cargados
+      </span>
+    </div>
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse min-w-[800px]">
+          <thead>
+            <tr class="bg-emerald-50 border-b border-emerald-100">
+              <th class="px-4 py-3 text-xs font-bold text-emerald-700 uppercase tracking-wider whitespace-nowrap">
+                Archivo</th>
+              <th class="px-4 py-3 text-xs font-bold text-emerald-700 uppercase tracking-wider whitespace-nowrap">
+                Algoritmo</th>
+              <th class="px-4 py-3 text-xs font-bold text-emerald-700 uppercase tracking-wider whitespace-nowrap">Hash
+                Base</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-sm">
+            @for (item of loadedReportItems(); track item.name) {
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="px-4 py-2 font-medium text-slate-800 whitespace-nowrap">{{ item.name }}</td>
+              <td class="px-4 py-2 text-slate-700 whitespace-nowrap font-semibold">{{ item.algorithm }}</td>
+              <td class="px-4 py-2 font-mono text-xs text-slate-600 truncate max-w-sm">{{ item.hash }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- Sección de Auditoría de Archivos -->
+  <div>
+    <div class="flex items-center justify-between mb-4 px-2">
+      <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+        Auditoría de Archivos
+      </h2>
+      <span class="text-sm font-medium text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">
+        {{ files().length }} archivos verificados
+      </span>
+    </div>
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse min-w-[1100px]">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200">
+              <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Filename
+              </th>
+              <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Full
+                Path (Simulated)</th>
+              <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                Extension</th>
+              <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Size
+              </th>
+              <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Time
+              </th>
+              <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                Algoritmo</th>
+              <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Hash
+              </th>
+              <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-sm">
+            @for (item of files(); track item.rowId) {
+            <tr class="hover:bg-slate-50 transition-colors group">
+              <td class="px-4 py-2 font-medium text-slate-800 whitespace-nowrap">
+                {{ item.name }}
+              </td>
+              <td class="px-4 py-2 text-slate-500 whitespace-nowrap max-w-xs truncate">{{ item.path }}</td>
+              <td class="px-4 py-2 text-slate-500 whitespace-nowrap">{{ item.type }}</td>
+              <td class="px-4 py-2 text-slate-500 whitespace-nowrap font-mono">
+                {{ formatSize(item.size) }}
+              </td>
+              <td class="px-4 py-2 text-slate-500 whitespace-nowrap font-mono">
+                {{ formatTime(item.time) }}
+              </td>
+              <td class="px-4 py-2 text-slate-700 whitespace-nowrap font-semibold">{{
+                getAlgorithmLabel(item.selectedAlgorithm) }}</td>
+              <td class="px-4 py-2 whitespace-nowrap max-w-xs">
+                <div class="flex items-center gap-2">
+                  @if (item.selectedHash) {
+                  <code class="text-xs px-2 py-1 rounded font-mono select-all cursor-help bg-slate-100 text-slate-700"
+                    [class.ring-2]="verifiedHashes().has(item.name)"
+                    [class.ring-emerald-400]="verifiedHashes().has(item.name) && verifiedHashes().get(item.name) === item.selectedHash"
+                    [class.ring-rose-400]="verifiedHashes().has(item.name) && verifiedHashes().get(item.name) !== item.selectedHash"
+                    [title]="item.selectedHash">{{ item.selectedHash.slice(0, 16) }}...</code>
+
+                  @if (verifiedHashes().has(item.name)) {
+                  @if (verifiedHashes().get(item.name) === item.selectedHash) {
+                  <span class="text-emerald-500" title="Verificado: El hash coincide con el reporte cargado">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </span>
+                  } @else {
+                  <span class="text-rose-500" title="Error: El hash ha sido alterado comparado con el reporte.">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </span>
+                  }
+                  }
+                  } @else {
+                  <span class="animate-pulse w-8 h-2 bg-slate-200 block rounded"></span>
+                  }
+                </div>
+              </td>
+              <td class="px-4 py-2 whitespace-nowrap">
+                <div class="flex gap-2">
+                  <button (click)="copyAll(item)"
+                    class="text-indigo-600 hover:text-indigo-800 font-medium text-xs uppercase" title="Copiar datos">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                      stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                  <button (click)="deleteRow(item)"
+                    class="text-slate-500 hover:text-rose-700 font-medium text-xs uppercase" title="Eliminar registro">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                      stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            }
+            @if (files().length === 0) {
+            <tr>
+              <td colspan="8" class="px-6 py-12 text-center text-slate-400 italic font-medium">
+                Arrastre archivos o use los botones de arriba para agregarlos a la auditoría.
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

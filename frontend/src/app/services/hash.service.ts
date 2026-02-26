@@ -31,10 +31,29 @@ export class HashService {
 
     private arrayBufferToWordArray(ab: ArrayBuffer): CryptoJS.lib.WordArray {
         const i8a = new Uint8Array(ab);
-        const a = [];
-        for (let i = 0; i < i8a.length; i += 4) {
-            a.push((i8a[i] << 24) | (i8a[i + 1] << 16) | (i8a[i + 2] << 8) | i8a[i + 3]);
+        const words: number[] = [];
+        // Procesa grupos completos de 4 bytes
+        const fullWords = Math.floor(i8a.length / 4);
+        for (let i = 0; i < fullWords; i++) {
+            const offset = i * 4;
+            words.push(
+                ((i8a[offset] << 24) |
+                    (i8a[offset + 1] << 16) |
+                    (i8a[offset + 2] << 8) |
+                    i8a[offset + 3]) >>> 0
+            );
         }
-        return CryptoJS.lib.WordArray.create(a, i8a.length);
+        // Maneja los bytes residuales (cuando length no es múltiplo de 4)
+        const remainder = i8a.length % 4;
+        if (remainder > 0) {
+            let lastWord = 0;
+            const base = fullWords * 4;
+            for (let j = 0; j < remainder; j++) {
+                lastWord |= (i8a[base + j] << (24 - j * 8));
+            }
+            words.push(lastWord >>> 0);
+        }
+        // El segundo argumento es el sigBytes (tamaño real en bytes, no en words)
+        return CryptoJS.lib.WordArray.create(words as any, i8a.length);
     }
 }

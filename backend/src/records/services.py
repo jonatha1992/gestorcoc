@@ -2,12 +2,16 @@ import hashlib
 import os
 import base64
 import binascii
+import json
+import re
 from io import BytesIO
 from datetime import datetime
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from pathlib import Path
+from django.conf import settings
+import requests
 
 class IntegrityService:
     @staticmethod
@@ -126,6 +130,138 @@ class IntegrityService:
                 replace_in_paragraph(paragraph)
 
     @staticmethod
+    def _extract_json_object(raw_text):
+        if isinstance(raw_text, dict):
+            return raw_text
+
+        text = str(raw_text or '').strip()
+        if not text:
+            raise RuntimeError("La API de IA no devolvio contenido para mejorar el texto.")
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if not match:
+            raise RuntimeError("No se pudo interpretar la respuesta de la API de IA.")
+
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("No se pudo interpretar la respuesta JSON de la API de IA.") from exc
+
+    @staticmethod
+    def improve_report_text_with_ai(desarrollo, conclusion, custom_api_key=""):
+        api_key_from_settings = str(getattr(settings, 'AI_TEXT_API_KEY', '') or '').strip()
+        api_key = custom_api_key.strip() or api_key_from_settings
+        api_url = str(getattr(settings, 'AI_TEXT_API_URL', '') or '').strip()
+        model = str(getattr(settings, 'AI_TEXT_MODEL', '') or '').strip()
+        timeout_seconds = int(getattr(settings, 'AI_TEXT_TIMEOUT_SECONDS', 45))
+
+        if not api_key:
+            raise RuntimeError("No se configuro AI_TEXT_API_KEY y no se ingreso ninguna manualmente.")
+        if not api_url:
+            raise RuntimeError("No se configuro AI_TEXT_API_URL.")
+        if not model:
+            raise RuntimeError("No se configuro AI_TEXT_MODEL.")
+
+        system_prompt = (
+            "Eres un redactor profesional de informes formales en espanol. "
+            "Mejora redaccion, coherencia, ortografia y puntuacion, sin inventar hechos nuevos. "
+            "Mantener un tono tecnico y objetivo."
+        )
+
+        payload_prompt = {
+            "instrucciones": "Mejora el texto y devuelve SOLO JSON valido.",
+            "formato_estricto": {
+                "desarrollo": "texto mejorado",
+                "conclusion": "texto mejorado",
+            },
+            "desarrollo_original": str(desarrollo or ''),
+            "conclusion_original": str(conclusion or ''),
+        }
+
+        request_payload = {
+            "model": model,
+            "temperature": 0.2,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": json.dumps(payload_prompt, ensure_ascii=False)},
+            ],
+            "response_format": {"type": "json_object"},
+        }
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            response = requests.post(
+                api_url,
+                headers=headers,
+                json=request_payload,
+                timeout=timeout_seconds,
+            )
+        except requests.RequestException as exc:
+            raise RuntimeError("No se pudo conectar con la API de IA.") from exc
+
+        if response.status_code >= 400:
+            detail = ""
+            try:
+                error_payload = response.json()
+                error_node = error_payload.get('error', {})
+                if isinstance(error_node, dict):
+                    detail = str(error_node.get('message', '') or '')
+                elif error_node:
+                    detail = str(error_node)
+            except Exception:
+                detail = response.text[:200]
+
+            suffix = f" Detalle: {detail}" if detail else ""
+            raise RuntimeError(
+                f"La API de IA devolvio un error ({response.status_code}).{suffix}"
+            )
+
+        try:
+            response_payload = response.json()
+            choices = response_payload.get('choices') or []
+            if not choices:
+                raise RuntimeError("La API de IA no devolvio opciones de respuesta.")
+
+            message = choices[0].get('message') if isinstance(choices[0], dict) else None
+            content = message.get('content') if isinstance(message, dict) else None
+            if isinstance(content, list):
+                parts = []
+                for item in content:
+                    if isinstance(item, dict):
+                        parts.append(str(item.get('text', '') or ''))
+                    else:
+                        parts.append(str(item))
+                content = ''.join(parts)
+
+            parsed_content = IntegrityService._extract_json_object(content)
+            improved_desarrollo = IntegrityService._as_text(
+                parsed_content.get('desarrollo'),
+                str(desarrollo or '')
+            ).strip()
+            improved_conclusion = IntegrityService._as_text(
+                parsed_content.get('conclusion'),
+                str(conclusion or '')
+            ).strip()
+
+            return {
+                'desarrollo': improved_desarrollo,
+                'conclusion': improved_conclusion,
+            }
+        except RuntimeError:
+            raise
+        except Exception as exc:
+            raise RuntimeError("Respuesta invalida al mejorar texto con IA.") from exc
+
+    @staticmethod
     def generate_video_analysis_docx(payload):
         """
         Genera un informe DOCX usando data/Modelo Informe.docx como base.
@@ -160,28 +296,38 @@ class IntegrityService:
 
         destinatarios = IntegrityService._as_text(report_data.get("destinatarios"), "URSA I - Jefe")
         tipo_informe = IntegrityService._as_text(report_data.get("tipo_informe"), "IAV - Informe Analisis de Video")
-        numero_informe = IntegrityService._as_text(report_data.get("numero_informe"), f"{parsed.year}/001")
+        numero_informe = IntegrityService._as_text(report_data.get("numero_informe"), f"001/{parsed.year}")
         grado = IntegrityService._as_text(report_data.get("grado"), "Oficial Mayor")
         operador = IntegrityService._as_text(report_data.get("operador"), "Operador")
         lup = IntegrityService._as_text(report_data.get("lup"), "0000")
         sistema = IntegrityService._as_text(report_data.get("sistema"), "MILESTONE")
         prevencion_sumaria = IntegrityService._as_text(report_data.get("prevencion_sumaria"), "000BAR/2026")
         caratula = IntegrityService._as_text(report_data.get("caratula"), "DENUNCIA S/ PRESUNTO HURTO")
+        unidad = IntegrityService._as_text(report_data.get("unidad"), "Coordinación Regional de Video Seguridad I del Este")
+        material_filmico = IntegrityService._as_text(report_data.get("material_filmico"), "material fílmico")
         fiscalia = IntegrityService._as_text(report_data.get("fiscalia"), "Fiscalia Nro. 02")
         fiscal = IntegrityService._as_text(report_data.get("fiscal"), "Fiscal Interviniente")
         denunciante = IntegrityService._as_text(report_data.get("denunciante"), "Denunciante")
-        vuelo = IntegrityService._as_text(report_data.get("vuelo"), "WJ 3045")
+        vuelo = IntegrityService._as_text(report_data.get("vuelo"), "---")
+        empresa_aerea = IntegrityService._as_text(report_data.get("empresa_aerea"), "---")
+        destino = IntegrityService._as_text(report_data.get("destino"), "---")
+        fecha_hecho = IntegrityService._as_text(report_data.get("fecha_hecho"), "---")
+        unidad_aeroportuaria = IntegrityService._as_text(report_data.get("unidad_aeroportuaria"), "---")
+        asiento = IntegrityService._as_text(report_data.get("asiento"), "---")
+        aeropuerto = IntegrityService._as_text(report_data.get("aeropuerto"), "---")
         objeto_denunciado = IntegrityService._as_text(report_data.get("objeto_denunciado"), "objeto denunciado")
         conclusion = IntegrityService._as_text(report_data.get("conclusion"), "")
         desarrollo = IntegrityService._as_text(report_data.get("desarrollo"), "")
         firma = IntegrityService._as_text(report_data.get("firma"), "Coordinador CReV I DEL ESTE")
+
+        op_info = f"{grado} {operador}, LUP: {lup}"
 
         replacements = [
             ("Fecha: Enero de 2026.", f"Fecha: {month_name.capitalize()} de {year}."),
             ("URSA I - Jefe", destinatarios),
             ("IAV - Informe Análisis de Video    /2026", f"{tipo_informe} {numero_informe}"),
             ("IAV - Informe Analisis de Video    /2026", f"{tipo_informe} {numero_informe}"),
-            ("Oficial Mayor XXX, LUP: XXX", f"{grado} {operador}, LUP: {lup}"),
+            ("Oficial Mayor XXX, LUP: XXX", op_info),
             ("denominado “MILESTONE”", f"denominado \"{sistema}\""),
             ("denominado \"MILESTONE\"", f"denominado \"{sistema}\""),
             ("Prevención Sumaria 003BAR/2026", f"Prevencion Sumaria {prevencion_sumaria}"),
@@ -192,7 +338,16 @@ class IntegrityService:
             ("Sr. PONZO Osvaldo", f"Sr. {denunciante}"),
             ("vuelo WJ 3045", f"vuelo {vuelo}"),
             ("RIVER PLATE", objeto_denunciado),
+            ("Coordinación Regional de Video Seguridad I del Este", unidad),
+            ("material fílmico", material_filmico),
             ("Coordinador CReV I DEL ESTE", firma),
+            ("empresa aerea", empresa_aerea),
+            ("empresa aérea", empresa_aerea),
+            ("destino", destino),
+            ("fecha del hecho", fecha_hecho),
+            ("unidad aeroportuaria", unidad_aeroportuaria),
+            ("asiento", asiento),
+            ("aeropuerto", aeropuerto),
         ]
 
         document = Document(str(template_path))
@@ -353,7 +508,8 @@ class IntegrityService:
     @staticmethod
     def generate_integrity_summary_pdf(entries):
         """
-        Genera un PDF resumen con todos los archivos hasheados en la sesión UI.
+        Genera un PDF resumen en orientación landscape con todos los archivos
+        hasheados en la sesión UI. El hash se muestra completo.
 
         Args:
             entries: list[dict] con name, size, algorithm, hash, time_ms
@@ -362,52 +518,113 @@ class IntegrityService:
             BytesIO: Buffer con el PDF generado
         """
         buffer = BytesIO()
-        p = canvas.Canvas(buffer, pagesize=A4)
-        width, height = A4
+        page_size = landscape(A4)
+        p = canvas.Canvas(buffer, pagesize=page_size)
+        width, height = page_size
 
-        p.setFont("Helvetica-Bold", 18)
-        p.drawString(50, height - 50, "Resumen de Integridad")
-        p.setFont("Helvetica", 10)
-        p.drawString(50, height - 70, f"Generado el: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
-        p.line(50, height - 80, width - 50, height - 80)
+        # Márgenes y ancho útil
+        margin = 40
+        usable_width = width - (margin * 2)
 
-        y = height - 110
-        p.setFont("Helvetica-Bold", 10)
-        p.drawString(50, y, "Archivo")
-        p.drawString(215, y, "Algoritmo")
-        p.drawString(300, y, "Tiempo (ms)")
-        p.drawString(380, y, "Hash")
-        y -= 12
-        p.line(50, y, width - 50, y)
-        y -= 14
+        def draw_header():
+            p.setFont("Helvetica-Bold", 16)
+            p.drawString(margin, height - 35, "Resumen de Verificación de Integridad")
+            p.setFont("Helvetica", 9)
+            p.drawString(margin, height - 52, f"Generado el: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}   |   Total archivos: {len(entries)}")
+            p.line(margin, height - 60, width - margin, height - 60)
 
-        p.setFont("Helvetica", 9)
+        def draw_column_headers(y_pos):
+            p.setFillColorRGB(0.11, 0.22, 0.37)  # Azul oscuro
+            p.rect(margin, y_pos - 4, usable_width, 18, fill=1, stroke=0)
+            p.setFillColorRGB(1, 1, 1)
+            p.setFont("Helvetica-Bold", 8)
+            p.drawString(margin + 4,      y_pos + 2, "#")
+            p.drawString(margin + 20,     y_pos + 2, "Nombre")
+            p.drawString(margin + 170,    y_pos + 2, "Tipo")
+            p.drawString(margin + 210,    y_pos + 2, "Tamaño")
+            p.drawString(margin + 260,    y_pos + 2, "Algoritmo")
+            p.drawString(margin + 310,    y_pos + 2, "Tiempo")
+            p.drawString(margin + 360,    y_pos + 2, "Hash completo")
+            p.setFillColorRGB(0, 0, 0)
+            return y_pos - 20
+
+        draw_header()
+        y = height - 80
+        y = draw_column_headers(y)
+
+        # Ancho máximo del campo hash en puntos (desde x=400 hasta el margen derecho)
+        hash_x = margin + 360
+        hash_max_width = width - margin - hash_x
+        # SHA-256 = 64 chars, SHA-512 = 128 chars, SHA-3 = 64 chars
+        # Con Courier 7, un car es ~4.2pt → caben ~hash_max_width/4.2 chars por línea
+        chars_per_line = int(hash_max_width / 4.2)
+
+        row_bg_even = (0.97, 0.98, 1.0)
+        row_bg_odd  = (1.0, 1.0, 1.0)
+
         for idx, entry in enumerate(entries, start=1):
-            name = str(entry.get("name", "N/A"))
-            algorithm = str(entry.get("algorithm", "N/A"))
-            time_ms = str(entry.get("time_ms", "N/A"))
+            name       = str(entry.get("name", "N/A"))
+            ext_type   = str(entry.get("type", "N/A"))
+            size_str   = str(entry.get("size_str", "N/A"))
+            algorithm  = str(entry.get("algorithm", "N/A"))
+            time_ms    = str(entry.get("time_ms", "N/A")).strip()
             hash_value = str(entry.get("hash", "N/A"))
 
-            if y < 70:
+            # Quitar posibles dobles ms si la UI los envía por error
+            if time_ms.endswith(" ms ms"):
+                time_ms = time_ms[:-3]
+
+            # Partir el hash en líneas si es muy largo
+            hash_lines = [hash_value[i:i + chars_per_line] for i in range(0, len(hash_value), chars_per_line)] if hash_value != "N/A" else [hash_value]
+            row_height = max(14, len(hash_lines) * 10 + 4)
+
+            if y - row_height < margin + 20:
                 p.showPage()
-                y = height - 60
-                p.setFont("Helvetica", 9)
+                draw_header()
+                y = height - 80
+                y = draw_column_headers(y)
 
-            p.drawString(50, y, f"{idx}. {name[:28]}")
-            p.drawString(215, y, algorithm[:12])
-            p.drawString(300, y, time_ms[:10])
+            # Fondo alternado
+            bg = row_bg_even if idx % 2 == 0 else row_bg_odd
+            p.setFillColorRGB(*bg)
+            p.rect(margin, y - row_height + 12, usable_width, row_height, fill=1, stroke=0)
+            p.setFillColorRGB(0, 0, 0)
+
+            # Datos de la fila
+            row_top = y
+            p.setFont("Helvetica", 8)
+            p.drawString(margin + 4,   row_top, str(idx))
+            p.drawString(margin + 20,  row_top, name[:25] if len(name) > 25 else name)
+            p.drawString(margin + 170, row_top, ext_type[:7] if len(ext_type) > 7 else ext_type)
+            p.drawString(margin + 210, row_top, size_str)
+            p.drawString(margin + 260, row_top, algorithm)
+            p.drawString(margin + 310, row_top, str(time_ms))
+
+            # Hash completo en líneas
             p.setFont("Courier", 7)
-            p.drawString(380, y, hash_value[:44])
-            p.setFont("Helvetica", 9)
-            y -= 14
+            p.setFillColorRGB(0.21, 0.19, 0.64)  # Índigo
+            for line_idx, hash_line in enumerate(hash_lines):
+                p.drawString(hash_x, row_top - (line_idx * 9), hash_line)
+            p.setFillColorRGB(0, 0, 0)
 
-        p.setFont("Helvetica-Oblique", 8)
-        p.drawString(50, 40, "Documento de resumen generado por GestorCOC.")
+            # Línea separadora
+            p.setStrokeColorRGB(0.88, 0.91, 0.94)
+            p.line(margin, y - row_height + 12, width - margin, y - row_height + 12)
+            p.setStrokeColorRGB(0, 0, 0)
+
+            y -= row_height
+
+        # Footer
+        p.setFont("Helvetica-Oblique", 7)
+        p.setFillColorRGB(0.58, 0.64, 0.72)
+        p.drawString(margin, margin - 10, "Documento generado automáticamente por GestorCOC. Los hashes son calculados por el cliente y no garantizan la cadena de custodia si los archivos son modificados posteriormente.")
+        p.setFillColorRGB(0, 0, 0)
 
         p.showPage()
         p.save()
         buffer.seek(0)
         return buffer
+
     
     @staticmethod
     def generate_verification_report(film_record):

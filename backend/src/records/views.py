@@ -1,4 +1,5 @@
 from django.http import FileResponse
+from django.core.exceptions import RequestDataTooBig
 from django.utils import timezone
 from rest_framework import viewsets, views, status
 from rest_framework.decorators import action
@@ -12,6 +13,7 @@ from .serializers import (
     FilmRecordSerializer,
     CatalogSerializer,
     VideoReportPayloadSerializer,
+    VideoReportImproveTextSerializer,
 )
 from .services import IntegrityService
 
@@ -235,6 +237,11 @@ class VideoAnalysisReportView(views.APIView):
                 content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             )
         except Exception as exc:
+            if isinstance(exc, RequestDataTooBig):
+                return Response(
+                    {"error": "El tamaño total del informe excede el máximo permitido."},
+                    status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
+                )
             if isinstance(exc, ValidationError):
                 return Response({"errors": exc.detail}, status=status.HTTP_400_BAD_REQUEST)
             if isinstance(exc, FileNotFoundError):
@@ -242,4 +249,35 @@ class VideoAnalysisReportView(views.APIView):
             if isinstance(exc, RuntimeError):
                 return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return Response({"error": f"Error al generar informe: {str(exc)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class VideoAnalysisImproveTextView(views.APIView):
+    """
+    Mejora con IA los campos narrativos del informe (desarrollo y conclusion).
+
+    POST /api/video-analysis-improve-text/
+    Body: {"desarrollo": "...", "conclusion": "..."}
+    """
+
+    def post(self, request, *args, **kwargs):
+        try:
+            payload = request.data if isinstance(request.data, dict) else {}
+            serializer = VideoReportImproveTextSerializer(data=payload)
+            serializer.is_valid(raise_exception=True)
+
+            improved_text = IntegrityService.improve_report_text_with_ai(
+                serializer.validated_data.get('desarrollo', ''),
+                serializer.validated_data.get('conclusion', ''),
+                serializer.validated_data.get('api_key', '')
+            )
+            return Response(improved_text, status=status.HTTP_200_OK)
+        except Exception as exc:
+            if isinstance(exc, ValidationError):
+                return Response({"errors": exc.detail}, status=status.HTTP_400_BAD_REQUEST)
+            if isinstance(exc, RuntimeError):
+                message = str(exc)
+                if message.startswith("No se configuro AI_TEXT_"):
+                    return Response({"error": message}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                return Response({"error": message}, status=status.HTTP_502_BAD_GATEWAY)
+            return Response({"error": f"Error al mejorar texto con IA: {str(exc)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

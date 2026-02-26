@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -143,6 +144,21 @@ STATICFILES_DIRS = [
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Upload limits for report generation payloads (JSON + base64 frames)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 128 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 16 * 1024 * 1024
+
+# Video analysis report limits
+VIDEO_REPORT_MAX_FRAMES = 30
+VIDEO_REPORT_MAX_FRAME_SIZE_BYTES = 8 * 1024 * 1024
+VIDEO_REPORT_MAX_TOTAL_BYTES = 80 * 1024 * 1024
+
+# AI text improvement for report narrative fields
+AI_TEXT_API_URL = os.getenv('AI_TEXT_API_URL', 'https://api.openai.com/v1/chat/completions')
+AI_TEXT_API_KEY = os.getenv('AI_TEXT_API_KEY', '')
+AI_TEXT_MODEL = os.getenv('AI_TEXT_MODEL', 'gpt-4o-mini')
+AI_TEXT_TIMEOUT_SECONDS = int(os.getenv('AI_TEXT_TIMEOUT_SECONDS', '45'))
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
