@@ -17,6 +17,43 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _load_local_env_file():
+    """Load key=value pairs from backend/.env into process env."""
+    env_candidates = [
+        BASE_DIR.parent / '.env',  # backend/.env (recommended)
+        BASE_DIR / '.env',         # backend/src/.env (legacy)
+    ]
+
+    for env_path in env_candidates:
+        if not env_path.exists():
+            continue
+
+        try:
+            lines = env_path.read_text(encoding='utf-8-sig').splitlines()
+        except OSError:
+            return
+
+        for raw_line in lines:
+            line = raw_line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+
+            key, value = line.split('=', 1)
+            key = key.strip()
+            value = value.strip()
+            if not key:
+                continue
+
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+                value = value[1:-1]
+
+            os.environ.setdefault(key, value)
+        return
+
+
+_load_local_env_file()
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -155,10 +192,36 @@ VIDEO_REPORT_MAX_FRAME_SIZE_BYTES = 8 * 1024 * 1024
 VIDEO_REPORT_MAX_TOTAL_BYTES = 80 * 1024 * 1024
 
 # AI text improvement for report narrative fields
-AI_TEXT_API_URL = os.getenv('AI_TEXT_API_URL', 'https://api.openai.com/v1/chat/completions')
-AI_TEXT_API_KEY = os.getenv('AI_TEXT_API_KEY', '')
-AI_TEXT_MODEL = os.getenv('AI_TEXT_MODEL', 'gpt-4o-mini')
+AI_TEXT_PROVIDER_ORDER = os.getenv('AI_TEXT_PROVIDER_ORDER', 'gemini,openrouter,groq')
+AI_TEXT_PROVIDER_SELECTION = os.getenv('AI_TEXT_PROVIDER_SELECTION', 'ordered')
+AI_TEXT_FALLBACK_MODE = os.getenv('AI_TEXT_FALLBACK_MODE', 'quota_only')
 AI_TEXT_TIMEOUT_SECONDS = int(os.getenv('AI_TEXT_TIMEOUT_SECONDS', '45'))
+
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+AI_TEXT_GEMINI_API_URL = os.getenv(
+    'AI_TEXT_GEMINI_API_URL',
+    'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+)
+AI_TEXT_GEMINI_MODEL = os.getenv('AI_TEXT_GEMINI_MODEL', 'gemini-2.5-flash')
+
+OPEN_ROUTER_API_KEY = os.getenv('OPEN_ROUTER_API_KEY', '')
+AI_TEXT_OPENROUTER_API_URL = os.getenv(
+    'AI_TEXT_OPENROUTER_API_URL',
+    'https://openrouter.ai/api/v1/chat/completions',
+)
+AI_TEXT_OPENROUTER_MODEL = os.getenv('AI_TEXT_OPENROUTER_MODEL', 'gpt-4o-mini')
+
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+AI_TEXT_GROQ_API_URL = os.getenv(
+    'AI_TEXT_GROQ_API_URL',
+    'https://api.groq.com/openai/v1/chat/completions',
+)
+AI_TEXT_GROQ_MODEL = os.getenv('AI_TEXT_GROQ_MODEL', 'llama-3.3-70b-versatile')
+
+# Legacy aliases (backward compatibility)
+AI_TEXT_API_URL = os.getenv('AI_TEXT_API_URL', AI_TEXT_OPENROUTER_API_URL)
+AI_TEXT_API_KEY = os.getenv('AI_TEXT_API_KEY', OPEN_ROUTER_API_KEY)
+AI_TEXT_MODEL = os.getenv('AI_TEXT_MODEL', AI_TEXT_OPENROUTER_MODEL)
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',

@@ -3,6 +3,52 @@ import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+export type VideoReportHashAlgorithm = 'sha1' | 'sha3' | 'sha256' | 'sha512' | 'otro';
+export type VideoReportExportFormat =
+    | 'mp4'
+    | 'avi'
+    | 'mkv'
+    | 'mov'
+    | 'asf'
+    | 'dav'
+    | 'ave'
+    | 'xprotect'
+    | 'jpg'
+    | 'png'
+    | 'zip'
+    | 'otro';
+export type VideoReportVmsAuthenticityMode =
+    | 'vms_propio'
+    | 'hash_preventivo'
+    | 'sin_autenticacion'
+    | 'otro';
+
+export interface MaterialSpeechContext {
+    sistema?: string;
+    aeropuerto?: string;
+    cantidad_observada?: string;
+    sectores_analizados?: string;
+    franja_horaria_analizada?: string;
+    tiempo_total_analisis?: string;
+    sintesis_conclusion?: string;
+    prevencion_sumaria?: string;
+    caratula?: string;
+    fecha_hecho?: string;
+    vuelo?: string;
+    empresa_aerea?: string;
+    destino?: string;
+    unidad?: string;
+    export_file_format?: VideoReportExportFormat | '';
+    export_file_format_other?: string;
+    hash_algorithms?: VideoReportHashAlgorithm[];
+    hash_algorithm_other?: string;
+    hash_program?: string;
+    medida_seguridad_interna?: string;
+    vms_authenticity_mode?: VideoReportVmsAuthenticityMode | '';
+    vms_authenticity_detail?: string;
+    motivo_sin_hash?: string;
+}
+
 export interface VideoReportFormData {
     report_date: string;
     destinatarios: string;
@@ -12,6 +58,20 @@ export interface VideoReportFormData {
     operador: string;
     lup: string;
     sistema: string;
+    cantidad_observada: string;
+    sectores_analizados: string;
+    franja_horaria_analizada: string;
+    tiempo_total_analisis: string;
+    sintesis_conclusion: string;
+    export_file_format: VideoReportExportFormat | '';
+    export_file_format_other: string;
+    hash_algorithms: VideoReportHashAlgorithm[];
+    hash_algorithm_other: string;
+    hash_program: string;
+    medida_seguridad_interna: string;
+    vms_authenticity_mode: VideoReportVmsAuthenticityMode | '';
+    vms_authenticity_detail: string;
+    motivo_sin_hash: string;
     prevencion_sumaria: string;
     caratula: string;
     fiscalia: string;
@@ -23,8 +83,6 @@ export interface VideoReportFormData {
     fecha_hecho: string;
     objeto_denunciado: string;
     unidad: string;
-    unidad_aeroportuaria: string;
-    asiento: string;
     aeropuerto: string;
     material_filmico: string;
     desarrollo: string;
@@ -48,15 +106,22 @@ export interface VideoReportPayload {
     frames: VideoReportFrame[];
 }
 
+export type ImproveVideoTextMode = 'material_filmico' | 'desarrollo' | 'conclusion' | 'full';
+
 export interface ImproveVideoTextPayload {
+    material_filmico: string;
     desarrollo: string;
     conclusion: string;
+    material_context?: MaterialSpeechContext;
     api_key?: string;
+    mode?: ImproveVideoTextMode;
 }
 
 export interface ImproveVideoTextResponse {
+    material_filmico: string;
     desarrollo: string;
     conclusion: string;
+    ai_applied?: boolean;
 }
 
 @Injectable({

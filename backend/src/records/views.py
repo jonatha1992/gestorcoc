@@ -253,10 +253,10 @@ class VideoAnalysisReportView(views.APIView):
 
 class VideoAnalysisImproveTextView(views.APIView):
     """
-    Mejora con IA los campos narrativos del informe (desarrollo y conclusion).
+    Mejora con IA los campos narrativos del informe (material fílmico, desarrollo y conclusion).
 
     POST /api/video-analysis-improve-text/
-    Body: {"desarrollo": "...", "conclusion": "..."}
+    Body: {"material_filmico": "...", "desarrollo": "...", "conclusion": "..."}
     """
 
     def post(self, request, *args, **kwargs):
@@ -266,9 +266,12 @@ class VideoAnalysisImproveTextView(views.APIView):
             serializer.is_valid(raise_exception=True)
 
             improved_text = IntegrityService.improve_report_text_with_ai(
+                serializer.validated_data.get('material_filmico', ''),
                 serializer.validated_data.get('desarrollo', ''),
                 serializer.validated_data.get('conclusion', ''),
-                serializer.validated_data.get('api_key', '')
+                custom_api_key=serializer.validated_data.get('api_key', ''),
+                material_context=serializer.validated_data.get('material_context', {}),
+                mode=serializer.validated_data.get('mode', 'full'),
             )
             return Response(improved_text, status=status.HTTP_200_OK)
         except Exception as exc:

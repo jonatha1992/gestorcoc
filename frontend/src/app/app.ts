@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs';
@@ -16,8 +16,12 @@ export class App {
   title = 'Gestor COC';
   pageTitle = 'Dashboard';
   isSidebarCollapsed = false;
+  private hasInitializedViewport = false;
 
   constructor(private router: Router) {
+    this.syncSidebarWithViewport();
+    this.setPageTitle(this.router.url);
+
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event: any) => {
@@ -25,8 +29,25 @@ export class App {
     });
   }
 
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.syncSidebarWithViewport();
+  }
+
   toggleSidebar() {
     this.isSidebarCollapsed = !this.isSidebarCollapsed;
+  }
+
+  private syncSidebarWithViewport() {
+    const isMobileViewport = window.innerWidth < 1024;
+    if (isMobileViewport && !this.hasInitializedViewport) {
+      this.isSidebarCollapsed = true;
+    }
+    if (!isMobileViewport) {
+      this.hasInitializedViewport = false;
+      return;
+    }
+    this.hasInitializedViewport = true;
   }
 
   private setPageTitle(url: string) {

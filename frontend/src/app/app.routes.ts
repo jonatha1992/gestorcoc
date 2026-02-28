@@ -7,6 +7,7 @@ import { RecordsComponent } from './pages/records/records';
 import { HashComponent } from './pages/hash/hash';
 import { HechosComponent } from './pages/hechos/hechos';
 import { InformesComponent } from './pages/informes/informes';
+import { SettingsComponent } from './pages/settings/settings';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -17,5 +18,6 @@ export const routes: Routes = [
     { path: 'hechos', component: HechosComponent },
     { path: 'integrity', component: HashComponent },
     { path: 'informes', component: InformesComponent },
+    { path: 'settings', component: SettingsComponent },
     { path: '**', redirectTo: '' }
 ];

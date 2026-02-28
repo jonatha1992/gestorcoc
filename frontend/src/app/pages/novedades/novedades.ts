@@ -139,10 +139,12 @@ export class NovedadesComponent implements OnInit {
   }
 
   onTargetTypeChange() {
-    this.selectedAssets = [];
-    this.searchText = '';
-    this.showDropdown = false;
-    this.filterAssets();
+    setTimeout(() => {
+      this.selectedAssets = [];
+      this.searchText = '';
+      this.showDropdown = false;
+      this.filterAssets();
+    });
   }
 
   filterAssets() {
@@ -233,7 +235,7 @@ export class NovedadesComponent implements OnInit {
       let createCount = 0;
       const totalAssets = this.selectedAssets.length;
 
-      this.selectedAssets.forEach((asset, index) => {
+      this.selectedAssets.forEach((asset) => {
         const payload: any = { ...baseData };
 
         // Set the appropriate asset field based on targetType

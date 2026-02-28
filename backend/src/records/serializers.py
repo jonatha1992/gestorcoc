@@ -6,17 +6,25 @@ from .models import FilmRecord, Catalog
 from assets.models import Camera
 from personnel.models import Person
 
+HASH_ALGORITHM_CHOICES = ('sha3', 'sha256', 'sha512')
+VMS_AUTHENTICITY_MODE_CHOICES = (
+    'vms_propio',
+    'hash_preventivo',
+    'sin_autenticacion',
+    'otro',
+)
+
 
 def _video_report_max_frames():
-    return int(getattr(settings, 'VIDEO_REPORT_MAX_FRAMES', 20))
+    return int(getattr(settings, 'VIDEO_REPORT_MAX_FRAMES', 30))
 
 
 def _video_report_max_frame_size_bytes():
-    return int(getattr(settings, 'VIDEO_REPORT_MAX_FRAME_SIZE_BYTES', 5 * 1024 * 1024))
+    return int(getattr(settings, 'VIDEO_REPORT_MAX_FRAME_SIZE_BYTES', 8 * 1024 * 1024))
 
 
 def _video_report_max_total_bytes():
-    return int(getattr(settings, 'VIDEO_REPORT_MAX_TOTAL_BYTES', 40 * 1024 * 1024))
+    return int(getattr(settings, 'VIDEO_REPORT_MAX_TOTAL_BYTES', 80 * 1024 * 1024))
 
 
 def _bytes_to_mb_label(size_bytes):
@@ -104,6 +112,46 @@ class CatalogSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class VideoReportMaterialContextSerializer(serializers.Serializer):
+    sistema = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    aeropuerto = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    cantidad_observada = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    sectores_analizados = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    franja_horaria_analizada = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    tiempo_total_analisis = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    sintesis_conclusion = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    prevencion_sumaria = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    caratula = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    fecha_hecho = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    vuelo = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    empresa_aerea = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    destino = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    unidad = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    hash_algorithms = serializers.ListField(
+        child=serializers.ChoiceField(choices=HASH_ALGORITHM_CHOICES),
+        required=False,
+        allow_empty=True,
+    )
+    hash_program = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    motivo_sin_hash = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    medida_seguridad_interna = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    vms_authenticity_mode = serializers.ChoiceField(
+        choices=VMS_AUTHENTICITY_MODE_CHOICES,
+        required=False,
+        allow_blank=True,
+    )
+    vms_authenticity_detail = serializers.CharField(max_length=500, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        mode = (attrs.get('vms_authenticity_mode') or '').strip()
+        detail = (attrs.get('vms_authenticity_detail') or '').strip()
+        if mode == 'otro' and not detail:
+            raise serializers.ValidationError({
+                'vms_authenticity_detail': "Debe completar detalle cuando autenticidad = 'otro'."
+            })
+        return attrs
+
+
 class VideoReportDataSerializer(serializers.Serializer):
     report_date = serializers.DateField(input_formats=['%Y-%m-%d'])
     destinatarios = serializers.CharField(max_length=200)
@@ -116,23 +164,58 @@ class VideoReportDataSerializer(serializers.Serializer):
     dni = serializers.CharField(max_length=20, required=False, allow_blank=True, write_only=True)
     lup = serializers.CharField(max_length=30)
     sistema = serializers.CharField(max_length=100)
+    cantidad_observada = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    sectores_analizados = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    franja_horaria_analizada = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    tiempo_total_analisis = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    sintesis_conclusion = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    hash_algorithms = serializers.ListField(
+        child=serializers.ChoiceField(choices=HASH_ALGORITHM_CHOICES),
+        required=False,
+        allow_empty=True,
+    )
+    hash_program = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    motivo_sin_hash = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    medida_seguridad_interna = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    vms_authenticity_mode = serializers.ChoiceField(
+        choices=VMS_AUTHENTICITY_MODE_CHOICES,
+        required=False,
+        allow_blank=True,
+    )
+    vms_authenticity_detail = serializers.CharField(max_length=500, required=False, allow_blank=True)
     material_filmico = serializers.CharField(required=False, allow_blank=True)
     prevencion_sumaria = serializers.CharField(max_length=100)
     caratula = serializers.CharField(max_length=500)
-    fiscalia = serializers.CharField(max_length=300)
-    fiscal = serializers.CharField(max_length=120)
+    fiscalia = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    fiscal = serializers.CharField(max_length=120, required=False, allow_blank=True)
     denunciante = serializers.CharField(max_length=120)
     vuelo = serializers.CharField(max_length=40, required=False, allow_blank=True)
     empresa_aerea = serializers.CharField(max_length=100, required=False, allow_blank=True)
     destino = serializers.CharField(max_length=200, required=False, allow_blank=True)
     fecha_hecho = serializers.CharField(max_length=50, required=False, allow_blank=True)
-    unidad_aeroportuaria = serializers.CharField(max_length=200, required=False, allow_blank=True)
-    asiento = serializers.CharField(max_length=200, required=False, allow_blank=True)
     aeropuerto = serializers.CharField(max_length=200, required=False, allow_blank=True)
     objeto_denunciado = serializers.CharField(max_length=200)
     desarrollo = serializers.CharField(required=False, allow_blank=True)
     conclusion = serializers.CharField(required=False, allow_blank=True)
     firma = serializers.CharField(max_length=200)
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            normalized = dict(data)
+            # Legacy compatibility: accepted and ignored.
+            normalized.pop('unidad_aeroportuaria', None)
+            normalized.pop('asiento', None)
+            return super().to_internal_value(normalized)
+        return super().to_internal_value(data)
+
+    def validate(self, attrs):
+        mode = (attrs.get('vms_authenticity_mode') or '').strip()
+        detail = (attrs.get('vms_authenticity_detail') or '').strip()
+        if mode == 'otro' and not detail:
+            raise serializers.ValidationError({
+                'vms_authenticity_detail': "Debe completar detalle cuando autenticidad = 'otro'."
+            })
+        return attrs
 
 
 class VideoReportFrameSerializer(serializers.Serializer):
@@ -206,16 +289,34 @@ class VideoReportPayloadSerializer(serializers.Serializer):
         return attrs
 
 
+AI_IMPROVE_MODE_CHOICES = ('material_filmico', 'desarrollo', 'conclusion', 'full')
+
+
 class VideoReportImproveTextSerializer(serializers.Serializer):
+    material_filmico = serializers.CharField(required=False, allow_blank=True, max_length=12000)
     desarrollo = serializers.CharField(required=False, allow_blank=True, max_length=12000)
     conclusion = serializers.CharField(required=False, allow_blank=True, max_length=12000)
+    material_context = VideoReportMaterialContextSerializer(required=False)
     api_key = serializers.CharField(required=False, allow_blank=True)
+    mode = serializers.ChoiceField(choices=AI_IMPROVE_MODE_CHOICES, required=False, default='full')
 
     def validate(self, attrs):
+        material_filmico = (attrs.get('material_filmico') or '').strip()
         desarrollo = (attrs.get('desarrollo') or '').strip()
         conclusion = (attrs.get('conclusion') or '').strip()
-        if not desarrollo and not conclusion:
+        context = attrs.get('material_context') or {}
+        has_context = False
+        if isinstance(context, dict):
+            for value in context.values():
+                if isinstance(value, str) and value.strip():
+                    has_context = True
+                    break
+                if isinstance(value, list) and len(value) > 0:
+                    has_context = True
+                    break
+        if not material_filmico and not desarrollo and not conclusion and not has_context:
             raise serializers.ValidationError(
-                "Debe enviar texto en 'desarrollo' o 'conclusion' para mejorar con IA."
+                "Debe enviar texto en 'material_filmico', 'desarrollo' o 'conclusion', "
+                "o bien completar 'material_context' para mejorar con IA."
             )
         return attrs

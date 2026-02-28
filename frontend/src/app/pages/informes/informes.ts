@@ -1,13 +1,31 @@
-import { Component, HostListener, OnDestroy, inject, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
+import { Component, HostListener, OnDestroy, inject, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { InformeService, VideoReportFormData, VideoReportFrame, VideoReportPayload, ImproveVideoTextResponse } from '../../services/informe.service';
+import { firstValueFrom, forkJoin } from 'rxjs';
+import {
+  InformeService,
+  ImproveVideoTextMode,
+  ImproveVideoTextResponse,
+  MaterialSpeechContext,
+  VideoReportExportFormat,
+  VideoReportFormData,
+  VideoReportFrame,
+  VideoReportHashAlgorithm,
+  VideoReportPayload,
+  VideoReportVmsAuthenticityMode,
+} from '../../services/informe.service';
 import { ToastService } from '../../services/toast.service';
 import { LoadingService } from '../../services/loading.service';
 import { PersonnelService } from '../../services/personnel.service';
 import { AssetService } from '../../services/asset.service';
-import { environment } from '../../../environments/environment';
+
+type HelpKey = keyof VideoReportFormData | 'operador_select' | 'frame_upload' | 'frame_description';
+
+type FieldHelpContent = {
+  quePoner: string;
+  ejemplo: string;
+};
 
 @Component({
   selector: 'app-informes',
@@ -23,25 +41,37 @@ export class InformesComponent implements OnDestroy {
   private assetService = inject(AssetService);
   private cdr = inject(ChangeDetectorRef);
 
-  readonly wizardEnabled = !!environment.enableReportWizardPreview;
   readonly MAX_FRAMES = 30;
   readonly MAX_FRAME_SIZE = 8 * 1024 * 1024;
   readonly MAX_TOTAL_FRAMES_SIZE = 80 * 1024 * 1024;
   readonly MAX_FRAME_SIZE_MB = this.MAX_FRAME_SIZE / (1024 * 1024);
   readonly MAX_TOTAL_FRAMES_SIZE_MB = this.MAX_TOTAL_FRAMES_SIZE / (1024 * 1024);
   readonly allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+  readonly motivoSinHashOptions: string[] = [
+    'El material fue exportado por el propio VMS con autenticación incorporada',
+    'No se contó con las herramientas necesarias al momento del análisis',
+    'El material fue recibido sin posibilidad de aplicar hash previo',
+    'No correspondía por el tipo de análisis solicitado',
+  ];
 
   isGenerating = false;
-  isImprovingText = false;
+  isImprovingNarrative = false;
+  isImprovingMaterialFilmico = false;
   isProcessingFrames = false;
+  utilizoHash = false;
   isDirty = false;
-  currentStep = 1;
-  reportGenerationMode: 'frontend_doc' | 'backend_docx' = 'frontend_doc';
+  aiProgressLabel = '';
+  private aiStartedAt = 0;
+  private aiProgressTimer: ReturnType<typeof window.setInterval> | null = null;
+  private aiToastId: number | null = null;
+  private aiBaseLabel = '';
 
   @ViewChild('signaturePad') signaturePad?: ElementRef<HTMLCanvasElement>;
   private signatureCtx: CanvasRenderingContext2D | null = null;
   isDrawingSignature = false;
   incluirFirma = false;
+  incluirDatosVuelo = false;
+  private airportManualOverride = false;
   api_key = '';
   private lastPos = { x: 0, y: 0 };
   frames: VideoReportFrame[] = [];
@@ -52,9 +82,9 @@ export class InformesComponent implements OnDestroy {
   invalidFields = new Set<keyof VideoReportFormData>();
   validationMessage = '';
   private lastSuggestedReportNumber = '';
-  private validationStep: number | null = null;
   private readonly numeroInformePattern = /^\d{4}[A-Z]{3,4}\/\d{4}$/;
   private unitCodeByName: Record<string, string> = {};
+  private unitAirportByName: Record<string, string> = {};
   private readonly fallbackUnidadOptions: string[] = [
     'Coordinacion Regional de Video Seguridad I del Este',
     'Coordinacion Regional de Video Seguridad II del Centro',
@@ -64,6 +94,66 @@ export class InformesComponent implements OnDestroy {
     'CEAC',
   ];
   unidadOptions: string[] = [...this.fallbackUnidadOptions];
+  private readonly fallbackAirportOptions: string[] = [
+    'Aeropuerto Internacional Mtro. Pistarini',
+    'Aeroparque Jorge Newbery',
+    'Aeropuerto Internacional de San Fernando',
+    'Aeropuerto Comandante Espora',
+    'Aeropuerto Astor Piazzolla',
+  ];
+  airportOptions: string[] = [...this.fallbackAirportOptions];
+  readonly hashAlgorithmOptions: { value: VideoReportHashAlgorithm; label: string }[] = [
+    { value: 'sha3', label: 'SHA-3' },
+    { value: 'sha256', label: 'SHA-256' },
+    { value: 'sha512', label: 'SHA-512' },
+    { value: 'otro', label: 'Otro' },
+  ];
+  readonly exportFormatOptions: { value: VideoReportExportFormat; label: string }[] = [
+    { value: 'mp4', label: 'MP4' },
+    { value: 'avi', label: 'AVI' },
+    { value: 'mkv', label: 'MKV' },
+    { value: 'mov', label: 'MOV' },
+    { value: 'asf', label: 'ASF' },
+    { value: 'dav', label: 'DAV' },
+    { value: 'ave', label: 'AVE (Avigilon)' },
+    { value: 'xprotect', label: 'XProtect nativo (Milestone)' },
+    { value: 'jpg', label: 'JPG/JPEG' },
+    { value: 'png', label: 'PNG' },
+    { value: 'zip', label: 'ZIP' },
+    { value: 'otro', label: 'Otro' },
+  ];
+  readonly vmsAuthenticityOptions: { value: VideoReportVmsAuthenticityMode; label: string }[] = [
+    { value: 'vms_propio', label: 'Propio VMS (Milestone / Avigilon)' },
+    { value: 'hash_preventivo', label: 'Hash externo preventivo' },
+    { value: 'sin_autenticacion', label: 'Sin autenticación declarada' },
+    { value: 'otro', label: 'Otro' },
+  ];
+  private readonly hashAlgorithmLabelByCode: Record<VideoReportHashAlgorithm, string> = {
+    sha1: 'SHA-1',
+    sha3: 'SHA-3',
+    sha256: 'SHA-256',
+    sha512: 'SHA-512',
+    otro: 'OTRO',
+  };
+  private readonly exportFormatLabelByCode: Record<VideoReportExportFormat, string> = {
+    mp4: 'MP4',
+    avi: 'AVI',
+    mkv: 'MKV',
+    mov: 'MOV',
+    asf: 'ASF',
+    dav: 'DAV',
+    ave: 'AVE (Avigilon)',
+    xprotect: 'XProtect nativo (Milestone)',
+    jpg: 'JPG/JPEG',
+    png: 'PNG',
+    zip: 'ZIP',
+    otro: 'OTRO',
+  };
+  openHelpKey: HelpKey | null = null;
+
+  get isAiProcessing(): boolean {
+    return this.isImprovingNarrative || this.isImprovingMaterialFilmico;
+  }
 
   ngOnInit() {
     this.loadUnits();
@@ -73,46 +163,11 @@ export class InformesComponent implements OnDestroy {
   private loadUnits() {
     this.assetService.getUnits().subscribe({
       next: (units) => {
-        const sortedUnits = [...(units || [])].sort((a, b) =>
-          (a.name || '').localeCompare((b.name || ''), 'es', { sensitivity: 'base' })
-        );
-
-        if (sortedUnits.length === 0) {
-          this.unitCodeByName = {};
-          this.unidadOptions = [...this.fallbackUnidadOptions];
-          if (!this.form.unidad) {
-            this.form.unidad = this.unidadOptions[0];
-          }
-          this.applySuggestedReportNumber(true);
-          return;
-        }
-
-        this.unitCodeByName = {};
-        for (const unit of sortedUnits) {
-          const name = (unit.name || '').trim();
-          const code = this.normalizeUnitCode(unit.code || '');
-          if (name && code) {
-            this.unitCodeByName[name] = code;
-          }
-        }
-
-        this.unidadOptions = sortedUnits.map((unit) => unit.name).filter((name) => !!name);
-
-        const currentUnit = (this.form.unidad || '').trim();
-        if (!currentUnit || !this.unidadOptions.includes(currentUnit)) {
-          this.form.unidad = this.unidadOptions[0] || '';
-        }
-        this.applySuggestedReportNumber(true);
-        this.cdr.detectChanges();
+        setTimeout(() => this.applyUnitsFromApi(units || []), 50);
       },
       error: (err) => {
         console.error('Error loading units:', err);
-        this.unitCodeByName = {};
-        this.unidadOptions = [...this.fallbackUnidadOptions];
-        if (!this.form.unidad) {
-          this.form.unidad = this.unidadOptions[0];
-        }
-        this.applySuggestedReportNumber(true);
+        setTimeout(() => this.applyFallbackUnits(), 50);
         this.toastService.show(
           'No se pudieron cargar las unidades desde la base de datos. Se usa lista local.',
           'warning'
@@ -121,14 +176,61 @@ export class InformesComponent implements OnDestroy {
     });
   }
 
+  private applyUnitsFromApi(units: any[]): void {
+    const sortedUnits = [...units].sort((a, b) =>
+      (a.name || '').localeCompare((b.name || ''), 'es', { sensitivity: 'base' })
+    );
+
+    if (sortedUnits.length === 0) {
+      this.applyFallbackUnits();
+      return;
+    }
+
+    this.unitCodeByName = {};
+    this.unitAirportByName = {};
+    for (const unit of sortedUnits) {
+      const name = (unit.name || '').trim();
+      const code = this.normalizeUnitCode(unit.code || '');
+      if (name && code) {
+        this.unitCodeByName[name] = code;
+      }
+      if (name) {
+        this.unitAirportByName[name] = this.inferAirportFromUnit(name, code);
+      }
+    }
+    this.refreshAirportOptions();
+
+    this.unidadOptions = sortedUnits.map((unit) => unit.name).filter((name) => !!name);
+
+    const currentUnit = (this.form.unidad || '').trim();
+    if (!currentUnit || !this.unidadOptions.includes(currentUnit)) {
+      this.form.unidad = this.unidadOptions[0] || '';
+    }
+    this.syncAirportFromUnitSelection();
+    this.applySuggestedReportNumber(true);
+  }
+
+  private applyFallbackUnits(): void {
+    this.unitCodeByName = {};
+    this.unitAirportByName = {};
+    this.unidadOptions = [...this.fallbackUnidadOptions];
+    this.refreshAirportOptions();
+    if (!this.form.unidad) {
+      this.form.unidad = this.unidadOptions[0];
+    }
+    this.syncAirportFromUnitSelection();
+    this.applySuggestedReportNumber(true);
+  }
+
   private loadPersonnel() {
     this.personnelService.getPeople().subscribe({
       next: (people) => {
-        this.personnelOptions = people;
-        for (const person of this.personnelOptions) {
-          this.registerGradeOption((person?.rank || '').trim());
-        }
-        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.personnelOptions = people;
+          for (const person of this.personnelOptions) {
+            this.registerGradeOption((person?.rank || '').trim());
+          }
+        }, 50);
       },
       error: (err) => {
         console.error('Error loading personnel:', err);
@@ -161,7 +263,7 @@ export class InformesComponent implements OnDestroy {
   }
 
   onOperatorLupChange(value: string) {
-    this.form.lup = (value || '').toUpperCase();
+    this.form.lup = (value || '').replace(/\D/g, '');
     this.markDirty('lup');
   }
 
@@ -270,14 +372,118 @@ export class InformesComponent implements OnDestroy {
   }
 
   onUnidadChange(_val: string) {
+    this.syncAirportFromUnitSelection();
     this.applySuggestedReportNumber(false);
     this.markDirty('unidad');
     this.markDirty('numero_informe');
+    this.markDirty('aeropuerto');
+  }
+
+  onDatosVueloToggle(): void {
+    this.markDirty();
+  }
+
+  onAirportSelect(value: string): void {
+    const selectedAirport = (value || '').trim();
+    this.form.aeropuerto = selectedAirport;
+    this.ensureAirportOption(selectedAirport);
+
+    const unitName = (this.form.unidad || '').trim();
+    const inferredAirport =
+      this.unitAirportByName[unitName] ||
+      this.inferAirportFromUnit(unitName, this.unitCodeByName[unitName] || '');
+
+    this.airportManualOverride = !!selectedAirport && selectedAirport !== inferredAirport;
+    this.markDirty('aeropuerto');
+  }
+
+  toggleHashAlgorithm(algorithm: VideoReportHashAlgorithm): void {
+    const current = this.form.hash_algorithms || [];
+    if (current.includes(algorithm)) {
+      this.form.hash_algorithms = current.filter((item) => item !== algorithm);
+    } else {
+      this.form.hash_algorithms = [...current, algorithm];
+    }
+    this.markDirty('hash_algorithms');
+  }
+
+  hasHashAlgorithm(algorithm: VideoReportHashAlgorithm): boolean {
+    return (this.form.hash_algorithms || []).includes(algorithm);
+  }
+
+  onExportFormatChange(value: VideoReportExportFormat | ''): void {
+    this.form.export_file_format = value;
+    if (value !== 'otro') {
+      this.form.export_file_format_other = '';
+    }
+    this.markDirty('export_file_format');
+  }
+
+  onVmsAuthenticityModeChange(value: VideoReportVmsAuthenticityMode | ''): void {
+    this.form.vms_authenticity_mode = value;
+    if (value !== 'otro') {
+      this.form.vms_authenticity_detail = '';
+    }
+    if (value === 'hash_preventivo') {
+      this.utilizoHash = true;
+      if (!(this.form.hash_program || '').trim()) {
+        this.form.hash_program = 'HashMyFiles';
+        this.markDirty('hash_program');
+      }
+    }
+    this.markDirty('vms_authenticity_mode');
+  }
+
+  onUtilizaHashChange(checked: boolean): void {
+    this.utilizoHash = checked;
+    if (!checked) {
+      this.form.hash_program = '';
+      this.form.hash_algorithms = [];
+      this.form.hash_algorithm_other = '';
+    } else {
+      this.form.motivo_sin_hash = '';
+    }
+  }
+
+  getSelectedHashAlgorithmsSummary(): string {
+    const labels = this.getSelectedHashAlgorithmLabels();
+    return labels.length > 0 ? labels.join(', ') : 'No consignado';
+  }
+
+  getExportFormatSummary(): string {
+    return this.getExportFormatLabel(
+      this.form.export_file_format,
+      this.form.export_file_format_other
+    );
+  }
+
+  getVmsAuthenticitySummary(): string {
+    const mode = this.form.vms_authenticity_mode || '';
+    const label = this.getVmsAuthenticityLabel(mode);
+    if (mode === 'otro' && (this.form.vms_authenticity_detail || '').trim()) {
+      return `${label} - ${this.form.vms_authenticity_detail.trim()}`;
+    }
+    return label;
   }
 
   onNumeroInformeChange(value: string) {
     this.form.numero_informe = (value || '').toUpperCase();
     this.markDirty('numero_informe');
+  }
+
+  onMaterialFilmicoChange(value: string): void {
+    this.form.material_filmico = value || '';
+    this.markDirty('material_filmico');
+  }
+
+  onDesarrolloChange(value: string): void {
+    this.form.desarrollo = value || '';
+    this.markDirty();
+  }
+
+  onConclusionChange(value: string): void {
+    this.form.conclusion = value || '';
+    this.markDirty();
   }
 
   private applySuggestedReportNumber(force: boolean) {
@@ -328,12 +534,76 @@ export class InformesComponent implements OnDestroy {
     return 'UN';
   }
 
-  steps = [
-    { number: 1, label: 'Datos base' },
-    { number: 2, label: 'Causa' },
-    { number: 3, label: 'Desarrollo y fotogramas' },
-    { number: 4, label: 'Revision final' },
-  ];
+  private inferAirportFromUnit(unitName: string, unitCode: string): string {
+    const normalizedName = (unitName || '').trim().toLowerCase();
+    const code = this.normalizeUnitCode(unitCode || this.getUnitCode(unitName));
+
+    if (code === 'EZE' || normalizedName.includes('ezeiza')) {
+      return 'Aeropuerto Internacional Mtro. Pistarini';
+    }
+    if (code === 'AEP' || normalizedName.includes('aeroparque')) {
+      return 'Aeroparque Jorge Newbery';
+    }
+    if (code === 'FDO' || normalizedName.includes('san fernando')) {
+      return 'Aeropuerto Internacional de San Fernando';
+    }
+    if (code === 'BHI' || normalizedName.includes('bahia blanca') || normalizedName.includes('bahía blanca')) {
+      return 'Aeropuerto Comandante Espora';
+    }
+    if (code === 'MDQ' || normalizedName.includes('mar del plata')) {
+      return 'Aeropuerto Astor Piazzolla';
+    }
+    return '';
+  }
+
+  private syncAirportFromUnitSelection(): void {
+    const unitName = (this.form.unidad || '').trim();
+    if (!unitName) {
+      return;
+    }
+
+    const currentAirport = (this.form.aeropuerto || '').trim();
+    if (this.airportManualOverride && !!currentAirport) {
+      return;
+    }
+
+    const inferredAirport =
+      this.unitAirportByName[unitName] ||
+      this.inferAirportFromUnit(unitName, this.unitCodeByName[unitName] || '');
+
+    if (inferredAirport) {
+      this.form.aeropuerto = inferredAirport;
+      this.ensureAirportOption(inferredAirport);
+      this.airportManualOverride = false;
+    }
+  }
+
+  private refreshAirportOptions(): void {
+    const options = new Set<string>(this.fallbackAirportOptions);
+    for (const value of Object.values(this.unitAirportByName)) {
+      const normalized = (value || '').trim();
+      if (normalized) {
+        options.add(normalized);
+      }
+    }
+    this.airportOptions = Array.from(options).sort((a, b) =>
+      a.localeCompare(b, 'es', { sensitivity: 'base' })
+    );
+  }
+
+  private ensureAirportOption(value: string): void {
+    const normalized = (value || '').trim();
+    if (!normalized) {
+      return;
+    }
+    if (this.airportOptions.includes(normalized)) {
+      return;
+    }
+    this.airportOptions = [...this.airportOptions, normalized].sort((a, b) =>
+      a.localeCompare(b, 'es', { sensitivity: 'base' })
+    );
+  }
+
 
   gradeOptions: string[] = [
     'OF. AYUDATE',
@@ -350,13 +620,27 @@ export class InformesComponent implements OnDestroy {
   form: VideoReportFormData = {
     report_date: new Date().toISOString().slice(0, 10),
     destinatarios: 'URSA I - Jefe',
-    unidad: '',
+    unidad: this.fallbackUnidadOptions[0],
     tipo_informe: 'Informe de análisis de videos',
     numero_informe: '',
     grado: '',
     operador: '',
     lup: '',
     sistema: 'MILESTONE',
+    cantidad_observada: '',
+    sectores_analizados: '',
+    franja_horaria_analizada: '',
+    tiempo_total_analisis: '',
+    sintesis_conclusion: '',
+    export_file_format: '',
+    export_file_format_other: '',
+    hash_algorithms: [],
+    hash_algorithm_other: '',
+    hash_program: '',
+    motivo_sin_hash: '',
+    medida_seguridad_interna: '',
+    vms_authenticity_mode: '',
+    vms_authenticity_detail: '',
     material_filmico: '',
     prevencion_sumaria: '',
     caratula: '',
@@ -368,8 +652,6 @@ export class InformesComponent implements OnDestroy {
     destino: '',
     fecha_hecho: '',
     objeto_denunciado: '',
-    unidad_aeroportuaria: 'Unidad Regional de Seguridad Aeroportuaria I',
-    asiento: 'Coordinación Regional de Video Seguridad I del Este',
     aeropuerto: 'Aeropuerto Internacional Mtro. Pistarini',
     desarrollo: 'Al proceder a la reproducción y análisis del material fílmico obrante, pude observar e interpretar que, [DETALLAR OBSERVACIÓN AQUÍ].\n\nEn cumplimiento de las tareas solicitadas, es imperativo informar el siguiente resultado del análisis efectuado: Producto de la inspección visual minuciosa realizada en los autos ut supra mencionados, es dable destacar que [RESULTADO DE LA OBSERVACIÓN].\n\nPara finalizar, es relevante mencionar, que el análisis de imágenes realizado se limita únicamente a la visualización e interpretación de los registros fílmicos, sin constituir una pericia ni una tarea forense. Es todo CONSTE.',
     conclusion: 'Se determina que las imágenes analizadas coinciden con la descripción de los hechos mencionados en la denuncia.',
@@ -386,34 +668,205 @@ export class InformesComponent implements OnDestroy {
     lup: 'Legajo (LUP)',
     unidad: 'Unidad',
     sistema: 'Sistema',
+    cantidad_observada: 'Cantidad observada',
+    sectores_analizados: 'Sectores analizados',
+    franja_horaria_analizada: 'Franja horaria analizada',
+    tiempo_total_analisis: 'Tiempo total de análisis',
+    sintesis_conclusion: 'Síntesis para conclusión',
+    export_file_format: 'Formato de archivo exportado',
+    export_file_format_other: 'Otro formato de archivo',
+    hash_algorithms: 'Algoritmos SHA',
+    hash_algorithm_other: 'Otro algoritmo de hash',
+    hash_program: 'Programa de hash',
+    motivo_sin_hash: 'Motivo por el cual no se efectuó hash',
+    medida_seguridad_interna: 'Medida de seguridad interna',
+    vms_authenticity_mode: 'Autenticidad del material exportado',
+    vms_authenticity_detail: 'Detalle de autenticidad',
     material_filmico: 'Material Filmico Analizado',
     prevencion_sumaria: 'Prevencion Sumaria',
     caratula: 'Caratula',
-    fiscalia: 'Fiscalia',
-    fiscal: 'Fiscal',
+    fiscalia: 'Fiscalia / Juzgado',
+    fiscal: 'Fiscal / Juez / Secretario',
     denunciante: 'Denunciante',
     vuelo: 'Vuelo',
     empresa_aerea: 'Empresa Aérea',
     destino: 'Destino',
     fecha_hecho: 'Fecha del Hecho',
     objeto_denunciado: 'Objeto Denunciado / Marca',
-    unidad_aeroportuaria: 'Unidad Aeroportuaria',
-    asiento: 'Asiento',
     aeropuerto: 'Aeropuerto',
     desarrollo: 'Desarrollo',
     conclusion: 'Conclusion',
     firma: 'Firma',
   };
 
-  private readonly stepRequiredFields: Record<number, (keyof VideoReportFormData)[]> = {
-    1: ['operador', 'grado', 'lup', 'report_date', 'destinatarios', 'unidad', 'numero_informe', 'aeropuerto', 'asiento', 'unidad_aeroportuaria'],
-    2: ['sistema', 'material_filmico', 'prevencion_sumaria', 'caratula', 'fiscalia', 'fiscal', 'denunciante', 'objeto_denunciado'],
-    3: [],
-    4: [
-      'operador', 'grado', 'lup', 'report_date', 'destinatarios', 'unidad', 'numero_informe', 'aeropuerto', 'asiento', 'unidad_aeroportuaria',
-      'sistema', 'material_filmico', 'prevencion_sumaria', 'caratula', 'fiscalia', 'fiscal', 'denunciante', 'objeto_denunciado',
-    ],
+  readonly fieldHelp: Record<HelpKey, FieldHelpContent> = {
+    operador_select: {
+      quePoner: 'Selecciona el agente que realiza el informe.',
+      ejemplo: 'Perez, Juan',
+    },
+    report_date: {
+      quePoner: 'Fecha de confeccion del informe.',
+      ejemplo: '2026-02-26',
+    },
+    destinatarios: {
+      quePoner: 'Area o autoridad destinataria del informe.',
+      ejemplo: 'URSA I - Jefe',
+    },
+    tipo_informe: {
+      quePoner: 'Tipo de documento emitido.',
+      ejemplo: 'Informe de analisis de videos',
+    },
+    numero_informe: {
+      quePoner: 'Numero unico del informe con formato oficial.',
+      ejemplo: '0001EZE/2026',
+    },
+    grado: {
+      quePoner: 'Jerarquia del operador que firma.',
+      ejemplo: 'OF. PRINCIPAL',
+    },
+    operador: {
+      quePoner: 'Nombre del operador (se autocompleta desde Personal).',
+      ejemplo: 'Perez, Juan',
+    },
+    lup: {
+      quePoner: 'Legajo numerico de 6 digitos del operador.',
+      ejemplo: '506896',
+    },
+    unidad: {
+      quePoner: 'Unidad principal desde la que se emite el informe.',
+      ejemplo: 'Coordinacion Regional de Video Seguridad I del Este',
+    },
+    sistema: {
+      quePoner: 'Sistema de video donde se realizo el analisis.',
+      ejemplo: 'MILESTONE',
+    },
+    cantidad_observada: {
+      quePoner: 'Cantidad simple relacionada al hecho observado (personas, bultos, eventos, etc.).',
+      ejemplo: '2 personas / 1 bulto / 3 eventos',
+    },
+    sectores_analizados: {
+      quePoner: 'Sectores o áreas concretas donde se revisaron cámaras.',
+      ejemplo: 'Hall de arribos, cinta 3, plataforma norte',
+    },
+    franja_horaria_analizada: {
+      quePoner: 'Rango horario puntual revisado durante el análisis.',
+      ejemplo: '14:05 a 15:42',
+    },
+    tiempo_total_analisis: {
+      quePoner: 'Duración total invertida en el análisis visual.',
+      ejemplo: '1 hora 37 minutos',
+    },
+    sintesis_conclusion: {
+      quePoner: 'Resumen breve que quieras ver reflejado en la conclusión.',
+      ejemplo: 'No se observa manipulación posterior del bulto denunciado',
+    },
+    export_file_format: {
+      quePoner: 'Formato en que fue exportado el archivo de video/imágenes.',
+      ejemplo: 'MP4',
+    },
+    export_file_format_other: {
+      quePoner: 'Nombre exacto del formato cuando no figura en la lista.',
+      ejemplo: 'Formato propietario XProtect',
+    },
+    hash_algorithms: {
+      quePoner: 'Selecciona los algoritmos SHA usados para preservar integridad del material.',
+      ejemplo: 'SHA-256, SHA-512',
+    },
+    hash_algorithm_other: {
+      quePoner: 'Especifica el algoritmo cuando seleccionas "Otro".',
+      ejemplo: 'BLAKE3',
+    },
+    hash_program: {
+      quePoner: 'Herramienta utilizada para calcular hash de seguridad.',
+      ejemplo: 'HASH MY FILE',
+    },
+    medida_seguridad_interna: {
+      quePoner: 'Medida de seguridad interna declarada por el COC/VMS.',
+      ejemplo: 'Control de auditoría de exportaciones y bitácora interna',
+    },
+    vms_authenticity_mode: {
+      quePoner: 'Cómo se respalda autenticidad del material exportado.',
+      ejemplo: 'Propio VMS',
+    },
+    vms_authenticity_detail: {
+      quePoner: 'Detalle técnico cuando autenticidad = Otro.',
+      ejemplo: 'Firma digital del exportador y constancia interna del sistema',
+    },
+    prevencion_sumaria: {
+      quePoner: 'Numero/identificador de la prevencion sumaria.',
+      ejemplo: '003BAR/2026',
+    },
+    caratula: {
+      quePoner: 'Texto de la caratula de la causa.',
+      ejemplo: 'DENUNCIA S/ PRESUNTO HURTO',
+    },
+    fiscalia: {
+      quePoner: 'Fiscalia o juzgado interviniente (si corresponde).',
+      ejemplo: 'Fiscalia Nro. 02',
+    },
+    fiscal: {
+      quePoner: 'Autoridad interviniente (Fiscal, Juez o Secretario), si corresponde.',
+      ejemplo: 'INTI ISLA / MARIA GOMEZ / JUAN PEREZ',
+    },
+    denunciante: {
+      quePoner: 'Persona que realiza la denuncia.',
+      ejemplo: 'PONZO Osvaldo',
+    },
+    fecha_hecho: {
+      quePoner: 'Fecha en la que ocurrio el hecho investigado.',
+      ejemplo: '2026-02-21',
+    },
+    vuelo: {
+      quePoner: 'Numero de vuelo si el hecho involucra transporte aereo.',
+      ejemplo: 'WJ 3045',
+    },
+    empresa_aerea: {
+      quePoner: 'Aerolinea vinculada al vuelo (si corresponde).',
+      ejemplo: 'Jet Smart',
+    },
+    destino: {
+      quePoner: 'Destino del vuelo relacionado al hecho.',
+      ejemplo: 'San Carlos de Bariloche',
+    },
+    objeto_denunciado: {
+      quePoner: 'Objeto denunciado y/o marca afectada.',
+      ejemplo: 'Telefono Samsung S24, color negro',
+    },
+    aeropuerto: {
+      quePoner: 'Lugar de origen de la informacion (aeropuerto u otro lugar).',
+      ejemplo: 'Aeropuerto Internacional Mtro. Pistarini / Plataforma Norte',
+    },
+    material_filmico: {
+      quePoner: 'Detalla camaras, fechas, horarios y tramos revisados.',
+      ejemplo: 'Camara 01 y 03, 21/02/2026 de 14:00 a 16:30, sector check-in.',
+    },
+    desarrollo: {
+      quePoner: 'Narracion cronologica y observaciones relevantes del analisis.',
+      ejemplo: 'Se observa ingreso del pasajero... luego retiro de equipaje...',
+    },
+    conclusion: {
+      quePoner: 'Resultado final del analisis, concreto y verificable.',
+      ejemplo: 'Las imagenes son compatibles con la denuncia presentada.',
+    },
+    firma: {
+      quePoner: 'Firma digital del operador responsable.',
+      ejemplo: 'Habilitar firma y dibujar en el recuadro.',
+    },
+    frame_upload: {
+      quePoner: 'Adjunta fotogramas relevantes en formato imagen.',
+      ejemplo: 'Subir JPG/PNG de capturas clave del hecho.',
+    },
+    frame_description: {
+      quePoner: 'Describe brevemente que muestra cada fotograma.',
+      ejemplo: 'Se observa al sospechoso retirando equipaje de cinta 3.',
+    },
   };
+
+  private readonly requiredFields: (keyof VideoReportFormData)[] = [
+    'operador', 'grado', 'lup', 'report_date', 'destinatarios', 'unidad', 'numero_informe',
+    'sistema', 'material_filmico', 'prevencion_sumaria', 'caratula', 'denunciante',
+    'objeto_denunciado', 'export_file_format', 'vms_authenticity_mode',
+  ];
 
   @HostListener('window:beforeunload', ['$event'])
   beforeUnload(event: BeforeUnloadEvent): void {
@@ -423,7 +876,25 @@ export class InformesComponent implements OnDestroy {
     }
   }
 
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.openHelpKey) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (target && (target.closest('[data-help-trigger]') || target.closest('[data-help-panel]'))) {
+      return;
+    }
+    this.openHelpKey = null;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapePressed(): void {
+    this.openHelpKey = null;
+  }
+
   ngOnDestroy(): void {
+    this.stopAiFeedback();
     for (const frame of this.frames) {
       if (frame.preview_url) {
         URL.revokeObjectURL(frame.preview_url);
@@ -431,67 +902,68 @@ export class InformesComponent implements OnDestroy {
     }
   }
 
+  private startAiFeedback(label: string): void {
+    this.stopAiFeedback();
+    this.aiBaseLabel = label;
+    this.aiStartedAt = Date.now();
+    this.aiProgressLabel = `${label} · 0s`;
+    this.aiToastId = this.toastService.loading(label);
+    this.aiProgressTimer = window.setInterval(() => {
+      const elapsedSeconds = this.getAiElapsedSeconds();
+      this.aiProgressLabel = `${this.aiBaseLabel} · ${elapsedSeconds}s`;
+      if (this.aiToastId !== null) {
+        this.toastService.update(this.aiToastId, {
+          message: `${this.aiBaseLabel} (${elapsedSeconds}s)`
+        });
+      }
+    }, 1000);
+  }
+
+  private stopAiFeedback(): void {
+    if (this.aiProgressTimer !== null) {
+      window.clearInterval(this.aiProgressTimer);
+      this.aiProgressTimer = null;
+    }
+    if (this.aiToastId !== null) {
+      this.toastService.remove(this.aiToastId);
+      this.aiToastId = null;
+    }
+    this.aiProgressLabel = '';
+    this.aiStartedAt = 0;
+    this.aiBaseLabel = '';
+  }
+
+  private getAiElapsedSeconds(): number {
+    if (!this.aiStartedAt) {
+      return 0;
+    }
+    return Math.max(1, Math.round((Date.now() - this.aiStartedAt) / 1000));
+  }
+
   markDirty(field?: keyof VideoReportFormData): void {
     this.isDirty = true;
-
     if (field && this.invalidFields.has(field)) {
       this.invalidFields.delete(field);
     }
-
-    if (this.validationStep === this.currentStep) {
-      this.refreshValidationState(this.currentStep, false);
-    }
   }
 
-  goToStep(step: number): void {
-    if (step < this.currentStep) {
-      this.currentStep = step;
-      this.invalidFields.clear();
-      this.validationMessage = '';
-      this.validationStep = null;
-      if (step === 1) setTimeout(() => this.initSignaturePad(), 50);
-      return;
-    }
-    if (step === this.currentStep) {
-      return;
-    }
-    if (!this.validateStep(this.currentStep)) {
-      return;
-    }
-    if (this.currentStep === 1) {
-      this.saveOperatorData();
-    }
-    this.currentStep = step;
-    this.invalidFields.clear();
-    this.validationMessage = '';
-    this.validationStep = null;
-    if (step === 1) setTimeout(() => this.initSignaturePad(), 50);
+  toggleHelp(helpKey: HelpKey, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.openHelpKey = this.openHelpKey === helpKey ? null : helpKey;
   }
 
-  nextStep(): void {
-    if (!this.validateStep(this.currentStep)) {
-      return;
-    }
-    if (this.currentStep === 1) {
-      this.saveOperatorData();
-    }
-    if (this.currentStep < 4) {
-      this.currentStep += 1;
-      this.invalidFields.clear();
-      this.validationMessage = '';
-      this.validationStep = null;
-    }
+  isHelpOpen(helpKey: HelpKey): boolean {
+    return this.openHelpKey === helpKey;
   }
 
-  prevStep(): void {
-    if (this.currentStep > 1) {
-      this.currentStep -= 1;
-      this.invalidFields.clear();
-      this.validationMessage = '';
-      this.validationStep = null;
-      if (this.currentStep === 1) setTimeout(() => this.initSignaturePad(), 50);
+  getOpenHelpContent(): FieldHelpContent | null {
+    if (!this.openHelpKey) {
+      return null;
     }
+    return this.fieldHelp[this.openHelpKey];
   }
+
 
   // --- LOGICA DE FIRMA DIGITAL ---
   initSignaturePad() {
@@ -574,56 +1046,77 @@ export class InformesComponent implements OnDestroy {
 
   private isBlankField(field: keyof VideoReportFormData): boolean {
     const value = this.form[field];
-    return !value || !value.trim();
+    if (typeof value === 'string') {
+      return !value.trim();
+    }
+    if (Array.isArray(value)) {
+      return value.length === 0;
+    }
+    return !value;
   }
 
   isFieldInvalid(field: keyof VideoReportFormData): boolean {
     return this.invalidFields.has(field);
   }
 
-  private refreshValidationState(step: number, notify: boolean): boolean {
-    const required = this.stepRequiredFields[step] || [];
+  private validate(notify: boolean): boolean {
+    const required = [...this.requiredFields, 'aeropuerto' as keyof VideoReportFormData];
     const missing = required.filter((field) => this.isBlankField(field));
     const invalid = new Set<keyof VideoReportFormData>(missing);
 
     let hasFormatError = false;
-    if (
-      required.includes('numero_informe') &&
-      !missing.includes('numero_informe') &&
-      !this.numeroInformePattern.test((this.form.numero_informe || '').trim())
-    ) {
+    let hasVmsDetailError = false;
+    let hasExportFormatOtherError = false;
+    let hasCustomHashError = false;
+    let hasHashProgramError = false;
+    let hasExternalHashWithoutAlgorithmError = false;
+
+    if (!missing.includes('numero_informe') && !this.numeroInformePattern.test((this.form.numero_informe || '').trim())) {
       invalid.add('numero_informe');
       hasFormatError = true;
+    }
+    if ((this.form.vms_authenticity_mode || '') === 'otro' && !(this.form.vms_authenticity_detail || '').trim()) {
+      invalid.add('vms_authenticity_detail');
+      hasVmsDetailError = true;
+    }
+    if (this.form.export_file_format === 'otro' && !(this.form.export_file_format_other || '').trim()) {
+      invalid.add('export_file_format_other');
+      hasExportFormatOtherError = true;
+    }
+    if (this.hasHashAlgorithm('otro') && !(this.form.hash_algorithm_other || '').trim()) {
+      invalid.add('hash_algorithm_other');
+      hasCustomHashError = true;
+    }
+    if (this.utilizoHash) {
+      if (this.getSelectedHashAlgorithmLabels().length === 0) {
+        invalid.add('hash_algorithms');
+        hasExternalHashWithoutAlgorithmError = true;
+      }
+      if (!(this.form.hash_program || '').trim()) {
+        invalid.add('hash_program');
+        hasHashProgramError = true;
+      }
     }
 
     this.invalidFields = invalid;
 
     if (invalid.size === 0) {
       this.validationMessage = '';
-      if (this.validationStep === step) {
-        this.validationStep = null;
-      }
       return true;
     }
 
     const labels = missing.map((field) => this.fieldLabels[field]);
-    if (hasFormatError) {
-      labels.push('Numero de Informe (formato NNNNCODIGO/YYYY)');
-    }
+    if (hasFormatError) labels.push('Numero de Informe (formato NNNNCODIGO/YYYY)');
+    if (hasVmsDetailError) labels.push('Detalle de autenticidad (obligatorio cuando autenticidad = Otro)');
+    if (hasExportFormatOtherError) labels.push('Otro formato de archivo (completa el nombre del formato)');
+    if (hasCustomHashError) labels.push('Otro algoritmo de hash (completa el nombre del algoritmo)');
+    if (hasHashProgramError) labels.push('Programa de hash (obligatorio cuando autenticidad = Hash externo)');
+    if (hasExternalHashWithoutAlgorithmError) labels.push('Algoritmo SHA (obligatorio cuando autenticidad = Hash externo)');
 
     const message = `Completa los campos requeridos: ${labels.join(', ')}`;
     this.validationMessage = message;
-    this.validationStep = step;
-
-    if (notify) {
-      this.toastService.error(message);
-    }
-
+    if (notify) this.toastService.error(message);
     return false;
-  }
-
-  private validateStep(step: number): boolean {
-    return this.refreshValidationState(step, true);
   }
 
   private totalFramesBytes(): number {
@@ -699,7 +1192,6 @@ export class InformesComponent implements OnDestroy {
 
     this.isProcessingFrames = true;
     this.loadingService.show();
-    this.cdr.detectChanges();
 
     // Permitir que Angular renderice el spinner antes de bloquear el hilo
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -743,7 +1235,6 @@ export class InformesComponent implements OnDestroy {
     } finally {
       this.isProcessingFrames = false;
       this.loadingService.hide();
-      this.cdr.detectChanges();
     }
 
     this.reindexFrames();
@@ -789,11 +1280,30 @@ export class InformesComponent implements OnDestroy {
   }
 
   private buildPayload(): VideoReportPayload {
+    const reportData: VideoReportFormData = { ...this.form };
+    if (reportData.export_file_format !== 'otro') {
+      reportData.export_file_format_other = '';
+    }
+    if (!reportData.hash_algorithms.includes('otro')) {
+      reportData.hash_algorithm_other = '';
+    }
+    if (
+      (reportData.vms_authenticity_mode || '') === 'hash_preventivo' &&
+      !(reportData.hash_program || '').trim()
+    ) {
+      reportData.hash_program = 'HashMyFiles';
+    }
     if (!this.incluirFirma) {
-      this.form.firma = '';
+      reportData.firma = '';
+    }
+    if (!this.incluirDatosVuelo) {
+      reportData.fecha_hecho = '';
+      reportData.vuelo = '';
+      reportData.empresa_aerea = '';
+      reportData.destino = '';
     }
     return {
-      report_data: { ...this.form },
+      report_data: reportData,
       frames: this.orderedFrames().map((frame) => ({
         id_temp: frame.id_temp,
         file_name: frame.file_name,
@@ -805,81 +1315,367 @@ export class InformesComponent implements OnDestroy {
     };
   }
 
-  improveNarrativeWithAi(): void {
-    const desarrollo = (this.form.desarrollo || '').trim();
-    const conclusion = (this.form.conclusion || '').trim();
+  private getSelectedHashAlgorithmLabels(): string[] {
+    const labels = (this.form.hash_algorithms || [])
+      .map((item) => this.getHashAlgorithmLabel(item, this.form.hash_algorithm_other))
+      .map((item) => (item || '').trim())
+      .filter((item) => !!item);
+    return Array.from(new Set(labels));
+  }
 
-    if (!desarrollo && !conclusion) {
-      this.toastService.error('Escribe en Desarrollo o Conclusion para usar la mejora con IA.');
+  private buildMaterialSpeechContext(): MaterialSpeechContext {
+    return {
+      sistema: this.form.sistema,
+      aeropuerto: this.form.aeropuerto,
+      cantidad_observada: this.form.cantidad_observada,
+      sectores_analizados: this.form.sectores_analizados,
+      franja_horaria_analizada: this.form.franja_horaria_analizada,
+      tiempo_total_analisis: this.form.tiempo_total_analisis,
+      sintesis_conclusion: this.form.sintesis_conclusion,
+      prevencion_sumaria: this.form.prevencion_sumaria,
+      caratula: this.form.caratula,
+      fecha_hecho: this.form.fecha_hecho,
+      vuelo: this.form.vuelo,
+      empresa_aerea: this.form.empresa_aerea,
+      destino: this.form.destino,
+      unidad: this.form.unidad,
+      export_file_format: this.form.export_file_format,
+      export_file_format_other: this.form.export_file_format_other,
+      hash_algorithms: this.form.hash_algorithms,
+      hash_algorithm_other: this.form.hash_algorithm_other,
+      hash_program: this.form.hash_program,
+      vms_authenticity_mode: this.form.vms_authenticity_mode,
+      vms_authenticity_detail: this.form.vms_authenticity_detail,
+      motivo_sin_hash: this.form.motivo_sin_hash,
+    };
+  }
+
+  private buildMaterialFilmicoSeedFromContext(): string {
+    const sistema = (this.form.sistema || '').trim() || 'sistema no consignado';
+    const lugar = (this.form.aeropuerto || '').trim() || 'lugar de origen no consignado';
+    const formato = this.getExportFormatLabel(
+      this.form.export_file_format,
+      this.form.export_file_format_other
+    ).toLowerCase();
+    const autenticidad = this.getVmsAuthenticityLabel(this.form.vms_authenticity_mode || '');
+    const cantidad = (this.form.cantidad_observada || '').trim();
+    const sectores = (this.form.sectores_analizados || '').trim();
+    const franja = (this.form.franja_horaria_analizada || '').trim();
+    const tiempo = (this.form.tiempo_total_analisis || '').trim();
+    const hashLabels = this.getSelectedHashAlgorithmLabels();
+    const motivoSinHash = (this.form.motivo_sin_hash || '').trim();
+    const hashText =
+      hashLabels.length > 0
+        ? hashLabels.join(', ')
+        : motivoSinHash
+          ? `no aplicado (${motivoSinHash})`
+          : 'no aplicado';
+    const hashProgram = (this.form.hash_program || '').trim() || 'programa de hash no consignado';
+    const quantityText = cantidad ? ` Se consignó cantidad observada: ${cantidad}.` : '';
+    const sectorText = sectores ? ` Sectores analizados: ${sectores}.` : '';
+    const timingText =
+      franja || tiempo
+        ? ` Franja horaria: ${franja || 'no consignada'}; tiempo total: ${tiempo || 'no consignado'}.`
+        : '';
+
+    const hashDetail =
+      hashLabels.length > 0
+        ? `Verificación mediante ${hashProgram} bajo ${hashText}.`
+        : motivoSinHash
+          ? `Hash no efectuado (${motivoSinHash}).`
+          : 'Hash no efectuado.';
+
+    return `Material obtenido del sistema ${sistema}, con origen en ${lugar}, exportado en formato ${formato}. Método de autenticidad: ${autenticidad}. ${hashDetail}${quantityText}${sectorText}${timingText}`;
+  }
+
+  private hasStructuredSpeechContext(): boolean {
+    const values = [
+      this.form.cantidad_observada,
+      this.form.sectores_analizados,
+      this.form.franja_horaria_analizada,
+      this.form.tiempo_total_analisis,
+      this.form.sintesis_conclusion,
+      this.form.sistema,
+      this.form.aeropuerto,
+      this.form.export_file_format,
+      this.form.vms_authenticity_mode,
+    ];
+    return values.some((value) => !!(value || '').trim());
+  }
+
+  private buildDesarrolloSeedFromContext(): string {
+    const sectores = (this.form.sectores_analizados || '').trim() || 'sectores no consignados';
+    const franja = (this.form.franja_horaria_analizada || '').trim() || 'franja horaria no consignada';
+    const tiempo = (this.form.tiempo_total_analisis || '').trim() || 'tiempo total no consignado';
+    const cantidad = (this.form.cantidad_observada || '').trim() || 'cantidad observada no consignada';
+
+    return `Se analizaron los sectores ${sectores}, en la franja horaria ${franja}, con un tiempo total de análisis de ${tiempo}. Cantidad observada: ${cantidad}.`;
+  }
+
+  private buildConclusionSeedFromContext(): string {
+    const sintesis = (this.form.sintesis_conclusion || '').trim();
+    if (sintesis) {
+      return `Síntesis para conclusión: ${sintesis}.`;
+    }
+
+    const cantidad = (this.form.cantidad_observada || '').trim();
+    if (cantidad) {
+      return `Síntesis para conclusión: cantidad observada ${cantidad}.`;
+    }
+
+    return 'Síntesis para conclusión no consignada.';
+  }
+
+  private getHashAlgorithmLabel(code: VideoReportHashAlgorithm, customOther = ''): string {
+    if (code === 'otro') {
+      return (customOther || '').trim() || 'OTRO';
+    }
+    return this.hashAlgorithmLabelByCode[code] || code.toUpperCase();
+  }
+
+  private getExportFormatLabel(value: VideoReportExportFormat | '', otherValue: string): string {
+    if (!value) {
+      return 'No consignado';
+    }
+    if (value === 'otro') {
+      return (otherValue || '').trim() || 'OTRO';
+    }
+    return this.exportFormatLabelByCode[value] || String(value).toUpperCase();
+  }
+
+  private getVmsAuthenticityLabel(mode: VideoReportVmsAuthenticityMode | ''): string {
+    if (mode === 'vms_propio') {
+      return 'autenticación provista por el propio sistema VMS';
+    }
+    if (mode === 'hash_preventivo') {
+      return 'autenticación basada en hash preventivo externo';
+    }
+    if (mode === 'sin_autenticacion') {
+      return 'sin autenticación técnica declarada';
+    }
+    if (mode === 'otro') {
+      return 'autenticación declarada por método alternativo';
+    }
+    return 'autenticación no consignada';
+  }
+
+  private buildMaterialFilmicoFallbackTextFromReport(report: VideoReportFormData): string {
+    const sistema = (report.sistema || '').trim() || 'sistema no consignado';
+    const lugar = (report.aeropuerto || '').trim() || 'lugar de origen no consignado';
+    const formato = this.getExportFormatLabel(report.export_file_format, report.export_file_format_other).toLowerCase();
+    const cantidad = (report.cantidad_observada || '').trim();
+    const hashProgram = (report.hash_program || '').trim() || 'herramienta de hash no consignada';
+    const hashLabels = (report.hash_algorithms || [])
+      .map((item) => this.getHashAlgorithmLabel(item, report.hash_algorithm_other));
+    const motivoSinHash = (report.motivo_sin_hash || '').trim();
+    const hashText =
+      hashLabels.length > 0
+        ? hashLabels.join(' y ')
+        : motivoSinHash
+          ? `no aplicado (${motivoSinHash})`
+          : 'no aplicado';
+    const authenticity = this.getVmsAuthenticityLabel(report.vms_authenticity_mode || '');
+    const authenticityDetail = (report.vms_authenticity_detail || '').trim();
+    const authenticityText =
+      report.vms_authenticity_mode === 'otro' && authenticityDetail
+        ? `${authenticity}: ${authenticityDetail}`
+        : authenticity;
+
+    const quantityText = cantidad
+      ? ` En cuanto a la cantidad observada, se consignó ${cantidad}.`
+      : ' En cuanto a la cantidad observada, no fue consignada.';
+
+    const hashSentence =
+      hashLabels.length > 0
+        ? `asimismo, previamente a su examen, esta instancia procedió a efectuar sobre el material digital un hash de seguridad mediante ${hashProgram}, bajo los algoritmos ${hashText}, con la finalidad de preservar su integridad`
+        : motivoSinHash
+          ? `asimismo, se deja constancia que no se efectuó hash sobre el material (${motivoSinHash})`
+          : `asimismo, se deja constancia que no se efectuó hash sobre el material`;
+
+    return `Es oportuno mencionar que el sistema de video vigilancia denominado "${sistema}", desde donde se obtuvo la información en "${lugar}", exportada en formato ${formato}, posee medidas de seguridad propias; ${hashSentence}.${quantityText} En cuanto a la autenticidad del material exportado, se deja constancia de ${authenticityText}.`;
+  }
+
+  private buildDesarrolloFallbackTextFromReport(report: VideoReportFormData): string {
+    const sectores = (report.sectores_analizados || '').trim() || 'sectores no consignados';
+    const franja = (report.franja_horaria_analizada || '').trim() || 'franja horaria no consignada';
+    const tiempo = (report.tiempo_total_analisis || '').trim() || 'tiempo total no consignado';
+    const cantidad = (report.cantidad_observada || '').trim() || 'cantidad observada no consignada';
+
+    return `Del análisis visual practicado sobre los registros fílmicos, se deja constancia de que la revisión se centró en ${sectores}, abarcando la ${franja}, con un ${tiempo}. Como dato cuantitativo relevante se consignó: ${cantidad}. La presente descripción se limita al contenido visual observado, sin interpretación pericial.`;
+  }
+
+  private buildConclusionFallbackTextFromReport(report: VideoReportFormData): string {
+    const sintesis = (report.sintesis_conclusion || '').trim();
+    if (sintesis) {
+      return `En virtud del análisis efectuado, y sin apartarse de los extremos objetivamente observables, se concluye preliminarmente: ${sintesis}.`;
+    }
+    const cantidad = (report.cantidad_observada || '').trim();
+    const cantidadTexto = cantidad ? `con una cantidad observada declarada de ${cantidad}, ` : '';
+    return `En virtud del análisis efectuado, y dentro de los límites propios de la revisión visual, se concluye que ${cantidadTexto}no se advierten elementos adicionales a los ya consignados en el desarrollo, quedando la valoración jurídica sujeta a la autoridad competente.`;
+  }
+
+  async improveNarrativeWithAi(): Promise<void> {
+    if (this.isImprovingNarrative) {
       return;
     }
 
-    this.isImprovingText = true;
-    this.informeService.improveVideoText({
-      desarrollo: this.form.desarrollo,
-      conclusion: this.form.conclusion
-      // Redundant api_key removed, backend uses env var
-    }).subscribe({
-      next: (response: ImproveVideoTextResponse) => {
-        this.form.desarrollo = response?.desarrollo ?? this.form.desarrollo;
-        this.form.conclusion = response?.conclusion ?? this.form.conclusion;
+    const desarrollo = (this.form.desarrollo || '').trim();
+    const conclusion = (this.form.conclusion || '').trim();
+    const hasStructuredContext = this.hasStructuredSpeechContext();
+    const desarrolloSeed = desarrollo || this.buildDesarrolloSeedFromContext();
+    const conclusionSeed = conclusion || this.buildConclusionSeedFromContext();
+
+    if (!desarrollo && !conclusion && !hasStructuredContext) {
+      this.toastService.error('Completa texto o datos rápidos (sectores/tiempos/síntesis) para usar la mejora con IA.');
+      return;
+    }
+
+    const materialContext = this.buildMaterialSpeechContext();
+    this.isImprovingNarrative = true;
+    this.startAiFeedback('Mejorando desarrollo y conclusión con IA');
+
+    let deferredSuccess = false;
+    try {
+      const responses = await firstValueFrom(
+        forkJoin({
+          desarrollo: this.informeService.improveVideoText({
+            material_filmico: '',
+            desarrollo: desarrolloSeed,
+            conclusion: '',
+            material_context: materialContext,
+            mode: 'desarrollo' as ImproveVideoTextMode,
+          }),
+          conclusion: this.informeService.improveVideoText({
+            material_filmico: '',
+            desarrollo: '',
+            conclusion: conclusionSeed,
+            material_context: materialContext,
+            mode: 'conclusion' as ImproveVideoTextMode,
+          }),
+        })
+      );
+
+      const elapsedSeconds = this.getAiElapsedSeconds();
+      const newDesarrollo = (responses.desarrollo?.desarrollo || '').trim();
+      const newConclusion = (responses.conclusion?.conclusion || '').trim();
+      const aiApplied = (responses.desarrollo?.ai_applied !== false) || (responses.conclusion?.ai_applied !== false);
+      deferredSuccess = true;
+      window.setTimeout(() => {
+        if (newDesarrollo) {
+          this.form.desarrollo = newDesarrollo;
+        }
+        if (newConclusion) {
+          this.form.conclusion = newConclusion;
+        }
         this.markDirty();
-        this.toastService.success('Texto mejorado con IA.');
-        this.isImprovingText = false;
-      },
-      error: (error: HttpErrorResponse) => {
-        this.toastService.error(this.getSimpleApiErrorMessage(error, 'No se pudo mejorar el texto con IA.'));
-        this.isImprovingText = false;
+        this.cdr.detectChanges();
+        if (!aiApplied) {
+          this.toastService.warning(`Proceso IA finalizado en ${elapsedSeconds}s sin cambios en el texto.`);
+        } else {
+          this.toastService.success(`Desarrollo y conclusión mejorados con IA en ${elapsedSeconds}s.`);
+        }
+        this.isImprovingNarrative = false;
+        this.stopAiFeedback();
+      }, 50);
+    } catch (error) {
+      this.toastService.error(
+        this.getSimpleApiErrorMessage(error as HttpErrorResponse, 'No se pudo mejorar el texto con IA.')
+      );
+    } finally {
+      if (!deferredSuccess) {
+        this.isImprovingNarrative = false;
+        this.stopAiFeedback();
       }
-    });
+    }
   }
 
+  async improveMaterialFilmicoWithAi(): Promise<void> {
+    if (this.isImprovingMaterialFilmico) {
+      return;
+    }
+    if (!this.form.export_file_format) {
+      this.toastService.warning('Selecciona el formato del archivo exportado antes de usar IA.');
+      return;
+    }
+    if (this.form.export_file_format === 'otro' && !(this.form.export_file_format_other || '').trim()) {
+      this.toastService.warning('Completa el nombre del formato exportado.');
+      return;
+    }
+    if (!this.form.vms_authenticity_mode) {
+      this.toastService.warning('Selecciona el método de autenticidad del material exportado.');
+      return;
+    }
+    if (this.form.vms_authenticity_mode === 'hash_preventivo' && this.getSelectedHashAlgorithmLabels().length === 0) {
+      this.toastService.warning('Para hash externo debes seleccionar al menos un algoritmo de hash.');
+      return;
+    }
+    if (this.form.vms_authenticity_mode === 'hash_preventivo' && !(this.form.hash_program || '').trim()) {
+      this.form.hash_program = 'HashMyFiles';
+      this.markDirty('hash_program');
+    }
+
+    const materialFilmico = (this.form.material_filmico || '').trim();
+    const desarrollo = (this.form.desarrollo || '').trim();
+    const materialSeed = materialFilmico || desarrollo || this.buildMaterialFilmicoSeedFromContext();
+    const materialContext = this.buildMaterialSpeechContext();
+
+    this.isImprovingMaterialFilmico = true;
+    this.startAiFeedback('Analizando material fílmico con IA');
+    let deferredSuccess = false;
+    try {
+      const response: ImproveVideoTextResponse = await firstValueFrom(
+        this.informeService.improveVideoText({
+          material_filmico: materialSeed,
+          desarrollo: '',
+          conclusion: '',
+          material_context: materialContext,
+          mode: 'material_filmico' as ImproveVideoTextMode,
+        })
+      );
+
+      const elapsedSeconds = this.getAiElapsedSeconds();
+      const improvedMaterialFilmico = (response?.material_filmico || '').trim();
+      const fallbackFromDesarrollo = (response?.desarrollo || '').trim();
+      deferredSuccess = true;
+      window.setTimeout(() => {
+        if (improvedMaterialFilmico) {
+          this.form.material_filmico = improvedMaterialFilmico;
+        } else if (!materialFilmico && fallbackFromDesarrollo) {
+          this.form.material_filmico = fallbackFromDesarrollo;
+        }
+        this.markDirty('material_filmico');
+        this.cdr.detectChanges();
+        if (response.ai_applied === false) {
+          this.toastService.warning(`Proceso IA finalizado en ${elapsedSeconds}s sin cambios en material fílmico.`);
+        } else {
+          this.toastService.success(`Material fílmico completado con IA en ${elapsedSeconds}s.`);
+        }
+        this.isImprovingMaterialFilmico = false;
+        this.stopAiFeedback();
+      }, 50);
+    } catch (error) {
+      this.toastService.error(
+        this.getSimpleApiErrorMessage(error as HttpErrorResponse, 'No se pudo mejorar el material fílmico con IA.')
+      );
+    } finally {
+      if (!deferredSuccess) {
+        this.isImprovingMaterialFilmico = false;
+        this.stopAiFeedback();
+      }
+    }
+  }
+
+
   generateReport(): void {
-    if (!this.validateStep(4)) {
-      this.currentStep = 4;
+    if (!this.validate(true)) {
       return;
     }
     this.saveOperatorData();
 
     this.isGenerating = true;
     const payload = this.buildPayload();
-
-    if (this.reportGenerationMode === 'frontend_doc') {
-      this.loadingService.show();
-      setTimeout(async () => await this.generateReportLocally(payload), 0);
-      return;
-    }
-
-    this.informeService.generateVideoAnalysisReport(payload).subscribe({
-      next: (response) => {
-        const blob = response.body;
-        if (!blob) {
-          this.toastService.error('No se recibio archivo para descargar.');
-          this.isGenerating = false;
-          return;
-        }
-
-        const serverFileName = this.extractFilenameFromContentDisposition(
-          response.headers.get('content-disposition')
-        );
-        const downloadFileName = serverFileName || `informe_analisis_video_${this.form.report_date || 'hoy'}.docx`;
-
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = downloadFileName;
-        link.click();
-        window.URL.revokeObjectURL(url);
-        this.toastService.success('Informe generado');
-        this.isGenerating = false;
-        this.isDirty = false;
-      },
-      error: async (error: HttpErrorResponse) => {
-        const message = await this.getReportErrorMessage(error);
-        this.toastService.error(message);
-        this.isGenerating = false;
-      }
-    });
+    this.loadingService.show();
+    void this.generateReportLocally(payload);
   }
 
   private async generateReportLocally(payload: VideoReportPayload): Promise<void> {
@@ -922,6 +1718,23 @@ export class InformesComponent implements OnDestroy {
   private buildLocalWordHtml(payload: VideoReportPayload, logoBase64: string): string {
     const report = payload.report_data;
     const orderedFrames = [...payload.frames].sort((a, b) => a.order - b.order);
+    const hashAlgorithmsText =
+      (report.hash_algorithms || [])
+        .map((item) => this.getHashAlgorithmLabel(item, report.hash_algorithm_other))
+        .join(', ') || (report.motivo_sin_hash || '').trim() || 'No aplicado';
+    const exportFormatText = this.getExportFormatLabel(
+      report.export_file_format,
+      report.export_file_format_other
+    );
+    const hashProgramText = (report.hash_program || '').trim() || 'No consignado';
+    const vmsModeText = this.getVmsAuthenticityLabel(report.vms_authenticity_mode || '');
+    const vmsDetailText =
+      report.vms_authenticity_mode === 'otro' && (report.vms_authenticity_detail || '').trim()
+        ? ` (${this.escapeHtml(report.vms_authenticity_detail)})`
+        : '';
+    const materialFilmicoText = (report.material_filmico || '').trim() || this.buildMaterialFilmicoFallbackTextFromReport(report);
+    const desarrolloText = (report.desarrollo || '').trim() || this.buildDesarrolloFallbackTextFromReport(report);
+    const conclusionText = (report.conclusion || '').trim() || this.buildConclusionFallbackTextFromReport(report);
     const frameBlocks = orderedFrames.length === 0
       ? '<p>No se adjuntaron fotogramas.</p>'
       : orderedFrames.map((frame, idx) => `
@@ -933,6 +1746,49 @@ export class InformesComponent implements OnDestroy {
             <p><strong>Descripcion:</strong> ${this.escapeHtml(frame.description || 'Sin descripcion.')}</p>
           </div>
         `).join('');
+    const fiscalia = (report.fiscalia || '').trim();
+    const fiscal = (report.fiscal || '').trim();
+    const fiscaliaMeta = fiscalia
+      ? `<p><strong>Fiscalia / Juzgado:</strong> ${this.escapeHtml(fiscalia)}</p>`
+      : '';
+    const fiscalMeta = fiscal
+      ? `<p><strong>Fiscal / Juez / Secretario:</strong> ${this.escapeHtml(fiscal)}</p>`
+      : '';
+    const unidad = (report.unidad || '').trim();
+    const aeropuerto = (report.aeropuerto || '').trim();
+    const locationMeta =
+      aeropuerto || unidad
+        ? `
+          <p><strong>Aeropuerto:</strong> ${this.escapeHtml(aeropuerto || 'No consignado')}</p>
+          <p><strong>Unidad:</strong> ${this.escapeHtml(unidad || 'No consignada')}</p>
+        `
+        : '';
+    const introLocationClause =
+      aeropuerto || unidad
+        ? `En el ${this.escapeHtml(aeropuerto || 'aeropuerto no consignado')}, de la ${this.escapeHtml(unidad || 'unidad no consignada')}, de la Policía de Seguridad Aeroportuaria,`
+        : 'En relación con grabaciones externas sin unidad de causa consignada,';
+    const fiscaliaIntroClause = fiscalia
+      ? `, en tramite por ante la ${this.escapeHtml(fiscalia)}`
+      : '';
+    const fiscalIntroClause = fiscal
+      ? `, con intervencion de ${this.escapeHtml(fiscal)}`
+      : '';
+    const flightDetails: string[] = [];
+    if (report.vuelo) {
+      flightDetails.push(`del vuelo ${this.escapeHtml(report.vuelo)}`);
+    }
+    if (report.empresa_aerea) {
+      flightDetails.push(`de la empresa aerocomercial ${this.escapeHtml(report.empresa_aerea)}`);
+    }
+    if (report.destino) {
+      flightDetails.push(`con destino a la ciudad de ${this.escapeHtml(report.destino)}`);
+    }
+    if (report.fecha_hecho) {
+      flightDetails.push(`el dia ${this.escapeHtml(report.fecha_hecho)}`);
+    }
+    const flightIntroClause = flightDetails.length > 0
+      ? `, vinculado ${flightDetails.join(', ')}`
+      : '';
 
     return `
       <!DOCTYPE html>
@@ -966,19 +1822,25 @@ export class InformesComponent implements OnDestroy {
         ${logoBase64 ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${logoBase64}" width="150" alt="Logo PSA"></div>` : ''}
         <h1>${this.escapeHtml(report.tipo_informe)} ${this.escapeHtml(report.numero_informe)}</h1>
         <p class="muted">Generado localmente en frontend para reducir trafico.</p>
-
-/* Replaced content for local doc generation to include intro and new fields if mapped */
         <div class="meta">
           <p><strong>Fecha:</strong> ${this.escapeHtml(report.report_date)}</p>
           <p><strong>Destinatarios:</strong> ${this.escapeHtml(report.destinatarios)}</p>
           <p><strong>Operador:</strong> ${this.escapeHtml(report.grado)} ${this.escapeHtml(report.operador)}, LUP: ${this.escapeHtml(report.lup)}</p>
-          <p><strong>Unidad Aeroportuaria:</strong> ${this.escapeHtml(report.unidad_aeroportuaria)}</p>
-          <p><strong>Asiento / Aeropuerto:</strong> ${this.escapeHtml(report.asiento)} / ${this.escapeHtml(report.aeropuerto)}</p>
+          ${locationMeta}
           <p><strong>Sistema:</strong> ${this.escapeHtml(report.sistema)}</p>
+          <p><strong>Cantidad observada:</strong> ${this.escapeHtml((report.cantidad_observada || '').trim() || 'No consignada')}</p>
+          <p><strong>Sectores analizados:</strong> ${this.escapeHtml((report.sectores_analizados || '').trim() || 'No consignados')}</p>
+          <p><strong>Franja horaria analizada:</strong> ${this.escapeHtml((report.franja_horaria_analizada || '').trim() || 'No consignada')}</p>
+          <p><strong>Tiempo total de análisis:</strong> ${this.escapeHtml((report.tiempo_total_analisis || '').trim() || 'No consignado')}</p>
+          <p><strong>Síntesis para conclusión:</strong> ${this.escapeHtml((report.sintesis_conclusion || '').trim() || 'No consignada')}</p>
+          <p><strong>Formato de archivo exportado:</strong> ${this.escapeHtml(exportFormatText)}</p>
+          <p><strong>Algoritmos SHA:</strong> ${this.escapeHtml(hashAlgorithmsText)}</p>
+          <p><strong>Programa de hash:</strong> ${this.escapeHtml(hashProgramText)}</p>
+          <p><strong>Autenticidad de exportación:</strong> ${this.escapeHtml(vmsModeText)}${vmsDetailText}</p>
           <p><strong>Prevencion sumaria:</strong> ${this.escapeHtml(report.prevencion_sumaria)}</p>
           <p><strong>Caratula:</strong> ${this.escapeHtml(report.caratula)}</p>
-          <p><strong>Fiscalia:</strong> ${this.escapeHtml(report.fiscalia)}</p>
-          <p><strong>Fiscal:</strong> ${this.escapeHtml(report.fiscal)}</p>
+          ${fiscaliaMeta}
+          ${fiscalMeta}
           <p><strong>Denunciante:</strong> ${this.escapeHtml(report.denunciante)}</p>
           ${report.vuelo ? `<p><strong>Vuelo:</strong> ${this.escapeHtml(report.vuelo)}</p>` : ''}
           ${report.empresa_aerea ? `<p><strong>Empresa Aerea:</strong> ${this.escapeHtml(report.empresa_aerea)}</p>` : ''}
@@ -990,20 +1852,20 @@ export class InformesComponent implements OnDestroy {
 
         <h2>Introduccion</h2>
         <p style="text-align: justify; text-indent: 2em; line-height: 1.5;">
-          En el ${this.escapeHtml(report.aeropuerto)}, asiento de la ${this.escapeHtml(report.asiento)}, de la Policía de Seguridad Aeroportuaria, a los XXXXX días del mes de XXXXX del año XXXXX, siendo la hora XXXXX, quien suscribe ${this.escapeHtml(report.grado)} ${this.escapeHtml(report.operador)}, LUP: ${this.escapeHtml(report.lup)}, en mi carácter de Operador de Video Vigilancia (OVV), labro el presente a los fines legales de dejar debida constancia del resultado obtenido en virtud al análisis visual minucioso efectuado sobre el material fílmico, obrante en el sistema denominado “${this.escapeHtml(report.sistema)}”, emplazado en el Centro Operativo de Control (COC) de la ${this.escapeHtml(report.unidad_aeroportuaria)}, en el marco de la Prevención Sumaria ${this.escapeHtml(report.prevencion_sumaria)}, caratulada “${this.escapeHtml(report.caratula)}”, en trámite por ante la ${this.escapeHtml(report.fiscalia)}, a cargo del Señor fiscal ${this.escapeHtml(report.fiscal)}, respecto de los hechos denunciados por el Sr/a. ${this.escapeHtml(report.denunciante)}, quien manifiesta el faltante de ${this.escapeHtml(report.objeto_denunciado)}${report.vuelo ? `, el cual se encontraba en el interior de su equipaje despachado por bodega del vuelo ${this.escapeHtml(report.vuelo)} perteneciente a la empresa aerocomercial ${this.escapeHtml(report.empresa_aerea || '—')}, con destino a la ciudad de ${this.escapeHtml(report.destino || '—')}, el día ${this.escapeHtml(report.fecha_hecho || '—')}` : ''}.
+          ${introLocationClause} a los XXXXX días del mes de XXXXX del año XXXXX, siendo la hora XXXXX, quien suscribe ${this.escapeHtml(report.grado)} ${this.escapeHtml(report.operador)}, LUP: ${this.escapeHtml(report.lup)}, en mi carácter de Operador de Video Vigilancia (OVV), labro el presente a los fines legales de dejar debida constancia del resultado obtenido en virtud al análisis visual minucioso efectuado sobre el material fílmico, obrante en el sistema denominado “${this.escapeHtml(report.sistema)}”, en el marco de la Prevención Sumaria ${this.escapeHtml(report.prevencion_sumaria)}, caratulada “${this.escapeHtml(report.caratula)}”${fiscaliaIntroClause}${fiscalIntroClause}, respecto de los hechos denunciados por el Sr/a. ${this.escapeHtml(report.denunciante)}, quien manifiesta el faltante de ${this.escapeHtml(report.objeto_denunciado)}${flightIntroClause}.
         </p>
 
         <h2>Material Fílmico Analizado</h2>
-        <p>${this.escapeHtml(report.material_filmico || 'Sin material.').replace(/\n/g, '<br>')}</p>
+        <p>${this.escapeHtml(materialFilmicoText).replace(/\n/g, '<br>')}</p>
 
         <h2>Desarrollo</h2>
-        <p>${this.escapeHtml(report.desarrollo || 'Sin desarrollo.').replace(/\n/g, '<br>')}</p>
+        <p>${this.escapeHtml(desarrolloText).replace(/\n/g, '<br>')}</p>
 
         <h2>Anexo de fotogramas (${orderedFrames.length})</h2>
         ${frameBlocks}
 
         <h2>Conclusion</h2>
-        <p>${this.escapeHtml(report.conclusion || 'Sin conclusion.').replace(/\n/g, '<br>')}</p>
+        <p>${this.escapeHtml(conclusionText).replace(/\n/g, '<br>')}</p>
 
         <br><br><br>
         <div style="text-align: center; margin-top: 50px;">
@@ -1024,67 +1886,6 @@ export class InformesComponent implements OnDestroy {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
-  }
-
-  private extractFilenameFromContentDisposition(contentDisposition: string | null): string | null {
-    if (!contentDisposition) {
-      return null;
-    }
-
-    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
-    if (utf8Match && utf8Match[1]) {
-      return decodeURIComponent(utf8Match[1].trim().replace(/["']/g, ''));
-    }
-
-    const asciiMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
-    if (asciiMatch && asciiMatch[1]) {
-      return asciiMatch[1].trim();
-    }
-
-    return null;
-  }
-
-  private async getReportErrorMessage(error: HttpErrorResponse): Promise<string> {
-    if (error.status === 0) {
-      return 'No se pudo conectar con el backend en http://localhost:8000. Verifica que Django este ejecutandose.';
-    }
-
-    if (error.status === 413) {
-      return 'El tamano total del informe excede el maximo permitido.';
-    }
-
-    const payload = error.error;
-
-    if (payload instanceof Blob) {
-      try {
-        const text = await payload.text();
-        const parsed = JSON.parse(text);
-        if (parsed?.['error'] && typeof parsed['error'] === 'string') {
-          return parsed['error'];
-        }
-        if (parsed?.['errors']) {
-          return this.formatValidationErrors(parsed['errors']);
-        }
-      } catch {
-        // Keep fallback message below.
-      }
-    }
-
-    if (payload && typeof payload === 'object') {
-      const apiPayload = payload as Record<string, unknown>;
-      if (typeof apiPayload['error'] === 'string') {
-        return apiPayload['error'];
-      }
-      if (apiPayload['errors']) {
-        return this.formatValidationErrors(apiPayload['errors']);
-      }
-    }
-
-    if (typeof payload === 'string' && payload.trim()) {
-      return payload.trim();
-    }
-
-    return 'No se pudo generar el informe. Verifica los datos cargados.';
   }
 
   private formatValidationErrors(errors: unknown): string {

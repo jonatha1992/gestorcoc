@@ -17,6 +17,14 @@ export class RecordsService {
         return this.api.post<any>('api/film-records/', record);
     }
 
+    updateRecord(id: number, record: any): Observable<any> {
+        return this.api.patch<any>(`api/film-records/${id}/`, record);
+    }
+
+    deleteRecord(id: number): Observable<any> {
+        return this.api.delete<any>(`api/film-records/${id}/`);
+    }
+
     getCatalogs(): Observable<any[]> {
         return this.api.get<any[]>('api/catalogs/');
     }

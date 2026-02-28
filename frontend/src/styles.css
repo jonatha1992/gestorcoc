@@ -33,6 +33,165 @@ body {
   background-color: #f8fafc;
 }
 
+.ui-compact main h1 {
+  font-size: 1.125rem !important;
+  line-height: 1.35rem !important;
+}
+
+.ui-compact .text-2xl {
+  font-size: 1.3rem !important;
+  line-height: 1.6rem !important;
+}
+
+.ui-compact .text-xl {
+  font-size: 1.1rem !important;
+  line-height: 1.4rem !important;
+}
+
+.ui-compact .text-lg {
+  font-size: 1rem !important;
+  line-height: 1.35rem !important;
+}
+
+.ui-compact .text-base {
+  font-size: 0.82rem !important;
+  line-height: 1.2rem !important;
+}
+
+.ui-compact .text-sm {
+  font-size: 0.75rem !important;
+  line-height: 1.1rem !important;
+}
+
+.ui-compact .text-xs {
+  font-size: 0.66rem !important;
+  line-height: 0.95rem !important;
+}
+
+.ui-compact main table th {
+  font-size: 0.62rem !important;
+  letter-spacing: 0.08em !important;
+}
+
+.ui-compact main table td {
+  font-size: 0.74rem !important;
+}
+
+.ui-compact main label {
+  font-size: 0.62rem !important;
+  letter-spacing: 0.08em !important;
+}
+
+.ui-compact main button {
+  font-size: 0.74rem;
+}
+
+.ui-compact main input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+.ui-compact main select,
+.ui-compact main textarea {
+  font-size: 0.74rem !important;
+}
+
+.table-head-cell {
+  padding: 0.7rem 1rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.table-body-cell {
+  padding: 0.7rem 1rem;
+  vertical-align: middle;
+}
+
+.table-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  border-radius: 0.5rem;
+  color: #64748b;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.table-action-btn:hover {
+  color: #4f46e5;
+  background-color: #eef2ff;
+}
+
+.table-action-btn-danger:hover {
+  color: #dc2626;
+  background-color: #fef2f2;
+}
+
+.field-label-compact {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-left: 0.25rem;
+}
+
+.field-control-compact {
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.8rem;
+  color: #334155;
+  font-size: 0.74rem;
+  line-height: 1rem;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.field-control-compact:hover {
+  border-color: #94a3b8;
+}
+
+.field-control-compact:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 1px #4f46e5;
+}
+
+.btn-primary-compact,
+.btn-secondary-compact {
+  flex: 1 1 0%;
+  border-radius: 0.9rem;
+  font-weight: 700;
+  padding: 0.65rem 1rem;
+  transition: background-color 160ms ease, color 160ms ease, opacity 160ms ease;
+}
+
+.btn-primary-compact {
+  color: #ffffff;
+  background-color: #4f46e5;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.2);
+}
+
+.btn-primary-compact:hover {
+  background-color: #4338ca;
+}
+
+.btn-primary-compact:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary-compact {
+  color: #475569;
+  background-color: #f1f5f9;
+}
+
+.btn-secondary-compact:hover {
+  background-color: #e2e8f0;
+}
+
 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
 select,
 textarea {
@@ -94,4 +253,55 @@ textarea[data-invalid='true'],
 
 .animate-slide-in {
   animation: slide-in 0.3s ease-out forwards;
+}
+
+@keyframes toast-loading-progress {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+.toast-loading-bar {
+  animation: toast-loading-progress 1.8s ease-in-out infinite;
+}
+
+@keyframes ai-progress-sweep {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}
+
+.ai-progress-bar {
+  animation: ai-progress-sweep 1.5s ease-in-out infinite;
+}
+
+@keyframes ai-status-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.ai-status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #6366f1 0%, #22d3ee 100%);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+  animation: ai-status-pulse 1.2s ease-in-out infinite;
+}
+
+.informes-view [data-help-trigger] {
+  display: none !important;
 }

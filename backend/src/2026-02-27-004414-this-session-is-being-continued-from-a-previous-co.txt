@@ -1,0 +1,2714 @@
+
+╭─── Claude Code v2.1.58 ──────────────────────────────────────────────────────╮
+│                                          │ Tips for getting started          │
+│          Welcome back Jonathan!          │ Run /init to create a CLAUDE.md … │
+│                                          │ ───────────────────────────────── │
+│                  ▐▛███▜▌                 │ Recent activity                   │
+│                 ▝▜█████▛▘                │ No recent activity                │
+│                   ▘▘ ▝▝                  │                                   │
+│                                          │                                   │
+│         Sonnet 4.6 · Claude Pro          │                                   │
+│   C:\Repositorio\gestorcoc\backend\src   │                                   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+✻ Conversation compacted (ctrl+o for history)
+
+  ⎿  Referenced file records\services.py
+  ⎿  Referenced file ..\..\frontend\src\app\pages\informes\informes.ts
+  ⎿  Read ..\..\README_CAMBIOS_IA.md (250 lines)
+  ⎿  Referenced file records\tests.py
+  ⎿  Read ..\..\frontend\src\app\services\informe.service.ts (122 lines)
+  ⎿  Plan file referenced (~\.claude\plans\cuddly-fluttering-lynx.md)
+  ⎿  Skills restored (init)
+
+● Let me read the current state of the key files before implementing the
+  differentiated AI prompts.
+
+● Read 3 files (ctrl+o to expand)
+
+❯ es decir no se si hacer difretrentes tipos de enpoint para cada seccion   
+  poir ejemplo uno para materia anlizado y otro para desarrollo y otro      
+  conclusion                                                                
+
+● Respondo tu pregunta primero: No hace falta crear endpoints separados. Un solo
+   endpoint es más simple y mantenible. La diferencia estará en el campo mode
+  que el frontend envía, y el backend construye el prompt apropiado según eso.
+
+  Ahora leo el serializer y el frontend para implementar todo.
+
+● Read 2 files (ctrl+o to expand)
+
+● Now let me check the VideoReportImproveTextSerializer:
+
+● Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Ahora tengo todo el contexto. Voy a implementar el sistema de mode
+  diferenciado. La estructura es:
+
+  - Un solo endpoint (no hace falta crear endpoints separados)
+  - Campo mode en el payload: 'material_filmico' | 'desarrollo' | 'conclusion' |
+   'full'
+  - Cada modo tiene su propio system prompt y datos relevantes
+
+● Paso 1: serializer — agregar campo mode
+
+● Update(records\serializers.py)
+  ⎿  Added 4 lines
+      287          return attrs                                          
+      288                                                                
+      289                                                                
+      290 +AI_IMPROVE_MODE_CHOICES = ('material_filmico', 'desarrollo',  
+          +'conclusion', 'full')                                         
+      291 +                                                              
+      292 +                                                              
+      293  class                                                         
+           VideoReportImproveTextSerializer(serializers.Serializer):     
+      294      material_filmico = serializers.CharField(required=False,  
+           allow_blank=True, max_length=12000)                           
+      295      desarrollo = serializers.CharField(required=False,        
+           allow_blank=True, max_length=12000)                           
+      296      conclusion = serializers.CharField(required=False,        
+           allow_blank=True, max_length=12000)                           
+      297      material_context =                                        
+           VideoReportMaterialContextSerializer(required=False)          
+      298      api_key = serializers.CharField(required=False,           
+           allow_blank=True)                                             
+      299 +    mode =                                                    
+          +serializers.ChoiceField(choices=AI_IMPROVE_MODE_CHOICES,      
+          +required=False, default='full')                               
+      300                                                                
+      301      def validate(self, attrs):                                
+      302          material_filmico = (attrs.get('material_filmico') or  
+           '').strip()                                                   
+
+● Paso 2: view — pasar mode al service
+
+● Update(records\views.py)
+  ⎿  Added 2 lines, removed 1 line
+      270                  serializer.validated_data.get('desarrollo',   
+           ''),                                                          
+      271                  serializer.validated_data.get('conclusion',   
+           ''),                                                          
+      272                                                                
+           custom_api_key=serializer.validated_data.get('api_key', ''),  
+      273 -                material_context=serializer.validated_data.get
+          -('material_context', {})                                      
+      273 +                material_context=serializer.validated_data.get
+          +('material_context', {}),                                     
+      274 +                mode=serializer.validated_data.get('mode',    
+          +'full'),                                                      
+      275              )                                                 
+      276              return Response(improved_text,                    
+           status=status.HTTP_200_OK)                                    
+      277          except Exception as exc:                              
+
+● Paso 3: service — reescribir _build_ai_request_payload con prompts por modo y 
+  actualizar improve_report_text_with_ai
+
+● Update(records\services.py)
+  ⎿  Added 130 lines, removed 22 lines
+      317              raise RuntimeError("No se pudo interpretar la     
+           respuesta JSON de la API de IA.") from exc                    
+      318                                                                
+      319      @staticmethod                                             
+      320 -    def _build_ai_request_payload(material_filmico,           
+          -desarrollo, conclusion, model, material_context=None):        
+      321 -        system_prompt = (                                     
+      322 -            "Eres un redactor profesional de informes         
+          -formales en espanol juridico-administrativo. "                
+      323 -            "Mejora redaccion, coherencia, ortografia y       
+          -puntuacion sin inventar hechos nuevos. "                      
+      324 -            "Si falta informacion, usar redaccion neutra con  
+          -'no consignado'."                                             
+      320 +    def _vms_mode_to_text(vms_mode, vms_detail=''):           
+      321 +        mapping = {                                           
+      322 +            'vms_propio': 'VMS propio del sistema de          
+          +grabacion',                                                   
+      323 +            'hash_preventivo': 'hash preventivo aplicado al   
+          +material filmico',                                            
+      324 +            'sin_autenticacion': 'sin medida de autenticacion 
+          + adicional',                                                  
+      325 +            'otro': vms_detail.strip() if (vms_detail or      
+          +'').strip() else 'metodo de autenticidad no consignado',      
+      326 +        }                                                     
+      327 +        return mapping.get(str(vms_mode or '').strip(),       
+          +'metodo de autenticidad no consignado')                       
+      328 +                                                              
+      329 +    @staticmethod                                             
+      330 +    def _build_ai_request_payload(material_filmico,           
+          +desarrollo, conclusion, model, material_context=None,         
+          +mode='full'):                                                 
+      331 +        ctx = material_context if                             
+          +isinstance(material_context, dict) else {}                    
+      332 +                                                              
+      333 +        STYLE_NOTE = (                                        
+      334 +            "Usa estilo de acta policial argentina: oraciones 
+          + completas, voz pasiva institucional, "                       
+      335 +            "sin abreviaturas, sin inventar hechos. Cuando    
+          +falte un dato usa 'no consignado'."                           
+      336          )                                                     
+      337                                                                
+      338 -        context_payload = material_context if                 
+          -isinstance(material_context, dict) else {}                    
+      339 -        payload_prompt = {                                    
+      340 -            "instrucciones": (                                
+      341 -                "Mejora y/o completa el texto y devuelve SOLO 
+          - JSON valido. "                                               
+      342 -                "Prioriza completar material_filmico,         
+          -desarrollo y conclusion usando el contexto estructurado "     
+      343 -                "(sectores, tiempos y síntesis), sin inventar 
+          - hechos."                                                     
+      344 -            ),                                                
+      345 -            "formato_estricto": {                             
+      346 -                "material_filmico": "texto mejorado",         
+      347 -                "desarrollo": "texto mejorado",               
+      348 -                "conclusion": "texto mejorado",               
+      349 -            },                                                
+      350 -            "material_filmico_original": str(material_filmico 
+          - or ''),                                                      
+      351 -            "desarrollo_original": str(desarrollo or ''),     
+      352 -            "conclusion_original": str(conclusion or ''),     
+      353 -            "material_context": context_payload,              
+      354 -        }                                                     
+      338 +        if mode == 'material_filmico':                        
+      339 +            sistema = (ctx.get('sistema') or 'sistema no      
+          +consignado').strip()                                          
+      340 +            aeropuerto = (ctx.get('aeropuerto') or 'lugar no  
+          +consignado').strip()                                          
+      341 +            hash_algorithms = ctx.get('hash_algorithms') or   
+          +[]                                                            
+      342 +            hash_program = (ctx.get('hash_program') or        
+          +'programa no consignado').strip()                             
+      343 +            vms_mode = ctx.get('vms_authenticity_mode') or '' 
+      344 +            vms_detail = ctx.get('vms_authenticity_detail')   
+          +or ''                                                         
+      345 +            medida =                                          
+          +IntegrityService._vms_mode_to_text(vms_mode, vms_detail)      
+      346 +            hash_text = ', '.join(h.upper() for h in          
+          +hash_algorithms) if hash_algorithms else 'algoritmo no        
+          +consignado'                                                   
+      347                                                                
+      348 +            system_prompt = (                                 
+      349 +                "Eres redactor de informes policiales         
+          +argentinos. "                                                 
+      350 +                "Tu tarea es redactar el apartado 'MATERIAL   
+          +FILMICO ANALIZADO' de un informe de analisis de video. "      
+      351 +                "El apartado debe describir: el sistema de    
+          +CCTV utilizado, el material filmico observado, "              
+      352 +                "y las medidas de integridad y autenticidad   
+          +aplicadas (hash y/o VMS). " + STYLE_NOTE                      
+      353 +            )                                                 
+      354 +            payload_prompt = {                                
+      355 +                "instrucciones": (                            
+      356 +                    "Redacta o mejora el texto del apartado   
+          +de material filmico analizado. "                              
+      357 +                    "Incorpora los datos del sistema de       
+          +manera natural en la redaccion. "                             
+      358 +                    "Devuelve SOLO JSON valido con la clave   
+          +'material_filmico'."                                          
+      359 +                ),                                            
+      360 +                "formato_estricto": {"material_filmico":      
+          +"texto redactado"},                                           
+      361 +                "texto_original": str(material_filmico or     
+          +''),                                                          
+      362 +                "datos_del_sistema": {                        
+      363 +                    "sistema_cctv": sistema,                  
+      364 +                    "lugar_o_aeropuerto": aeropuerto,         
+      365 +                    "algoritmos_hash": hash_text,             
+      366 +                    "programa_hash": hash_program,            
+      367 +                    "medida_autenticidad": medida,            
+      368 +                },                                            
+      369 +            }                                                 
+      370 +                                                              
+      371 +        elif mode == 'desarrollo':                            
+      372 +            sectores = (ctx.get('sectores_analizados') or     
+          +'sectores no consignados').strip()                            
+      373 +            franja = (ctx.get('franja_horaria_analizada') or  
+          +'franja horaria no consignada').strip()                       
+      374 +            tiempo = (ctx.get('tiempo_total_analisis') or     
+          +'tiempo total no consignado').strip()                         
+      375 +            cantidad = (ctx.get('cantidad_observada') or      
+          +'cantidad no consignada').strip()                             
+      376 +            caratula = (ctx.get('caratula') or '').strip()    
+      377 +            sistema = (ctx.get('sistema') or 'sistema no      
+          +consignado').strip()                                          
+      378 +                                                              
+      379 +            system_prompt = (                                 
+      380 +                "Eres redactor de informes policiales         
+          +argentinos. "                                                 
+      381 +                "Tu tarea es redactar el apartado             
+          +'DESARROLLO' de un informe de analisis de video de CCTV. "    
+      382 +                "El apartado debe narrar de forma objetiva el 
+          + analisis visual practicado: "                                
+      383 +                "sectores revisados, franja horaria abarcada, 
+          + tiempo invertido y observaciones cuantitativas. "            
+      384 +                "No debe incluir interpretaciones juridicas   
+          +ni conclusiones. " + STYLE_NOTE                               
+      385 +            )                                                 
+      386 +            payload_prompt = {                                
+      387 +                "instrucciones": (                            
+      388 +                    "Redacta o mejora el texto del apartado   
+          +de desarrollo del analisis. "                                 
+      389 +                    "Describe el proceso de revision del      
+          +material filmico con los datos provistos. "                   
+      390 +                    "Devuelve SOLO JSON valido con la clave   
+          +'desarrollo'."                                                
+      391 +                ),                                            
+      392 +                "formato_estricto": {"desarrollo": "texto     
+          +redactado"},                                                  
+      393 +                "texto_original": str(desarrollo or ''),      
+      394 +                "datos_del_analisis": {                       
+      395 +                    "sistema_cctv": sistema,                  
+      396 +                    "sectores_analizados": sectores,          
+      397 +                    "franja_horaria": franja,                 
+      398 +                    "tiempo_total_analisis": tiempo,          
+      399 +                    "cantidad_observada": cantidad,           
+      400 +                    "caratula_causa": caratula,               
+      401 +                },                                            
+      402 +            }                                                 
+      403 +                                                              
+      404 +        elif mode == 'conclusion':                            
+      405 +            sintesis = (ctx.get('sintesis_conclusion') or     
+          +'').strip()                                                   
+      406 +            cantidad = (ctx.get('cantidad_observada') or      
+          +'cantidad no consignada').strip()                             
+      407 +            caratula = (ctx.get('caratula') or '').strip()    
+      408 +                                                              
+      409 +            system_prompt = (                                 
+      410 +                "Eres redactor de informes policiales         
+          +argentinos. "                                                 
+      411 +                "Tu tarea es redactar el apartado             
+          +'CONCLUSION' de un informe de analisis de video de CCTV. "    
+      412 +                "La conclusion debe sintetizar el resultado   
+          +del analisis visual de manera objetiva e institucional, "     
+      413 +                "sin apartarse de los hechos observados y     
+          +remitiendo la valoracion juridica a la autoridad competente.  
+          +"                                                             
+      414 +                + STYLE_NOTE                                  
+      415 +            )                                                 
+      416 +            payload_prompt = {                                
+      417 +                "instrucciones": (                            
+      418 +                    "Redacta o mejora el texto de la          
+          +conclusion del informe. "                                     
+      419 +                    "Debe ser un parrafo de cierre formal que 
+          + sintetice lo observado. "                                    
+      420 +                    "Devuelve SOLO JSON valido con la clave   
+          +'conclusion'."                                                
+      421 +                ),                                            
+      422 +                "formato_estricto": {"conclusion": "texto     
+          +redactado"},                                                  
+      423 +                "texto_original": str(conclusion or ''),      
+      424 +                "datos_para_conclusion": {                    
+      425 +                    "sintesis_del_analisis": sintesis,        
+      426 +                    "cantidad_observada": cantidad,           
+      427 +                    "caratula_causa": caratula,               
+      428 +                },                                            
+      429 +            }                                                 
+      430 +                                                              
+      431 +        else:  # mode == 'full'                               
+      432 +            system_prompt = (                                 
+      433 +                "Eres redactor de informes policiales         
+          +argentinos. "                                                 
+      434 +                "Tu tarea es mejorar los tres apartados       
+          +narrativos de un informe de analisis de video: "              
+      435 +                "'material filmico analizado', 'desarrollo' y 
+          + 'conclusion'. " + STYLE_NOTE                                 
+      436 +            )                                                 
+      437 +            payload_prompt = {                                
+      438 +                "instrucciones": (                            
+      439 +                    "Mejora y/o completa los tres apartados   
+          +usando el contexto estructurado provisto. "                   
+      440 +                    "No inventes hechos. Devuelve SOLO JSON   
+          +valido."                                                      
+      441 +                ),                                            
+      442 +                "formato_estricto": {                         
+      443 +                    "material_filmico": "texto mejorado",     
+      444 +                    "desarrollo": "texto mejorado",           
+      445 +                    "conclusion": "texto mejorado",           
+      446 +                },                                            
+      447 +                "material_filmico_original":                  
+          +str(material_filmico or ''),                                  
+      448 +                "desarrollo_original": str(desarrollo or ''), 
+      449 +                "conclusion_original": str(conclusion or ''), 
+      450 +                "material_context": ctx,                      
+      451 +            }                                                 
+      452 +                                                              
+      453          return {                                              
+      454              "model": model,                                   
+      455              "temperature": 0.2,                               
+
+● Paso 4: actualizar improve_report_text_with_ai para aceptar y pasar mode
+
+● Update(records\services.py)
+  ⎿  Added 1 line, removed 1 line
+      570          return chain                                          
+      571                                                                
+      572      @staticmethod                                             
+      573 -    def improve_report_text_with_ai(material_filmico,         
+          -desarrollo, conclusion, custom_api_key="",                    
+          -material_context=None):                                       
+      573 +    def improve_report_text_with_ai(material_filmico,         
+          +desarrollo, conclusion, custom_api_key="",                    
+          +material_context=None, mode='full'):                          
+      574          timeout_seconds = int(getattr(settings,               
+           'AI_TEXT_TIMEOUT_SECONDS', 45))                               
+      575          fallback_mode = str(getattr(settings,                 
+           'AI_TEXT_FALLBACK_MODE', 'quota_only') or                     
+           'quota_only').strip().lower()                                 
+      576          providers =                                           
+           IntegrityService._get_ai_provider_chain(custom_api_key)       
+
+● Update(records\services.py)
+  ⎿  Added 1 line
+      589                  conclusion,                                   
+      590                  provider['model'],                            
+      591                  material_context=material_context,            
+      592 +                mode=mode,                                    
+      593              )                                                 
+      594              headers = {                                       
+      595                  "Authorization": f"Bearer                     
+           {provider['api_key']}",                                       
+
+● Ahora actualizo la parte donde se extraen los campos del JSON de respuesta
+  para que en modos específicos devuelva los originales para los campos no
+  generados:
+
+● Update(records\services.py)
+  ⎿  Added 36 lines, removed 15 lines
+      643                      content = ''.join(parts)                  
+      644                                                                
+      645                  parsed_content =                              
+           IntegrityService._extract_json_object(content)                
+      646 -                improved_material_filmico =                   
+          -IntegrityService._as_text(                                    
+      647 -                    parsed_content.get('material_filmico'),   
+      648 -                    str(material_filmico or '')               
+      649 -                ).strip()                                     
+      650 -                improved_desarrollo =                         
+          -IntegrityService._as_text(                                    
+      651 -                    parsed_content.get('desarrollo'),         
+      652 -                    str(desarrollo or '')                     
+      653 -                ).strip()                                     
+      654 -                improved_conclusion =                         
+          -IntegrityService._as_text(                                    
+      655 -                    parsed_content.get('conclusion'),         
+      656 -                    str(conclusion or '')                     
+      657 -                ).strip()                                     
+      646                                                                
+      647 +                orig_mf = str(material_filmico or '').strip() 
+      648 +                orig_des = str(desarrollo or '').strip()      
+      649 +                orig_con = str(conclusion or '').strip()      
+      650 +                                                              
+      651 +                if mode == 'material_filmico':                
+      652 +                    improved_material_filmico =               
+          +IntegrityService._as_text(                                    
+      653 +                                                              
+          +parsed_content.get('material_filmico'), orig_mf               
+      654 +                    ).strip()                                 
+      655 +                    improved_desarrollo = orig_des            
+      656 +                    improved_conclusion = orig_con            
+      657 +                elif mode == 'desarrollo':                    
+      658 +                    improved_material_filmico = orig_mf       
+      659 +                    improved_desarrollo =                     
+          +IntegrityService._as_text(                                    
+      660 +                        parsed_content.get('desarrollo'),     
+          +orig_des                                                      
+      661 +                    ).strip()                                 
+      662 +                    improved_conclusion = orig_con            
+      663 +                elif mode == 'conclusion':                    
+      664 +                    improved_material_filmico = orig_mf       
+      665 +                    improved_desarrollo = orig_des            
+      666 +                    improved_conclusion =                     
+          +IntegrityService._as_text(                                    
+      667 +                        parsed_content.get('conclusion'),     
+          +orig_con                                                      
+      668 +                    ).strip()                                 
+      669 +                else:                                         
+      670 +                    improved_material_filmico =               
+          +IntegrityService._as_text(                                    
+      671 +                                                              
+          +parsed_content.get('material_filmico'), orig_mf               
+      672 +                    ).strip()                                 
+      673 +                    improved_desarrollo =                     
+          +IntegrityService._as_text(                                    
+      674 +                        parsed_content.get('desarrollo'),     
+          +orig_des                                                      
+      675 +                    ).strip()                                 
+      676 +                    improved_conclusion =                     
+          +IntegrityService._as_text(                                    
+      677 +                        parsed_content.get('conclusion'),     
+          +orig_con                                                      
+      678 +                    ).strip()                                 
+      679 +                                                              
+      680                  ai_applied = any([                            
+      681 -                    improved_material_filmico !=              
+          -str(material_filmico or '').strip(),                          
+      682 -                    improved_desarrollo !=                    
+          -str(desarrollo or '').strip(),                                
+      683 -                    improved_conclusion !=                    
+          -str(conclusion or '').strip(),                                
+      681 +                    improved_material_filmico != orig_mf,     
+      682 +                    improved_desarrollo != orig_des,          
+      683 +                    improved_conclusion != orig_con,          
+      684                  ])                                            
+      685                  return {                                      
+      686                      'material_filmico':                       
+           improved_material_filmico,                                    
+
+● Paso 5: frontend — agregar mode al tipo ImproveVideoTextPayload
+
+● Update(C:\Repositorio\gestorcoc\frontend\src\app\services\informe.service.ts)
+  ⎿  Added 3 lines
+      85      frames: VideoReportFrame[];                                
+      86  }                                                              
+      87                                                                 
+      88 +export type ImproveVideoTextMode = 'material_filmico' |        
+         +'desarrollo' | 'conclusion' | 'full';                          
+      89 +                                                               
+      90  export interface ImproveVideoTextPayload {                     
+      91      material_filmico: string;                                  
+      92      desarrollo: string;                                        
+      93      conclusion: string;                                        
+      94      material_context?: MaterialSpeechContext;                  
+      95      api_key?: string;                                          
+      96 +    mode?: ImproveVideoTextMode;                               
+      97  }                                                              
+      98                                                                 
+      99  export interface ImproveVideoTextResponse {                    
+
+● Paso 6: frontend — pasar mode correcto en cada método del componente
+
+  Primero verifico el import del tipo en informes.ts:
+
+● Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Update(C:\Repositorio\gestorcoc\frontend\src\app\pages\informes\informes.ts)
+  ⎿  Added 1 line
+       4  import { FormsModule } from '@angular/forms';                  
+       5  import {                                                       
+       6    InformeService,                                              
+       7 +  ImproveVideoTextMode,                                        
+       8    ImproveVideoTextResponse,                                    
+       9    MaterialSpeechContext,                                       
+      10    VideoReportFormData,                                         
+
+● Ahora actualizo improveNarrativeWithAi (que mejora los 3 campos → mode 'full')
+   y improveMaterialFilmicoWithAi (→ mode 'material_filmico'), y agrego helpers
+  para pasar el mode:
+
+● Update(C:\Repositorio\gestorcoc\frontend\src\app\pages\informes\informes.ts)
+  ⎿  Added 1 line, removed 1 line
+      1380        desarrollo: desarrolloSeed,                            
+      1381        conclusion: conclusionSeed,                            
+      1382        material_context: materialContext,                     
+      1383 -      // Redundant api_key removed, backend uses env var     
+      1383 +      mode: 'full' as ImproveVideoTextMode,                  
+      1384      }).subscribe({                                           
+      1385        next: (response: ImproveVideoTextResponse) => {        
+      1386          this.form.material_filmico =                         
+            response?.material_filmico ?? this.form.material_filmico;    
+
+● Update(C:\Repositorio\gestorcoc\frontend\src\app\pages\informes\informes.ts)
+  ⎿  Added 2 lines, removed 1 line
+      1414      this.isImprovingMaterialFilmico = true;                  
+      1415      this.informeService.improveVideoText({                   
+      1416        material_filmico: materialSeed,                        
+      1417 -      desarrollo: this.form.desarrollo,                      
+      1417 +      desarrollo: '',                                        
+      1418        conclusion: '',                                        
+      1419        material_context: materialContext,                     
+      1420 +      mode: 'material_filmico' as ImproveVideoTextMode,      
+      1421      }).subscribe({                                           
+      1422        next: (response: ImproveVideoTextResponse) => {        
+      1423          const improvedMaterialFilmico =                      
+            (response?.material_filmico || '').trim();                   
+
+● Ahora busco si hay un método improveDesarrolloWithAi o similar, o si el botón
+  de desarrollo/conclusion usa improveNarrativeWithAi:
+
+● Searched for 2 patterns (ctrl+o to expand)
+
+● El botón "Mejorar desarrollo y conclusion con IA" usa
+  improveNarrativeWithAi(). Lo voy a dividir en dos llamadas paralelas con
+  mode='desarrollo' y mode='conclusion' usando forkJoin:
+
+● Searched for 3 patterns, read 1 file (ctrl+o to expand)
+
+● No hay imports de rxjs. Voy a refactorizar improveNarrativeWithAi() para que
+  haga dos llamadas secuenciales (primero desarrollo, luego conclusion) usando
+  switchMap, o directamente con el patrón de llamadas anidadas. La opción más
+  simple sin agregar dependencias es hacer dos llamadas usando subscribe anidado
+   o simplemente agregar forkJoin:
+
+● Update(C:\Repositorio\gestorcoc\frontend\src\app\pages\informes\informes.ts)
+  ⎿  Added 1 line
+      2  import { CommonModule } from '@angular/common';                 
+      3  import { HttpErrorResponse } from '@angular/common/http';       
+      4  import { FormsModule } from '@angular/forms';                   
+      5 +import { forkJoin } from 'rxjs';                                
+      6  import {                                                        
+      7    InformeService,                                               
+      8    ImproveVideoTextMode,                                         
+
+● Ahora reescribo improveNarrativeWithAi() para hacer dos llamadas paralelas con
+   modos específicos:
+
+● Update(C:\Repositorio\gestorcoc\frontend\src\app\pages\informes\informes.ts)
+  ⎿  Added 27 lines, removed 17 lines
+      1361        return;                                                
+      1362      }                                                        
+      1363                                                               
+      1364 -    const materialFilmico = (this.form.material_filmico ||   
+           -'').trim();                                                  
+      1364      const desarrollo = (this.form.desarrollo || '').trim();  
+      1365      const conclusion = (this.form.conclusion || '').trim();  
+      1366      const hasStructuredContext =                             
+            this.hasStructuredSpeechContext();                           
+      1367 -    const materialSeed = materialFilmico ||                  
+           -this.buildMaterialFilmicoSeedFromContext();                  
+      1367      const desarrolloSeed = desarrollo ||                     
+            this.buildDesarrolloSeedFromContext();                       
+      1368      const conclusionSeed = conclusion ||                     
+            this.buildConclusionSeedFromContext();                       
+      1369                                                               
+      1370 -    if (!materialFilmico && !                                
+           -desarrollo && !conclusion && !hasStructuredContext) {        
+      1371 -      this.toastService.error('Completa texto o datos rápidos
+           - (sectores/tiempos/cantidad) para usar la mejora con IA.');  
+      1370 +    if (!                                                    
+           +desarrollo && !conclusion && !hasStructuredContext) {        
+      1371 +      this.toastService.error('Completa texto o datos rápidos
+           + (sectores/tiempos/síntesis) para usar la mejora con IA.');  
+      1372        return;                                                
+      1373      }                                                        
+      1374                                                               
+      1375      const materialContext =                                  
+            this.buildMaterialSpeechContext();                           
+      1376      this.isImprovingNarrative = true;                        
+      1377 -    this.informeService.improveVideoText({                   
+      1378 -      material_filmico: materialSeed,                        
+      1379 -      desarrollo: desarrolloSeed,                            
+      1380 -      conclusion: conclusionSeed,                            
+      1381 -      material_context: materialContext,                     
+      1382 -      mode: 'full' as ImproveVideoTextMode,                  
+      1377 +                                                             
+      1378 +    forkJoin({                                               
+      1379 +      desarrollo: this.informeService.improveVideoText({     
+      1380 +        material_filmico: '',                                
+      1381 +        desarrollo: desarrolloSeed,                          
+      1382 +        conclusion: '',                                      
+      1383 +        material_context: materialContext,                   
+      1384 +        mode: 'desarrollo' as ImproveVideoTextMode,          
+      1385 +      }),                                                    
+      1386 +      conclusion: this.informeService.improveVideoText({     
+      1387 +        material_filmico: '',                                
+      1388 +        desarrollo: '',                                      
+      1389 +        conclusion: conclusionSeed,                          
+      1390 +        material_context: materialContext,                   
+      1391 +        mode: 'conclusion' as ImproveVideoTextMode,          
+      1392 +      }),                                                    
+      1393      }).subscribe({                                           
+      1394 -      next: (response: ImproveVideoTextResponse) => {        
+      1395 -        this.form.material_filmico =                         
+           -response?.material_filmico ?? this.form.material_filmico;    
+      1396 -        this.form.desarrollo = response?.desarrollo ??       
+           -this.form.desarrollo;                                        
+      1397 -        this.form.conclusion = response?.conclusion ??       
+           -this.form.conclusion;                                        
+      1394 +      next: (responses) => {                                 
+      1395 +        const newDesarrollo =                                
+           +(responses.desarrollo?.desarrollo || '').trim();             
+      1396 +        const newConclusion =                                
+           +(responses.conclusion?.conclusion || '').trim();             
+      1397 +        if (newDesarrollo) { this.form.desarrollo =          
+           +newDesarrollo; }                                             
+      1398 +        if (newConclusion) { this.form.conclusion =          
+           +newConclusion; }                                             
+      1399          this.markDirty();                                    
+      1400 -        if (response.ai_applied === false) {                 
+      1401 -          this.toastService.warning('La IA no realizó        
+           -cambios al texto.');                                         
+      1400 +        const aiApplied = (responses.desarrollo?.ai_applied  
+           +!== false) || (responses.conclusion?.ai_applied !== false);  
+      1401 +        if (!aiApplied) {                                    
+      1402 +          this.toastService.warning('La IA no realizó        
+           +cambios al desarrollo ni a la conclusión.');                 
+      1403          } else {                                             
+      1404 -          this.toastService.success('Texto mejorado          
+           -con IA.');                                                   
+      1404 +          this.toastService.success('Desarrollo y            
+           +conclusión mejorados con IA.');                              
+      1405          }                                                    
+      1406          this.isImprovingNarrative = false;                   
+      1407        },                                                     
+
+● Ahora verifico que todo compila correctamente (backend tests + frontend
+  build):
+
+● Bash(cd /c/Repositorio/gestorcoc/backend/src && ../.venv/Scripts/python.exe
+      manage.py test records 2>&1 | tail -20)
+  ⎿    File "C:\Users\jonat\AppData\Local\Programs\Python\Python311\Lib\uni
+     ttest\mock.py", line 1375, in patched
+         return func(*newargs, **newkeywargs)
+     … +28 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)
+
+● Un test falla porque la firma del mock no incluye mode='full'. Lo corrijo:
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(records\tests.py)
+  ⎿  Added 1 line
+      297                  "hash_algorithms": ["sha256", "sha512"],      
+      298                  "vms_authenticity_mode": "vms_propio",        
+      299              },                                                
+      300 +            mode="full",                                      
+      301          )                                                     
+      302                                                                
+      303      @patch('records.views.IntegrityService.improve_report_tex 
+           t_with_ai')                                                   
+
+● Bash(cd /c/Repositorio/gestorcoc/backend/src && ../.venv/Scripts/python.exe
+      manage.py test records 2>&1 | tail -10)
+  ⎿  ?: (staticfiles.W004) The directory 'C:\Repositorio\gestorcoc\backend\
+     src\core\static' in the STATICFILES_DIRS setting does not exist.
+     … +8 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)
+
+● 27/27 tests pasan. Verifico el build del frontend:
+
+● Bash(cd /c/Repositorio/gestorcoc/frontend && npx ng build --configuration
+      development 2>&1 | tail -20)
+  ⎿  ❯ Building...
+     ✔ Building...
+     Initial chunk files | Names         | Raw size
+     … +9 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+
+● Build exitoso. Actualizo la tarea:
+
+● Todo implementado y funcionando. Resumen de lo que se hizo:
+
+  ---
+  Cambios implementados
+
+  Un solo endpoint, diferenciado por mode — no necesitás endpoints separados. El
+   frontend envía mode y el backend construye el prompt adecuado.
+
+  Backend (services.py)
+
+  - _vms_mode_to_text() — nuevo helper que convierte el enum VMS a texto
+  descriptivo para el prompt
+  - _build_ai_request_payload() — ahora acepta mode y genera prompts
+  específicos:
+    - material_filmico: prompt enfocado en describir el sistema CCTV, hash y
+  medida de autenticidad (VMS o hash preventivo)
+    - desarrollo: prompt enfocado en narrar el análisis visual (sectores, franja
+   horaria, tiempo, cantidad)
+    - conclusion: prompt enfocado en redactar la síntesis/cierre del informe
+    - full: prompt general para mejorar los 3 campos a la vez
+  - improve_report_text_with_ai() — acepta mode y en modos específicos preserva
+  los campos no generados (no toca material_filmico si el modo es conclusion,
+  etc.)
+
+  Backend (serializers.py, views.py, tests.py)
+
+  - Campo mode agregado al serializer con default 'full'
+  - View pasa mode al service
+  - Test de firma actualizado con mode="full"
+
+  Frontend (informe.service.ts, informes.ts)
+
+  - Tipo ImproveVideoTextMode exportado
+  - ImproveVideoTextPayload incluye mode?
+  - improveMaterialFilmicoWithAi() → mode: 'material_filmico'
+  - improveNarrativeWithAi() → ahora hace dos llamadas paralelas con forkJoin:
+  una con mode: 'desarrollo' y otra con mode: 'conclusion'
+
+✻ Baked for 21m 38s
+
+❯ verificaste como esta funcionando  
+
+● Los tests y el build ya pasaron, pero no hay tests específicos para los nuevos
+   modos. Voy a revisar el archivo de tests para agregar cobertura del nuevo
+  campo mode:
+
+● Read 1 file (ctrl+o to expand)
+
+● Veo que hay tests existentes que validan la estructura del prompt (keys,
+  contenido). Necesito agregar tests para los nuevos modos. Los agrego al final
+  de VideoAnalysisImproveTextApiTests y IntegrityServiceAiRequestTests:
+
+● Read 1 file (ctrl+o to expand)
+
+● Ahora agrego los tests para los modos nuevos:
+
+● Update(records\tests.py)
+  ⎿  Added 133 lines
+      598              'Todos los proveedores de IA alcanzaron su limite 
+            de cuota/tokens.'                                            
+      599          )                                                     
+      600          self.assertEqual(post_mock.call_count, 3)             
+      601 +                                                              
+      602 +    @override_settings(                                       
+      603 +        AI_TEXT_PROVIDER_ORDER='openrouter',                  
+      604 +        AI_TEXT_PROVIDER_SELECTION='ordered',                 
+      605 +        AI_TEXT_FALLBACK_MODE='quota_only',                   
+      606 +        OPEN_ROUTER_API_KEY='test-key',                       
+      607 +        AI_TEXT_OPENROUTER_API_URL='https://openrouter.ai/api 
+          +/v1/chat/completions',                                        
+      608 +        AI_TEXT_OPENROUTER_MODEL='gpt-4o-mini',               
+      609 +    )                                                         
+      610 +    @patch('records.services.requests.post')                  
+      611 +    def                                                       
+          +test_mode_material_filmico_sends_system_data_context(self,    
+          +post_mock):                                                   
+      612 +        """mode='material_filmico' debe enviar datos técnicos 
+          + (sistema, hash, VMS)."""                                     
+      613 +        response_mock = Mock()                                
+      614 +        response_mock.status_code = 200                       
+      615 +        response_mock.json.return_value = {                   
+      616 +            "choices": [{"message": {"content":               
+          +'{"material_filmico":"Material generado"}'}}]                 
+      617 +        }                                                     
+      618 +        post_mock.return_value = response_mock                
+      619 +                                                              
+      620 +        context = {                                           
+      621 +            "sistema": "MILESTONE",                           
+      622 +            "aeropuerto": "Aeroparque",                       
+      623 +            "hash_algorithms": ["sha256"],                    
+      624 +            "hash_program": "HashMyFiles",                    
+      625 +            "vms_authenticity_mode": "vms_propio",            
+      626 +        }                                                     
+      627 +        result =                                              
+          +IntegrityService.improve_report_text_with_ai(                 
+      628 +            "texto original", "", "",                         
+          +material_context=context, mode='material_filmico'             
+      629 +        )                                                     
+      630 +                                                              
+      631 +        self.assertEqual(result.get('material_filmico'),      
+          +'Material generado')                                          
+      632 +        # modo específico: desarrollo y conclusion no cambian 
+      633 +        self.assertEqual(result.get('desarrollo'), '')        
+      634 +        self.assertEqual(result.get('conclusion'), '')        
+      635 +                                                              
+      636 +        _, kwargs = post_mock.call_args                       
+      637 +        messages = kwargs.get('json', {}).get('messages', []) 
+      638 +        user_content = json.loads(messages[1].get('content')  
+          +or '{}')                                                      
+      639 +        self.assertIn('datos_del_sistema', user_content)      
+      640 +        self.assertEqual(user_content['datos_del_sistema']['s 
+          +istema_cctv'], 'MILESTONE')                                   
+      641 +        self.assertEqual(user_content['datos_del_sistema']['a 
+          +lgoritmos_hash'], 'SHA256')                                   
+      642 +        self.assertEqual(user_content['datos_del_sistema']['m 
+          +edida_autenticidad'], 'VMS propio del sistema de grabacion')  
+      643 +        # Solo debe pedir material_filmico en el formato      
+      644 +        self.assertEqual(set(user_content['formato_estricto'] 
+          +.keys()), {'material_filmico'})                               
+      645 +                                                              
+      646 +    @override_settings(                                       
+      647 +        AI_TEXT_PROVIDER_ORDER='openrouter',                  
+      648 +        AI_TEXT_PROVIDER_SELECTION='ordered',                 
+      649 +        AI_TEXT_FALLBACK_MODE='quota_only',                   
+      650 +        OPEN_ROUTER_API_KEY='test-key',                       
+      651 +        AI_TEXT_OPENROUTER_API_URL='https://openrouter.ai/api 
+          +/v1/chat/completions',                                        
+      652 +        AI_TEXT_OPENROUTER_MODEL='gpt-4o-mini',               
+      653 +    )                                                         
+      654 +    @patch('records.services.requests.post')                  
+      655 +    def test_mode_desarrollo_sends_analysis_context(self,     
+          +post_mock):                                                   
+      656 +        """mode='desarrollo' debe enviar datos analíticos     
+          +(sectores, franja, tiempo, cantidad)."""                      
+      657 +        response_mock = Mock()                                
+      658 +        response_mock.status_code = 200                       
+      659 +        response_mock.json.return_value = {                   
+      660 +            "choices": [{"message": {"content":               
+          +'{"desarrollo":"Desarrollo generado"}'}}]                     
+      661 +        }                                                     
+      662 +        post_mock.return_value = response_mock                
+      663 +                                                              
+      664 +        context = {                                           
+      665 +            "sectores_analizados": "Hall de arribos",         
+      666 +            "franja_horaria_analizada": "14:00 a 15:30",      
+      667 +            "tiempo_total_analisis": "1 hora 30 minutos",     
+      668 +            "cantidad_observada": "3 pasajeros",              
+      669 +        }                                                     
+      670 +        result =                                              
+          +IntegrityService.improve_report_text_with_ai(                 
+      671 +            "", "texto desarrollo", "",                       
+          +material_context=context, mode='desarrollo'                   
+      672 +        )                                                     
+      673 +                                                              
+      674 +        self.assertEqual(result.get('desarrollo'),            
+          +'Desarrollo generado')                                        
+      675 +        self.assertEqual(result.get('material_filmico'), '')  
+      676 +        self.assertEqual(result.get('conclusion'), '')        
+      677 +                                                              
+      678 +        _, kwargs = post_mock.call_args                       
+      679 +        messages = kwargs.get('json', {}).get('messages', []) 
+      680 +        user_content = json.loads(messages[1].get('content')  
+          +or '{}')                                                      
+      681 +        self.assertIn('datos_del_analisis', user_content)     
+      682 +        self.assertEqual(user_content['datos_del_analisis'][' 
+          +sectores_analizados'], 'Hall de arribos')                     
+      683 +        self.assertEqual(set(user_content['formato_estricto'] 
+          +.keys()), {'desarrollo'})                                     
+      684 +                                                              
+      685 +    @override_settings(                                       
+      686 +        AI_TEXT_PROVIDER_ORDER='openrouter',                  
+      687 +        AI_TEXT_PROVIDER_SELECTION='ordered',                 
+      688 +        AI_TEXT_FALLBACK_MODE='quota_only',                   
+      689 +        OPEN_ROUTER_API_KEY='test-key',                       
+      690 +        AI_TEXT_OPENROUTER_API_URL='https://openrouter.ai/api 
+          +/v1/chat/completions',                                        
+      691 +        AI_TEXT_OPENROUTER_MODEL='gpt-4o-mini',               
+      692 +    )                                                         
+      693 +    @patch('records.services.requests.post')                  
+      694 +    def test_mode_conclusion_sends_synthesis_context(self,    
+          +post_mock):                                                   
+      695 +        """mode='conclusion' debe enviar datos de             
+          +síntesis."""                                                  
+      696 +        response_mock = Mock()                                
+      697 +        response_mock.status_code = 200                       
+      698 +        response_mock.json.return_value = {                   
+      699 +            "choices": [{"message": {"content":               
+          +'{"conclusion":"Conclusion generada"}'}}]                     
+      700 +        }                                                     
+      701 +        post_mock.return_value = response_mock                
+      702 +                                                              
+      703 +        context = {                                           
+      704 +            "sintesis_conclusion": "No se observa             
+          +manipulación",                                                
+      705 +            "cantidad_observada": "2 personas",               
+      706 +        }                                                     
+      707 +        result =                                              
+          +IntegrityService.improve_report_text_with_ai(                 
+      708 +            "", "", "texto conclusion",                       
+          +material_context=context, mode='conclusion'                   
+      709 +        )                                                     
+      710 +                                                              
+      711 +        self.assertEqual(result.get('conclusion'),            
+          +'Conclusion generada')                                        
+      712 +        self.assertEqual(result.get('material_filmico'), '')  
+      713 +        self.assertEqual(result.get('desarrollo'), '')        
+      714 +                                                              
+      715 +        _, kwargs = post_mock.call_args                       
+      716 +        messages = kwargs.get('json', {}).get('messages', []) 
+      717 +        user_content = json.loads(messages[1].get('content')  
+          +or '{}')                                                      
+      718 +        self.assertIn('datos_para_conclusion', user_content)  
+      719 +        self.assertEqual(                                     
+      720 +            user_content['datos_para_conclusion']['sintesis_d 
+          +el_analisis'],                                                
+      721 +            'No se observa manipulación'                      
+      722 +        )                                                     
+      723 +        self.assertEqual(set(user_content['formato_estricto'] 
+          +.keys()), {'conclusion'})                                     
+      724 +                                                              
+      725 +    def test_mode_rejects_invalid_value(self):                
+      726 +        """El serializer debe rechazar un mode inválido."""   
+      727 +        from .serializers import                              
+          +VideoReportImproveTextSerializer                              
+      728 +        serializer = VideoReportImproveTextSerializer(data={  
+      729 +            "material_filmico": "texto",                      
+      730 +            "mode": "inventado",                              
+      731 +        })                                                    
+      732 +        self.assertFalse(serializer.is_valid())               
+      733 +        self.assertIn('mode', serializer.errors)              
+
+● Bash(cd /c/Repositorio/gestorcoc/backend/src && ../.venv/Scripts/python.exe
+      manage.py test records 2>&1 | tail -20)
+  ⎿  Creating test database for alias 'default'...
+     System check identified some issues:
+     … +12 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)
+
+● 31/31 tests pasan (4 nuevos). Resumen de lo que verificamos:
+
+  ---
+  Verificación completa:
+
+  ┌──────────────────────────────────────────────────────────┬──────────────┐
+  │                       Verificación                       │  Resultado   │
+  ├──────────────────────────────────────────────────────────┼──────────────┤
+  │ python manage.py test records                            │ ✅ 31/31     │
+  │                                                          │ tests OK     │
+  ├──────────────────────────────────────────────────────────┼──────────────┤
+  │ ng build --configuration development                     │ ✅ Sin       │
+  │                                                          │ errores      │
+  ├──────────────────────────────────────────────────────────┼──────────────┤
+  │ Test mode=material_filmico envía contexto técnico        │ ✅           │
+  │ (sistema, hash, VMS)                                     │              │
+  ├──────────────────────────────────────────────────────────┼──────────────┤
+  │ Test mode=desarrollo envía datos analíticos (sectores,   │ ✅           │
+  │ franja, tiempo)                                          │              │
+  ├──────────────────────────────────────────────────────────┼──────────────┤
+  │ Test mode=conclusion envía síntesis                      │ ✅           │
+  ├──────────────────────────────────────────────────────────┼──────────────┤
+  │ Test modo inválido es rechazado por serializer           │ ✅           │
+  ├──────────────────────────────────────────────────────────┼──────────────┤
+  │ Test modo específico no pisa campos ajenos               │              │
+  │ (desarrollo/conclusion intactos en                       │ ✅           │
+  │ mode=material_filmico)                                   │              │
+  └──────────────────────────────────────────────────────────┴──────────────┘
+
+  Lo que falta verificar manualmente (requiere servidor corriendo con las env
+  vars configuradas):
+  - Que la IA real genere texto coherente con cada prompt
+  - Que el frontend muestre los toasts correctos por modo
+
+  ¿Querés que levante el servidor para hacer una prueba end-to-end, o hay algo
+  más que quieras ajustar?
+
+✻ Cooked for 1m 8s
+
+❯  Medida de Seguridad Interna este  input no iria dado que ya depende del  
+  programa hash  , vamos a eliminar el tema del sha 1 por que ya no se hace 
+   mas , vamos a dejar como defecto hashmyfiles                             
+
+● Voy a leer el formulario y los archivos relevantes para hacer los 3 cambios:
+
+● Searched for 3 patterns, read 2 files (ctrl+o to expand)
+
+● Tengo todo claro. Aplico los 3 cambios en todos los archivos:
+
+● Update(C:\Repositorio\gestorcoc\frontend\src\app\pages\informes\informes.ts)
+  ⎿  Error editing file
+
+● Read 1 file (ctrl+o to expand)
+
+● Bash(python3 -c "
+      content = open('C:/Repositorio/gestorcoc/frontend/src/app/pages/informes/i
+      nformes.ts', encoding='utf-8').read()…)
+  ⎿  "hashAlgorithmOptions: { value: VideoReportHashAlgorithm; label: strin
+     g }[] = [\n    { value: 'sha1', label: 'SHA-1' },\n    { value: 'sha3'
+     , label: 'SHA-3' },\n    { value: 'sha256', label: 'SHA-256' },\n"
+
+● Las comillas son simples. Uso Python para hacer todos los cambios de una vez
+  de forma segura:
+
+● Bash(python3 << 'PYEOF'
+      import re…)
+  ⎿  OK - informes.ts updated
+
+● Bash(python3 << 'PYEOF'
+      path =
+      'C:/Repositorio/gestorcoc/frontend/src/app/pages/informes/informes.html'…)
+  ⎿  OK - informes.html updated
+
+● Ahora el backend — eliminar sha1 de los choices:
+
+● Update(records\serializers.py)
+  ⎿  Added 1 line, removed 1 line
+       6  from assets.models import Camera                               
+       7  from personnel.models import Person                            
+       8                                                                 
+       9 -HASH_ALGORITHM_CHOICES = ('sha1', 'sha3', 'sha256', 'sha512')  
+       9 +HASH_ALGORITHM_CHOICES = ('sha3', 'sha256', 'sha512')          
+      10  VMS_AUTHENTICITY_MODE_CHOICES = (                              
+      11      'vms_propio',                                              
+      12      'hash_preventivo',                                         
+
+● Verifico tests y build:
+
+● Bash(cd /c/Repositorio/gestorcoc/backend/src && ../.venv/Scripts/python.exe
+      manage.py test records 2>&1 | tail -8)
+  ⎿  AssertionError: 400 != 200
+
+     ----------------------------------------------------------------------
+     … +5 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)
+
+● Bash(cd /c/Repositorio/gestorcoc/frontend && npx ng build --configuration
+      development 2>&1 | tail -12)
+  ⎿  ❯ Building...
+     ✔ Building...
+     Initial chunk files | Names         | Raw size
+     … +9 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+
+● Frontend OK. Un test falla — probablemente alguno que usa sha1 en el payload.
+  Lo busco:
+
+● Bash(cd /c/Repositorio/gestorcoc/backend/src && ../.venv/Scripts/python.exe
+      manage.py test records 2>&1 | grep -A 15 "FAIL\|AssertionError")
+  ⎿  FAIL: test_accepts_integrity_and_authenticity_fields (records.tests.Vi
+     deoAnalysisReportApiTests.test_accepts_integrity_and_authenticity_fiel
+     ds)
+     … +17 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)
+
+● Read 1 file (ctrl+o to expand)
+
+● El test usa sha1 en el payload. Lo actualizo eliminando sha1:
+
+● Update(records\tests.py)
+  ⎿  Added 1 line, removed 1 line
+      78          service_mock.return_value = (BytesIO(b'docx-data'),    
+          'informe.docx')                                                
+      79          report_data = {                                        
+      80              **self.valid_report_data,                          
+      81 -            "hash_algorithms": ["sha1", "                      
+         -sha3", "sha256", "sha512"],                                    
+      81 +            "hash_algorithms": ["sha3", "sha256", "sha512"],   
+      82              "hash_program": "HASH MY FILE",                    
+      83              "medida_seguridad_interna": "Control de auditoria  
+          del COC",                                                      
+      84              "vms_authenticity_mode": "hash_preventivo",        
+
+● Bash(cd /c/Repositorio/gestorcoc/backend/src && ../.venv/Scripts/python.exe
+      manage.py test records 2>&1 | tail -6)
+  ⎿  ----------------------------------------------------------------------
+     Ran 31 tests in 0.495s
+     … +3 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)
+
+● 31/31 OK. Verifico que los cambios en el .ts quedaron bien:
+
+● Bash(python3 -c "
+      content = open('C:/Repositorio/gestorcoc/frontend/src/app/pages/informes/i
+      nformes.ts', encoding='utf-8').read()…)
+  ⎿  hash_program default: hash_program: 'HashMyFiles',
+     sha1 eliminado de opciones OK
+     medida_seguridad eliminada de buildMaterialSpeechContext OK
+     medidaSeguridadText eliminada de buildLocalWordHtml OK
+
+● Todo correcto. Resumen de los 3 cambios aplicados:
+
+  ┌───────────────────────────┬─────────────────────────────────────────────┐
+  │          Cambio           │                  Archivos                   │
+  ├───────────────────────────┼─────────────────────────────────────────────┤
+  │ Eliminar "Medida de       │ informes.html, informes.ts (fallback text,  │
+  │ Seguridad Interna" del    │ buildLocalWordHtml,                         │
+  │ formulario y resumen      │ buildMaterialSpeechContext)                 │
+  ├───────────────────────────┼─────────────────────────────────────────────┤
+  │ Eliminar SHA-1 de las     │ informes.ts (hashAlgorithmOptions),         │
+  │ opciones del checkbox     │ serializers.py (HASH_ALGORITHM_CHOICES),    │
+  │                           │ tests.py                                    │
+  ├───────────────────────────┼─────────────────────────────────────────────┤
+  │ Default hash_program =    │ informes.ts (estado inicial del form), HTML │
+  │ 'HashMyFiles'             │  (placeholder actualizado)                  │
+  └───────────────────────────┴─────────────────────────────────────────────┘
+
+  El campo medida_seguridad_interna sigue existiendo en el backend (compatible
+  con datos viejos) pero ya no se muestra ni se pide en el formulario.
+
+✻ Sautéed for 2m 27s
+
+❯ bueno ordena todos los campos para que quede lo mejor posible el tema del 
+   tamaño hiciste pruebas a ver si funciona todo bien                       
+
+● Voy a leer el HTML completo del formulario para entender la estructura actual:
+
+● Read 2 files (ctrl+o to expand)
+
+● El archivo es muy grande, lo voy a leer por secciones:
+
+● Searched for 3 patterns, read 1 file (ctrl+o to expand)
+
+● Ahora tengo todo el mapa del formulario. Voy a hacer una reorganización
+  completa:
+
+  1. Paso 2: Mover cantidad_observada a Paso 3, redimensionar grids, SHA +
+  hash_program lado a lado con VMS
+  2. Paso 3: cantidad_observada en datos rápidos, layout 3 columnas
+  3. Paso 4 revisión: agrupar campos en secciones
+
+● Bash(python3 << 'PYEOF'
+      content = open('C:/Repositorio/gestorcoc/frontend/src/app/pages/informes/i
+      nformes.html', encoding='utf-8').read()…)
+  ⎿  Error: Exit code 2
+     /usr/bin/bash: -c: line 86: unexpected EOF while looking for matching `''
+
+     /usr/bin/bash: -c: line 86: unexpected EOF while looking for matching `''
+
+● Bash(cat > /tmp/fix_html.py << 'ENDSCRIPT'
+      content = open('C:/Repositorio/gestorcoc/frontend/src/app/pages/informes/i
+      nformes.html', encoding='utf-8').read()…)
+  ⎿  Marker found OK
+
+● Bash(python3 /c/Users/jonat/fix_paso2.py 2>&1 || python3 << 'EOF'
+      import sys…)
+  ⎿  C:\Users\jonat\AppData\Local\Microsoft\WindowsApps\python3.exe: can't
+     open file 'C:\\Users\\jonat\\fix_paso2.py': [Errno 2] No such file or
+     directory
+     … +14 lines (ctrl+o to expand)
+
+● Write(C:\Repositorio\fix_html.py)
+  ⎿  Wrote 7 lines to ..\..\..\fix_html.py
+     path = 'C:/Repositorio/gestorcoc/frontend/src/app/pages/informes/infor
+     mes.html'
+     content = open(path, encoding='utf-8').read()
+     lines = content.split('\n')
+
+     # Print lines 191-252 to see exact text
+     for i in range(190, 252):
+         print(f"{i+1}: {lines[i]}")
+
+
+● Bash(cd /c/Repositorio && python3 fix_html.py)
+  ⎿  191:             <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+     192:                 <div class="lg:col-span-4">
+     193:                     <div class="flex items-center gap-1 mb-1">
+     … +82 lines (ctrl+o to expand)
+
+● Write(C:\Repositorio\fix_html.py)
+  ⎿  Added 7 lines, removed 7 lines
+      1 -path = 'C:/Repositorio/gestorcoc/frontend/src/app/pages/informes
+        -/informes.html'                                                 
+      2 -content = open(path, encoding='utf-8').read()                   
+      3 -lines = content.split('\n')                                     
+      4 -                                                                
+      5 -# Print lines 191-252 to see exact text                         
+      6 -for i in range(190, 252):                                       
+      7 -    print(f"{i+1}: {lines[i]}")                                 
+      1 +path = 'C:/Repositorio/gestorcoc/frontend/src/app/pages/informes
+        +/informes.html'                                                 
+      2 +content = open(path, encoding='utf-8').read()                   
+      3 +lines = content.split('\n')                                     
+      4 +                                                                
+      5 +# Print lines 280-325 (integridad section)                      
+      6 +for i in range(278, 325):                                       
+      7 +    print(f"{i+1}: {lines[i]}")                                 
+
+● Bash(cd /c/Repositorio && python3 fix_html.py)
+  ⎿  279:             <div class="shadow-sm p-4 rounded-xl bg-emerald-50/50
+      border border-emerald-100 space-y-3">
+     280:                 <h4 class="text-sm font-bold text-emerald-900">In
+     … +54 lines (ctrl+o to expand)
+
+● Write(C:\Repositorio\fix_html.py)
+  ⎿  Added 7 lines, removed 7 lines
+      1 -path = 'C:/Repositorio/gestorcoc/frontend/src/app/pages/informes
+        -/informes.html'                                                 
+      2 -content = open(path, encoding='utf-8').read()                   
+      3 -lines = content.split('\n')                                     
+      4 -                                                                
+      5 -# Print lines 280-325 (integridad section)                      
+      6 -for i in range(278, 325):                                       
+      7 -    print(f"{i+1}: {lines[i]}")                                 
+      1 +path = 'C:/Repositorio/gestorcoc/frontend/src/app/pages/informes
+        +/informes.html'                                                 
+      2 +content = open(path, encoding='utf-8').read()                   
+      3 +lines = content.split('\n')                                     
+      4 +                                                                
+      5 +# Print lines 448-485 (Paso 3 datos rapidos)                    
+      6 +for i in range(447, 485):                                       
+      7 +    print(f"{i+1}: {lines[i]}")                                 
+
+● Bash(cd /c/Repositorio && python3 fix_html.py)
+  ⎿  448:         <div *ngIf="currentStep === 3" class="space-y-4">
+     449:             <h3 class="text-lg font-bold text-slate-800">Paso 3 -
+      Desarrollo y fotogramas</h3>
+     … +52 lines (ctrl+o to expand)
+
+● Ahora tengo todo claro. Escribo el script completo de reorganización:
+
+● Write(C:\Repositorio\fix_html.py)
+  ⎿  Added 293 lines, removed 7 lines
+        1 -path = 'C:/Repositorio/gestorcoc/frontend/src/app/pages/inform
+          -es/informes.html'                                             
+        2 -content = open(path, encoding='utf-8').read()                 
+        3 -lines = content.split('\n')                                   
+        4 -                                                              
+        5 -# Print lines 448-485 (Paso 3 datos rapidos)                  
+        6 -for i in range(447, 485):                                     
+        7 -    print(f"{i+1}: {lines[i]}")                               
+        1 +path = 'C:/Repositorio/gestorcoc/frontend/src/app/pages/inform
+          +es/informes.html'                                             
+        2 +content = open(path, encoding='utf-8').read()                 
+        3 +                                                              
+        4 +INPUT_CLS = 'w-full px-2 py-1.5 text-sm border                
+          +border-slate-300 rounded-xl bg-white shadow-sm                
+          +hover:border-slate-400 focus:outline-none                     
+          +focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500    
+          +transition-colors'                                            
+        5 +                                                              
+        6 +# =========================================================== 
+          +==================                                            
+        7 +# CAMBIO 1: Paso 2 - reemplazar el grid superior (quitar      
+          +cantidad, nueva proporción)                                   
+        8 +# =========================================================== 
+          +==================                                            
+        9 +old_grid_top = (                                              
+       10 +    '            <div class="grid grid-cols-1 lg:grid-cols-12 
+          + gap-3">\n'                                                   
+       11 +    '                <div class="lg:col-span-4">\n'           
+       12 +    '                    <div class="flex items-center gap-1  
+          +mb-1">\n'                                                     
+       13 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-0">Sistema *</label>\n' 
+       14 +    '                        <button type="button"            
+          +data-help-trigger (click)="toggleHelp(\'sistema\',            
+          +$event)"\n'                                                   
+       15 +    '                            class="w-4 h-4 rounded-full  
+          +border border-indigo-300 text-indigo-700 text-[10px]          
+          +leading-none font-bold"\n'                                    
+       16 +    '                            aria-label="Ayuda            
+          +Sistema">?</button>\n'                                        
+       17 +    '                    </div>\n'                            
+       18 +    '                    <input [(ngModel)]="form.sistema"    
+          +(ngModelChange)="markDirty(\'sistema\')" name="sistema"       
+          +type="text"\n'                                                
+       19 +    '                        placeholder="Ej: MILESTONE"\n'   
+       20 +    '                                                         
+          +[attr.data-invalid]="isFieldInvalid(\'sistema\') ? \'true\' : 
+          + null"\n'                                                     
+       21 +    '                        class="' + INPUT_CLS + '">\n'    
+       22 +    '                </div>\n'                                
+       23 +    '                <div class="lg:col-span-4">\n'           
+       24 +    '                    <div class="flex items-center gap-1  
+          +mb-1">\n'                                                     
+       25 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-0">Cantidad observada   
+          +(opcional)</label>\n'                                         
+       26 +    '                        <button type="button"            
+          +data-help-trigger (click)="toggleHelp(\'cantidad_observada\', 
+          + $event)"\n'                                                  
+       27 +    '                            class="w-4 h-4 rounded-full  
+          +border border-indigo-300 text-indigo-700 text-[10px]          
+          +leading-none font-bold"\n'                                    
+       28 +    '                            aria-label="Ayuda Cantidad   
+          +observada">?</button>\n'                                      
+       29 +    '                    </div>\n'                            
+       30 +    '                    <input                               
+          +[(ngModel)]="form.cantidad_observada"                         
+          +(ngModelChange)="markDirty(\'cantidad_observada\')"           
+          +name="cantidad_observada"\n'                                  
+       31 +    '                        type="text" placeholder="Ej: 2   
+          +personas / 1 bulto"\n'                                        
+       32 +    '                        class="' + INPUT_CLS + '">\n'    
+       33 +    '                </div>\n'                                
+       34 +    '                <div class="lg:col-span-4">\n'           
+       35 +    '                    <div class="flex items-center gap-1  
+          +mb-1">\n'                                                     
+       36 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-0">Prevencion Sumaria   
+          +*</label>\n'                                                  
+       37 +    '                        <button type="button"            
+          +data-help-trigger (click)="toggleHelp(\'prevencion_sumaria\', 
+          + $event)"\n'                                                  
+       38 +    '                            class="w-4 h-4 rounded-full  
+          +border border-indigo-300 text-indigo-700 text-[10px]          
+          +leading-none font-bold"\n'                                    
+       39 +    '                            aria-label="Ayuda Prevencion 
+          + Sumaria">?</button>\n'                                       
+       40 +    '                    </div>\n'                            
+       41 +    '                    <input                               
+          +[(ngModel)]="form.prevencion_sumaria"                         
+          +(ngModelChange)="markDirty(\'prevencion_sumaria\')"           
+          +name="prevencion_sumaria"\n'                                  
+       42 +    '                        type="text" placeholder="Ej:     
+          +003BAR/2026"\n'                                               
+       43 +    '                                                         
+          +[attr.data-invalid]="isFieldInvalid(\'prevencion_sumaria\') ? 
+          + \'true\' : null"\n'                                          
+       44 +    '                        class="' + INPUT_CLS + '">\n'    
+       45 +    '                </div>\n'                                
+       46 +    '                <div class="lg:col-span-4">\n'           
+       47 +    '                    <div class="flex items-center gap-1  
+          +mb-1">\n'                                                     
+       48 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-0">Denunciante          
+          +*</label>\n'                                                  
+       49 +    '                        <button type="button"            
+          +data-help-trigger (click)="toggleHelp(\'denunciante\',        
+          +$event)"\n'                                                   
+       50 +    '                            class="w-4 h-4 rounded-full  
+          +border border-indigo-300 text-indigo-700 text-[10px]          
+          +leading-none font-bold"\n'                                    
+       51 +    '                            aria-label="Ayuda            
+          +Denunciante">?</button>\n'                                    
+       52 +    '                    </div>\n'                            
+       53 +    '                    <input                               
+          +[(ngModel)]="form.denunciante"                                
+          +(ngModelChange)="markDirty(\'denunciante\')"                  
+          +name="denunciante" type="text"\n'                             
+       54 +    '                        placeholder="Ej: PONZO           
+          +Osvaldo"\n'                                                   
+       55 +    '                                                         
+          +[attr.data-invalid]="isFieldInvalid(\'denunciante\') ?        
+          +\'true\' : null"\n'                                           
+       56 +    '                        class="' + INPUT_CLS + '">\n'    
+       57 +    '                </div>\n'                                
+       58 +    '                <div class="lg:col-span-12">\n'          
+       59 +    '                    <div class="flex items-center gap-1  
+          +mb-1">\n'                                                     
+       60 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-0">Caratula             
+          +*</label>\n'                                                  
+       61 +    '                        <button type="button"            
+          +data-help-trigger (click)="toggleHelp(\'caratula\',           
+          +$event)"\n'                                                   
+       62 +    '                            class="w-4 h-4 rounded-full  
+          +border border-indigo-300 text-indigo-700 text-[10px]          
+          +leading-none font-bold"\n'                                    
+       63 +    '                            aria-label="Ayuda            
+          +Caratula">?</button>\n'                                       
+       64 +    '                    </div>\n'                            
+       65 +    '                    <input [(ngModel)]="form.caratula"   
+          +(ngModelChange)="markDirty(\'caratula\')" name="caratula"     
+          +type="text"\n'                                                
+       66 +    '                        placeholder="Ej: DENUNCIA S/     
+          +PRESUNTO HURTO"\n'                                            
+       67 +    '                                                         
+          +[attr.data-invalid]="isFieldInvalid(\'caratula\') ? \'true\'  
+          +: null"\n'                                                    
+       68 +    '                        class="' + INPUT_CLS + '">\n'    
+       69 +    '                </div>\n'                                
+       70 +    '            </div>'                                      
+       71 +)                                                             
+       72 +                                                              
+       73 +new_grid_top = (                                              
+       74 +    '            <div class="grid grid-cols-1 md:grid-cols-2  
+          +lg:grid-cols-12 gap-3">\n'                                    
+       75 +    '                <div class="lg:col-span-4">\n'           
+       76 +    '                    <div class="flex items-center gap-1  
+          +mb-1">\n'                                                     
+       77 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-0">Sistema *</label>\n' 
+       78 +    '                        <button type="button"            
+          +data-help-trigger (click)="toggleHelp(\'sistema\',            
+          +$event)"\n'                                                   
+       79 +    '                            class="w-4 h-4 rounded-full  
+          +border border-indigo-300 text-indigo-700 text-[10px]          
+          +leading-none font-bold"\n'                                    
+       80 +    '                            aria-label="Ayuda            
+          +Sistema">?</button>\n'                                        
+       81 +    '                    </div>\n'                            
+       82 +    '                    <input [(ngModel)]="form.sistema"    
+          +(ngModelChange)="markDirty(\'sistema\')" name="sistema"       
+          +type="text"\n'                                                
+       83 +    '                        placeholder="Ej: MILESTONE"\n'   
+       84 +    '                                                         
+          +[attr.data-invalid]="isFieldInvalid(\'sistema\') ? \'true\' : 
+          + null"\n'                                                     
+       85 +    '                        class="' + INPUT_CLS + '">\n'    
+       86 +    '                </div>\n'                                
+       87 +    '                <div class="lg:col-span-4">\n'           
+       88 +    '                    <div class="flex items-center gap-1  
+          +mb-1">\n'                                                     
+       89 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-0">Prevencion Sumaria   
+          +*</label>\n'                                                  
+       90 +    '                        <button type="button"            
+          +data-help-trigger (click)="toggleHelp(\'prevencion_sumaria\', 
+          + $event)"\n'                                                  
+       91 +    '                            class="w-4 h-4 rounded-full  
+          +border border-indigo-300 text-indigo-700 text-[10px]          
+          +leading-none font-bold"\n'                                    
+       92 +    '                            aria-label="Ayuda Prevencion 
+          + Sumaria">?</button>\n'                                       
+       93 +    '                    </div>\n'                            
+       94 +    '                    <input                               
+          +[(ngModel)]="form.prevencion_sumaria"                         
+          +(ngModelChange)="markDirty(\'prevencion_sumaria\')"           
+          +name="prevencion_sumaria"\n'                                  
+       95 +    '                        type="text" placeholder="Ej:     
+          +003BAR/2026"\n'                                               
+       96 +    '                                                         
+          +[attr.data-invalid]="isFieldInvalid(\'prevencion_sumaria\') ? 
+          + \'true\' : null"\n'                                          
+       97 +    '                        class="' + INPUT_CLS + '">\n'    
+       98 +    '                </div>\n'                                
+       99 +    '                <div class="lg:col-span-4">\n'           
+      100 +    '                    <div class="flex items-center gap-1  
+          +mb-1">\n'                                                     
+      101 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-0">Denunciante          
+          +*</label>\n'                                                  
+      102 +    '                        <button type="button"            
+          +data-help-trigger (click)="toggleHelp(\'denunciante\',        
+          +$event)"\n'                                                   
+      103 +    '                            class="w-4 h-4 rounded-full  
+          +border border-indigo-300 text-indigo-700 text-[10px]          
+          +leading-none font-bold"\n'                                    
+      104 +    '                            aria-label="Ayuda            
+          +Denunciante">?</button>\n'                                    
+      105 +    '                    </div>\n'                            
+      106 +    '                    <input                               
+          +[(ngModel)]="form.denunciante"                                
+          +(ngModelChange)="markDirty(\'denunciante\')"                  
+          +name="denunciante" type="text"\n'                             
+      107 +    '                        placeholder="Ej: PONZO           
+          +Osvaldo"\n'                                                   
+      108 +    '                                                         
+          +[attr.data-invalid]="isFieldInvalid(\'denunciante\') ?        
+          +\'true\' : null"\n'                                           
+      109 +    '                        class="' + INPUT_CLS + '">\n'    
+      110 +    '                </div>\n'                                
+      111 +    '                <div class="lg:col-span-12">\n'          
+      112 +    '                    <div class="flex items-center gap-1  
+          +mb-1">\n'                                                     
+      113 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-0">Caratula             
+          +*</label>\n'                                                  
+      114 +    '                        <button type="button"            
+          +data-help-trigger (click)="toggleHelp(\'caratula\',           
+          +$event)"\n'                                                   
+      115 +    '                            class="w-4 h-4 rounded-full  
+          +border border-indigo-300 text-indigo-700 text-[10px]          
+          +leading-none font-bold"\n'                                    
+      116 +    '                            aria-label="Ayuda            
+          +Caratula">?</button>\n'                                       
+      117 +    '                    </div>\n'                            
+      118 +    '                    <input [(ngModel)]="form.caratula"   
+          +(ngModelChange)="markDirty(\'caratula\')" name="caratula"     
+          +type="text"\n'                                                
+      119 +    '                        placeholder="Ej: DENUNCIA S/     
+          +PRESUNTO HURTO"\n'                                            
+      120 +    '                                                         
+          +[attr.data-invalid]="isFieldInvalid(\'caratula\') ? \'true\'  
+          +: null"\n'                                                    
+      121 +    '                        class="' + INPUT_CLS + '">\n'    
+      122 +    '                </div>\n'                                
+      123 +    '            </div>'                                      
+      124 +)                                                             
+      125 +                                                              
+      126 +if old_grid_top in content:                                   
+      127 +    content = content.replace(old_grid_top, new_grid_top)     
+      128 +    print("Cambio 1 OK: grid superior Paso 2")                
+      129 +else:                                                         
+      130 +    print("ERROR Cambio 1")                                   
+      131 +                                                              
+      132 +# =========================================================== 
+          +==================                                            
+      133 +# CAMBIO 2: Paso 2 - Integridad: SHA + hash_program + VMS en  
+          +layout 2-col                                                  
+      134 +# =========================================================== 
+          +==================                                            
+      135 +old_integridad = (                                            
+      136 +    '                <div>\n'                                 
+      137 +    '                    <label class="block text-xs          
+          +font-bold text-slate-500 uppercase mb-1">Algoritmos           
+          +SHA</label>\n'                                                
+      138 +    '                    <div class="flex flex-wrap           
+          +gap-3">\n'                                                    
+      139 +    '                        <label *ngFor="let algo of       
+          +hashAlgorithmOptions" class="inline-flex items-center gap-2   
+          +text-sm text-slate-700">\n'                                   
+      140 +    '                            <input type="checkbox"       
+          +[checked]="hasHashAlgorithm(algo.value)"                      
+          +(change)="toggleHashAlgorithm(algo.value)"\n'                 
+      141 +    '                                class="rounded           
+          +border-slate-300 text-indigo-600 focus:ring-indigo-500">\n'   
+      142 +    '                            <span>{{ algo.label          
+          +}}</span>\n'                                                  
+      143 +    '                        </label>\n'                      
+      144 +    '                    </div>\n'                            
+      145 +    '                </div>\n'                                
+      146 +    '\n'                                                      
+      147 +    '                <div>\n'                                 
+      148 +    '                    <label class="block text-xs          
+          +font-bold text-slate-500 uppercase mb-1">Programa de          
+          +Hash</label>\n'                                               
+      149 +    '                    <input                               
+          +[(ngModel)]="form.hash_program"                               
+          +(ngModelChange)="markDirty(\'hash_program\')"                 
+          +name="hash_program" type="text"\n'                            
+      150 +    '                        placeholder="Ej: HashMyFiles"\n' 
+      151 +    '                        class="' + INPUT_CLS + '">\n'    
+      152 +    '                </div>\n'                                
+      153 +    '\n'                                                      
+      154 +    '                <div class="grid grid-cols-1             
+          +md:grid-cols-2 gap-3">\n'                                     
+      155 +    '                    <div>\n'                             
+      156 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-1">Autenticidad del     
+          +Material Exportado</label>\n'                                 
+      157 +    '                        <select                          
+          +[(ngModel)]="form.vms_authenticity_mode"                      
+          +(ngModelChange)="onVmsAuthenticityModeChange($event)"         
+          +name="vms_authenticity_mode"\n'                               
+      158 +    '                            class="' + INPUT_CLS +       
+          +'">\n'                                                        
+      159 +    '                            <option value="">Seleccione  
+          +opción...</option>\n'                                         
+      160 +    '                            <option *ngFor="let option   
+          +of vmsAuthenticityOptions" [ngValue]="option.value">\n'       
+      161 +    '                                {{ option.label }}\n'    
+      162 +    '                            </option>\n'                 
+      163 +    '                        </select>\n'                     
+      164 +    '                    </div>\n'                            
+      165 +    '                    <div                                 
+          +*ngIf="form.vms_authenticity_mode === \'otro\'">\n'           
+      166 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-1">Detalle de           
+          +Autenticidad *</label>\n'                                     
+      167 +    '                        <input                           
+          +[(ngModel)]="form.vms_authenticity_detail"                    
+          +(ngModelChange)="markDirty(\'vms_authenticity_detail\')"      
+          +name="vms_authenticity_detail"\n'                             
+      168 +    '                            type="text"                  
+          +placeholder="Detallar método alternativo"\n'                  
+      169 +    '                            class="' + INPUT_CLS +       
+          +'">\n'                                                        
+      170 +    '                    </div>\n'                            
+      171 +    '                </div>'                                  
+      172 +)                                                             
+      173 +                                                              
+      174 +new_integridad = (                                            
+      175 +    '                <div class="grid grid-cols-1             
+          +md:grid-cols-2 gap-4">\n'                                     
+      176 +    '                    <div>\n'                             
+      177 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-2">Algoritmos           
+          +SHA</label>\n'                                                
+      178 +    '                        <div class="flex flex-wrap       
+          +gap-3">\n'                                                    
+      179 +    '                            <label *ngFor="let algo of   
+          +hashAlgorithmOptions" class="inline-flex items-center gap-2   
+          +text-sm text-slate-700">\n'                                   
+      180 +    '                                <input type="checkbox"   
+          +[checked]="hasHashAlgorithm(algo.value)"                      
+          +(change)="toggleHashAlgorithm(algo.value)"\n'                 
+      181 +    '                                    class="rounded       
+          +border-slate-300 text-indigo-600 focus:ring-indigo-500">\n'   
+      182 +    '                                <span>{{ algo.label      
+          +}}</span>\n'                                                  
+      183 +    '                            </label>\n'                  
+      184 +    '                        </div>\n'                        
+      185 +    '                    </div>\n'                            
+      186 +    '                    <div class="space-y-3">\n'           
+      187 +    '                        <div>\n'                         
+      188 +    '                            <label class="block text-xs  
+          +font-bold text-slate-500 uppercase mb-1">Programa de          
+          +Hash</label>\n'                                               
+      189 +    '                            <input                       
+          +[(ngModel)]="form.hash_program"                               
+          +(ngModelChange)="markDirty(\'hash_program\')"                 
+          +name="hash_program" type="text"\n'                            
+      190 +    '                                                         
+          +placeholder="HashMyFiles"\n'                                  
+      191 +    '                                class="' + INPUT_CLS +   
+          +'">\n'                                                        
+      192 +    '                        </div>\n'                        
+      193 +    '                        <div>\n'                         
+      194 +    '                            <label class="block text-xs  
+          +font-bold text-slate-500 uppercase mb-1">Autenticidad del     
+          +Material Exportado</label>\n'                                 
+      195 +    '                            <select                      
+          +[(ngModel)]="form.vms_authenticity_mode"                      
+          +(ngModelChange)="onVmsAuthenticityModeChange($event)"         
+          +name="vms_authenticity_mode"\n'                               
+      196 +    '                                class="' + INPUT_CLS +   
+          +'">\n'                                                        
+      197 +    '                                <option                  
+          +value="">Seleccione opción...</option>\n'                     
+      198 +    '                                <option *ngFor="let      
+          +option of vmsAuthenticityOptions"                             
+          +[ngValue]="option.value">\n'                                  
+      199 +    '                                    {{ option.label      
+          +}}\n'                                                         
+      200 +    '                                </option>\n'             
+      201 +    '                            </select>\n'                 
+      202 +    '                        </div>\n'                        
+      203 +    '                    </div>\n'                            
+      204 +    '                </div>\n'                                
+      205 +    '                <div *ngIf="form.vms_authenticity_mode   
+          +=== \'otro\'">\n'                                             
+      206 +    '                    <label class="block text-xs          
+          +font-bold text-slate-500 uppercase mb-1">Detalle de           
+          +Autenticidad *</label>\n'                                     
+      207 +    '                    <input                               
+          +[(ngModel)]="form.vms_authenticity_detail"                    
+          +(ngModelChange)="markDirty(\'vms_authenticity_detail\')"      
+          +name="vms_authenticity_detail"\n'                             
+      208 +    '                        type="text"                      
+          +placeholder="Detallar método alternativo"\n'                  
+      209 +    '                        class="' + INPUT_CLS + '">\n'    
+      210 +    '                </div>'                                  
+      211 +)                                                             
+      212 +                                                              
+      213 +if old_integridad in content:                                 
+      214 +    content = content.replace(old_integridad, new_integridad) 
+      215 +    print("Cambio 2 OK: seccion integridad")                  
+      216 +else:                                                         
+      217 +    print("ERROR Cambio 2")                                   
+      218 +                                                              
+      219 +# =========================================================== 
+          +==================                                            
+      220 +# CAMBIO 3: Paso 3 - datos rapidos con cantidad_observada y   
+          +layout 3-col                                                  
+      221 +# =========================================================== 
+          +==================                                            
+      222 +old_datos_rapidos = (                                         
+      223 +    '                <div class="grid grid-cols-1             
+          +md:grid-cols-2 gap-3">\n'                                     
+      224 +    '                    <div>\n'                             
+      225 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-1">Sectores             
+          +analizados</label>\n'                                         
+      226 +    '                        <input                           
+          +[(ngModel)]="form.sectores_analizados"                        
+          +(ngModelChange)="markDirty(\'sectores_analizados\')"          
+          +name="sectores_analizados"\n'                                 
+      227 +    '                            type="text" placeholder="Ej: 
+          + Hall de arribos, cinta 3, plataforma norte"\n'               
+      228 +    '                            class="' + INPUT_CLS +       
+          +'">\n'                                                        
+      229 +    '                    </div>\n'                            
+      230 +    '                    <div>\n'                             
+      231 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-1">Franja horaria       
+          +analizada</label>\n'                                          
+      232 +    '                        <input                           
+          +[(ngModel)]="form.franja_horaria_analizada"                   
+          +(ngModelChange)="markDirty(\'franja_horaria_analizada\')"     
+          +name="franja_horaria_analizada"\n'                            
+      233 +    '                            type="text" placeholder="Ej: 
+          + 14:05 a 15:42"\n'                                            
+      234 +    '                            class="' + INPUT_CLS +       
+          +'">\n'                                                        
+      235 +    '                    </div>\n'                            
+      236 +    '                    <div>\n'                             
+      237 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-1">Tiempo total de      
+          +análisis</label>\n'                                           
+      238 +    '                        <input                           
+          +[(ngModel)]="form.tiempo_total_analisis"                      
+          +(ngModelChange)="markDirty(\'tiempo_total_analisis\')"        
+          +name="tiempo_total_analisis"\n'                               
+      239 +    '                            type="text" placeholder="Ej: 
+          + 1 hora 37 minutos"\n'                                        
+      240 +    '                            class="' + INPUT_CLS +       
+          +'">\n'                                                        
+      241 +    '                    </div>\n'                            
+      242 +    '                    <div>\n'                             
+      243 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-1">Síntesis para        
+          +conclusión</label>\n'                                         
+      244 +    '                        <input                           
+          +[(ngModel)]="form.sintesis_conclusion"                        
+          +(ngModelChange)="markDirty(\'sintesis_conclusion\')"          
+          +name="sintesis_conclusion"\n'                                 
+      245 +    '                            type="text" placeholder="Ej: 
+          + No se observa manipulación posterior del bulto"\n'           
+      246 +    '                            class="' + INPUT_CLS +       
+          +'">\n'                                                        
+      247 +    '                    </div>\n'                            
+      248 +    '                </div>'                                  
+      249 +)                                                             
+      250 +                                                              
+      251 +new_datos_rapidos = (                                         
+      252 +    '                <div class="grid grid-cols-1             
+          +md:grid-cols-3 gap-3">\n'                                     
+      253 +    '                    <div>\n'                             
+      254 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-1">Franja horaria       
+          +analizada</label>\n'                                          
+      255 +    '                        <input                           
+          +[(ngModel)]="form.franja_horaria_analizada"                   
+          +(ngModelChange)="markDirty(\'franja_horaria_analizada\')"     
+          +name="franja_horaria_analizada"\n'                            
+      256 +    '                            type="text" placeholder="Ej: 
+          + 14:05 a 15:42"\n'                                            
+      257 +    '                            class="' + INPUT_CLS +       
+          +'">\n'                                                        
+      258 +    '                    </div>\n'                            
+      259 +    '                    <div>\n'                             
+      260 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-1">Tiempo total de      
+          +análisis</label>\n'                                           
+      261 +    '                        <input                           
+          +[(ngModel)]="form.tiempo_total_analisis"                      
+          +(ngModelChange)="markDirty(\'tiempo_total_analisis\')"        
+          +name="tiempo_total_analisis"\n'                               
+      262 +    '                            type="text" placeholder="Ej: 
+          + 1 hora 37 minutos"\n'                                        
+      263 +    '                            class="' + INPUT_CLS +       
+          +'">\n'                                                        
+      264 +    '                    </div>\n'                            
+      265 +    '                    <div>\n'                             
+      266 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-1">Cantidad             
+          +observada</label>\n'                                          
+      267 +    '                        <input                           
+          +[(ngModel)]="form.cantidad_observada"                         
+          +(ngModelChange)="markDirty(\'cantidad_observada\')"           
+          +name="cantidad_observada"\n'                                  
+      268 +    '                            type="text" placeholder="Ej: 
+          + 2 personas / 1 bulto"\n'                                     
+      269 +    '                            class="' + INPUT_CLS +       
+          +'">\n'                                                        
+      270 +    '                    </div>\n'                            
+      271 +    '                    <div class="md:col-span-2">\n'       
+      272 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-1">Sectores             
+          +analizados</label>\n'                                         
+      273 +    '                        <input                           
+          +[(ngModel)]="form.sectores_analizados"                        
+          +(ngModelChange)="markDirty(\'sectores_analizados\')"          
+          +name="sectores_analizados"\n'                                 
+      274 +    '                            type="text" placeholder="Ej: 
+          + Hall de arribos, cinta 3, plataforma norte"\n'               
+      275 +    '                            class="' + INPUT_CLS +       
+          +'">\n'                                                        
+      276 +    '                    </div>\n'                            
+      277 +    '                    <div>\n'                             
+      278 +    '                        <label class="block text-xs      
+          +font-bold text-slate-500 uppercase mb-1">Síntesis para        
+          +conclusión</label>\n'                                         
+      279 +    '                        <input                           
+          +[(ngModel)]="form.sintesis_conclusion"                        
+          +(ngModelChange)="markDirty(\'sintesis_conclusion\')"          
+          +name="sintesis_conclusion"\n'                                 
+      280 +    '                            type="text" placeholder="Ej: 
+          + No se observa manipulación posterior del bulto"\n'           
+      281 +    '                            class="' + INPUT_CLS +       
+          +'">\n'                                                        
+      282 +    '                    </div>\n'                            
+      283 +    '                </div>'                                  
+      284 +)                                                             
+      285 +                                                              
+      286 +if old_datos_rapidos in content:                              
+      287 +    content = content.replace(old_datos_rapidos,              
+          +new_datos_rapidos)                                            
+      288 +    print("Cambio 3 OK: datos rapidos Paso 3")                
+      289 +else:                                                         
+      290 +    print("ERROR Cambio 3")                                   
+      291 +                                                              
+      292 +open(path, 'w', encoding='utf-8').write(content)              
+      293 +print("Archivo guardado.")                                    
+
+● Bash(cd /c/Repositorio && python3 fix_html.py)
+  ⎿  Cambio 1 OK: grid superior Paso 2
+     Cambio 2 OK: seccion integridad
+     Cambio 3 OK: datos rapidos Paso 3
+     Archivo guardado.
+
+● Los 3 cambios estructurales aplicados. Ahora mejoro el Paso 4 revisión para
+  que esté agrupado en secciones, y también el Paso 2 Material Fílmico para que
+  quede más arriba junto a la sección de integridad:
+
+● Read 1 file (ctrl+o to expand)
+
+● Write(C:\Repositorio\fix_html.py)
+  ⎿  Added 113 lines, removed 293 lines
+        1 -path = 'C:/Repositorio/gestorcoc/frontend/src/app/pages/inform
+          -es/informes.html'                                             
+        2 -content = open(path, encoding='utf-8').read()                 
+        3 -                                                              
+        4 -INPUT_CLS = 'w-full px-2 py-1.5 text-sm border                
+          -border-slate-300 rounded-xl bg-white shadow-sm                
+          -hover:border-slate-400 focus:outline-none                     
+          -focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500    
+          -transition-colors'                                            
+        5 -                                                              
+        6 -# ============================================================
+          -=================                                             
+        7 -# CAMBIO 1: Paso 2 - reemplazar el grid superior (quitar      
+          -cantidad, nueva proporción)                                   
+        8 -# =========================================================== 
+          -==================                                            
+        9 -old_grid_top = (                                              
+       10 -    '            <div class="grid grid-cols-1 lg:grid-cols-12 
+          - gap-3">\n'                                                   
+       11 -    '                <div class="lg:col-span-4">\n'           
+       12 -    '                    <div class="flex items-center gap-1  
+          -mb-1">\n'                                                     
+       13 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-0">Sistema *</label>\n' 
+       14 -    '                        <button type="button"            
+          -data-help-trigger (click)="toggleHelp(\'sistema\',            
+          -$event)"\n'                                                   
+       15 -    '                            class="w-4 h-4 rounded-full  
+          -border border-indigo-300 text-indigo-700 text-[10px]          
+          -leading-none font-bold"\n'                                    
+       16 -    '                            aria-label="Ayuda            
+          -Sistema">?</button>\n'                                        
+       17 -    '                    </div>\n'                            
+       18 -    '                    <input [(ngModel)]="form.sistema"    
+          -(ngModelChange)="markDirty(\'sistema\')" name="sistema"       
+          -type="text"\n'                                                
+       19 -    '                        placeholder="Ej: MILESTONE"\n'   
+       20 -    '                                                         
+          -[attr.data-invalid]="isFieldInvalid(\'sistema\') ? \'true\' : 
+          - null"\n'                                                     
+       21 -    '                        class="' + INPUT_CLS + '">\n'    
+       22 -    '                </div>\n'                                
+       23 -    '                <div class="lg:col-span-4">\n'           
+       24 -    '                    <div class="flex items-center gap-1  
+          -mb-1">\n'                                                     
+       25 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-0">Cantidad observada   
+          -(opcional)</label>\n'                                         
+       26 -    '                        <button type="button"            
+          -data-help-trigger (click)="toggleHelp(\'cantidad_observada\', 
+          - $event)"\n'                                                  
+       27 -    '                            class="w-4 h-4 rounded-full  
+          -border border-indigo-300 text-indigo-700 text-[10px]          
+          -leading-none font-bold"\n'                                    
+       28 -    '                            aria-label="Ayuda Cantidad   
+          -observada">?</button>\n'                                      
+       29 -    '                    </div>\n'                            
+       30 -    '                    <input                               
+          -[(ngModel)]="form.cantidad_observada"                         
+          -(ngModelChange)="markDirty(\'cantidad_observada\')"           
+          -name="cantidad_observada"\n'                                  
+       31 -    '                        type="text" placeholder="Ej: 2   
+          -personas / 1 bulto"\n'                                        
+       32 -    '                        class="' + INPUT_CLS + '">\n'    
+       33 -    '                </div>\n'                                
+       34 -    '                <div class="lg:col-span-4">\n'           
+       35 -    '                    <div class="flex items-center gap-1  
+          -mb-1">\n'                                                     
+       36 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-0">Prevencion Sumaria   
+          -*</label>\n'                                                  
+       37 -    '                        <button type="button"            
+          -data-help-trigger (click)="toggleHelp(\'prevencion_sumaria\', 
+          - $event)"\n'                                                  
+       38 -    '                            class="w-4 h-4 rounded-full  
+          -border border-indigo-300 text-indigo-700 text-[10px]          
+          -leading-none font-bold"\n'                                    
+       39 -    '                            aria-label="Ayuda Prevencion 
+          - Sumaria">?</button>\n'                                       
+       40 -    '                    </div>\n'                            
+       41 -    '                    <input                               
+          -[(ngModel)]="form.prevencion_sumaria"                         
+          -(ngModelChange)="markDirty(\'prevencion_sumaria\')"           
+          -name="prevencion_sumaria"\n'                                  
+       42 -    '                        type="text" placeholder="Ej:     
+          -003BAR/2026"\n'                                               
+       43 -    '                                                         
+          -[attr.data-invalid]="isFieldInvalid(\'prevencion_sumaria\') ? 
+          - \'true\' : null"\n'                                          
+       44 -    '                        class="' + INPUT_CLS + '">\n'    
+       45 -    '                </div>\n'                                
+       46 -    '                <div class="lg:col-span-4">\n'           
+       47 -    '                    <div class="flex items-center gap-1  
+          -mb-1">\n'                                                     
+       48 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-0">Denunciante          
+          -*</label>\n'                                                  
+       49 -    '                        <button type="button"            
+          -data-help-trigger (click)="toggleHelp(\'denunciante\',        
+          -$event)"\n'                                                   
+       50 -    '                            class="w-4 h-4 rounded-full  
+          -border border-indigo-300 text-indigo-700 text-[10px]          
+          -leading-none font-bold"\n'                                    
+       51 -    '                            aria-label="Ayuda            
+          -Denunciante">?</button>\n'                                    
+       52 -    '                    </div>\n'                            
+       53 -    '                    <input                               
+          -[(ngModel)]="form.denunciante"                                
+          -(ngModelChange)="markDirty(\'denunciante\')"                  
+          -name="denunciante" type="text"\n'                             
+       54 -    '                        placeholder="Ej: PONZO           
+          -Osvaldo"\n'                                                   
+       55 -    '                                                         
+          -[attr.data-invalid]="isFieldInvalid(\'denunciante\') ?        
+          -\'true\' : null"\n'                                           
+       56 -    '                        class="' + INPUT_CLS + '">\n'    
+       57 -    '                </div>\n'                                
+       58 -    '                <div class="lg:col-span-12">\n'          
+       59 -    '                    <div class="flex items-center gap-1  
+          -mb-1">\n'                                                     
+       60 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-0">Caratula             
+          -*</label>\n'                                                  
+       61 -    '                        <button type="button"            
+          -data-help-trigger (click)="toggleHelp(\'caratula\',           
+          -$event)"\n'                                                   
+       62 -    '                            class="w-4 h-4 rounded-full  
+          -border border-indigo-300 text-indigo-700 text-[10px]          
+          -leading-none font-bold"\n'                                    
+       63 -    '                            aria-label="Ayuda            
+          -Caratula">?</button>\n'                                       
+       64 -    '                    </div>\n'                            
+       65 -    '                    <input [(ngModel)]="form.caratula"   
+          -(ngModelChange)="markDirty(\'caratula\')" name="caratula"     
+          -type="text"\n'                                                
+       66 -    '                        placeholder="Ej: DENUNCIA S/     
+          -PRESUNTO HURTO"\n'                                            
+       67 -    '                                                         
+          -[attr.data-invalid]="isFieldInvalid(\'caratula\') ? \'true\'  
+          -: null"\n'                                                    
+       68 -    '                        class="' + INPUT_CLS + '">\n'    
+       69 -    '                </div>\n'                                
+       70 -    '            </div>'                                      
+       71 -)                                                             
+       72 -                                                              
+       73 -new_grid_top = (                                              
+       74 -    '            <div class="grid grid-cols-1 md:grid-cols-2  
+          -lg:grid-cols-12 gap-3">\n'                                    
+       75 -    '                <div class="lg:col-span-4">\n'           
+       76 -    '                    <div class="flex items-center gap-1  
+          -mb-1">\n'                                                     
+       77 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-0">Sistema *</label>\n' 
+       78 -    '                        <button type="button"            
+          -data-help-trigger (click)="toggleHelp(\'sistema\',            
+          -$event)"\n'                                                   
+       79 -    '                            class="w-4 h-4 rounded-full  
+          -border border-indigo-300 text-indigo-700 text-[10px]          
+          -leading-none font-bold"\n'                                    
+       80 -    '                            aria-label="Ayuda            
+          -Sistema">?</button>\n'                                        
+       81 -    '                    </div>\n'                            
+       82 -    '                    <input [(ngModel)]="form.sistema"    
+          -(ngModelChange)="markDirty(\'sistema\')" name="sistema"       
+          -type="text"\n'                                                
+       83 -    '                        placeholder="Ej: MILESTONE"\n'   
+       84 -    '                                                         
+          -[attr.data-invalid]="isFieldInvalid(\'sistema\') ? \'true\' : 
+          - null"\n'                                                     
+       85 -    '                        class="' + INPUT_CLS + '">\n'    
+       86 -    '                </div>\n'                                
+       87 -    '                <div class="lg:col-span-4">\n'           
+       88 -    '                    <div class="flex items-center gap-1  
+          -mb-1">\n'                                                     
+       89 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-0">Prevencion Sumaria   
+          -*</label>\n'                                                  
+       90 -    '                        <button type="button"            
+          -data-help-trigger (click)="toggleHelp(\'prevencion_sumaria\', 
+          - $event)"\n'                                                  
+       91 -    '                            class="w-4 h-4 rounded-full  
+          -border border-indigo-300 text-indigo-700 text-[10px]          
+          -leading-none font-bold"\n'                                    
+       92 -    '                            aria-label="Ayuda Prevencion 
+          - Sumaria">?</button>\n'                                       
+       93 -    '                    </div>\n'                            
+       94 -    '                    <input                               
+          -[(ngModel)]="form.prevencion_sumaria"                         
+          -(ngModelChange)="markDirty(\'prevencion_sumaria\')"           
+          -name="prevencion_sumaria"\n'                                  
+       95 -    '                        type="text" placeholder="Ej:     
+          -003BAR/2026"\n'                                               
+       96 -    '                                                         
+          -[attr.data-invalid]="isFieldInvalid(\'prevencion_sumaria\') ? 
+          - \'true\' : null"\n'                                          
+       97 -    '                        class="' + INPUT_CLS + '">\n'    
+       98 -    '                </div>\n'                                
+       99 -    '                <div class="lg:col-span-4">\n'           
+      100 -    '                    <div class="flex items-center gap-1  
+          -mb-1">\n'                                                     
+      101 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-0">Denunciante          
+          -*</label>\n'                                                  
+      102 -    '                        <button type="button"            
+          -data-help-trigger (click)="toggleHelp(\'denunciante\',        
+          -$event)"\n'                                                   
+      103 -    '                            class="w-4 h-4 rounded-full  
+          -border border-indigo-300 text-indigo-700 text-[10px]          
+          -leading-none font-bold"\n'                                    
+      104 -    '                            aria-label="Ayuda            
+          -Denunciante">?</button>\n'                                    
+      105 -    '                    </div>\n'                            
+      106 -    '                    <input                               
+          -[(ngModel)]="form.denunciante"                                
+          -(ngModelChange)="markDirty(\'denunciante\')"                  
+          -name="denunciante" type="text"\n'                             
+      107 -    '                        placeholder="Ej: PONZO           
+          -Osvaldo"\n'                                                   
+      108 -    '                                                         
+          -[attr.data-invalid]="isFieldInvalid(\'denunciante\') ?        
+          -\'true\' : null"\n'                                           
+      109 -    '                        class="' + INPUT_CLS + '">\n'    
+      110 -    '                </div>\n'                                
+      111 -    '                <div class="lg:col-span-12">\n'          
+      112 -    '                    <div class="flex items-center gap-1  
+          -mb-1">\n'                                                     
+      113 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-0">Caratula             
+          -*</label>\n'                                                  
+      114 -    '                        <button type="button"            
+          -data-help-trigger (click)="toggleHelp(\'caratula\',           
+          -$event)"\n'                                                   
+      115 -    '                            class="w-4 h-4 rounded-full  
+          -border border-indigo-300 text-indigo-700 text-[10px]          
+          -leading-none font-bold"\n'                                    
+      116 -    '                            aria-label="Ayuda            
+          -Caratula">?</button>\n'                                       
+      117 -    '                    </div>\n'                            
+      118 -    '                    <input [(ngModel)]="form.caratula"   
+          -(ngModelChange)="markDirty(\'caratula\')" name="caratula"     
+          -type="text"\n'                                                
+      119 -    '                        placeholder="Ej: DENUNCIA S/     
+          -PRESUNTO HURTO"\n'                                            
+      120 -    '                                                         
+          -[attr.data-invalid]="isFieldInvalid(\'caratula\') ? \'true\'  
+          -: null"\n'                                                    
+      121 -    '                        class="' + INPUT_CLS + '">\n'    
+      122 -    '                </div>\n'                                
+      123 -    '            </div>'                                      
+      124 -)                                                             
+      125 -                                                              
+      126 -if old_grid_top in content:                                   
+      127 -    content = content.replace(old_grid_top, new_grid_top)     
+      128 -    print("Cambio 1 OK: grid superior Paso 2")                
+      129 -else:                                                         
+      130 -    print("ERROR Cambio 1")                                   
+      131 -                                                              
+      132 -# =========================================================== 
+          -==================                                            
+      133 -# CAMBIO 2: Paso 2 - Integridad: SHA + hash_program + VMS en  
+          -layout 2-col                                                  
+      134 -# =========================================================== 
+          -==================                                            
+      135 -old_integridad = (                                            
+      136 -    '                <div>\n'                                 
+      137 -    '                    <label class="block text-xs          
+          -font-bold text-slate-500 uppercase mb-1">Algoritmos           
+          -SHA</label>\n'                                                
+      138 -    '                    <div class="flex flex-wrap           
+          -gap-3">\n'                                                    
+      139 -    '                        <label *ngFor="let algo of       
+          -hashAlgorithmOptions" class="inline-flex items-center gap-2   
+          -text-sm text-slate-700">\n'                                   
+      140 -    '                            <input type="checkbox"       
+          -[checked]="hasHashAlgorithm(algo.value)"                      
+          -(change)="toggleHashAlgorithm(algo.value)"\n'                 
+      141 -    '                                class="rounded           
+          -border-slate-300 text-indigo-600 focus:ring-indigo-500">\n'   
+      142 -    '                            <span>{{ algo.label          
+          -}}</span>\n'                                                  
+      143 -    '                        </label>\n'                      
+      144 -    '                    </div>\n'                            
+      145 -    '                </div>\n'                                
+      146 -    '\n'                                                      
+      147 -    '                <div>\n'                                 
+      148 -    '                    <label class="block text-xs          
+          -font-bold text-slate-500 uppercase mb-1">Programa de          
+          -Hash</label>\n'                                               
+      149 -    '                    <input                               
+          -[(ngModel)]="form.hash_program"                               
+          -(ngModelChange)="markDirty(\'hash_program\')"                 
+          -name="hash_program" type="text"\n'                            
+      150 -    '                        placeholder="Ej: HashMyFiles"\n' 
+      151 -    '                        class="' + INPUT_CLS + '">\n'    
+      152 -    '                </div>\n'                                
+      153 -    '\n'                                                      
+      154 -    '                <div class="grid grid-cols-1             
+          -md:grid-cols-2 gap-3">\n'                                     
+      155 -    '                    <div>\n'                             
+      156 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-1">Autenticidad del     
+          -Material Exportado</label>\n'                                 
+      157 -    '                        <select                          
+          -[(ngModel)]="form.vms_authenticity_mode"                      
+          -(ngModelChange)="onVmsAuthenticityModeChange($event)"         
+          -name="vms_authenticity_mode"\n'                               
+      158 -    '                            class="' + INPUT_CLS +       
+          -'">\n'                                                        
+      159 -    '                            <option value="">Seleccione  
+          -opción...</option>\n'                                         
+      160 -    '                            <option *ngFor="let option   
+          -of vmsAuthenticityOptions" [ngValue]="option.value">\n'       
+      161 -    '                                {{ option.label }}\n'    
+      162 -    '                            </option>\n'                 
+      163 -    '                        </select>\n'                     
+      164 -    '                    </div>\n'                            
+      165 -    '                    <div                                 
+          -*ngIf="form.vms_authenticity_mode === \'otro\'">\n'           
+      166 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-1">Detalle de           
+          -Autenticidad *</label>\n'                                     
+      167 -    '                        <input                           
+          -[(ngModel)]="form.vms_authenticity_detail"                    
+          -(ngModelChange)="markDirty(\'vms_authenticity_detail\')"      
+          -name="vms_authenticity_detail"\n'                             
+      168 -    '                            type="text"                  
+          -placeholder="Detallar método alternativo"\n'                  
+      169 -    '                            class="' + INPUT_CLS +       
+          -'">\n'                                                        
+      170 -    '                    </div>\n'                            
+      171 -    '                </div>'                                  
+      172 -)                                                             
+      173 -                                                              
+      174 -new_integridad = (                                            
+      175 -    '                <div class="grid grid-cols-1             
+          -md:grid-cols-2 gap-4">\n'                                     
+      176 -    '                    <div>\n'                             
+      177 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-2">Algoritmos           
+          -SHA</label>\n'                                                
+      178 -    '                        <div class="flex flex-wrap       
+          -gap-3">\n'                                                    
+      179 -    '                            <label *ngFor="let algo of   
+          -hashAlgorithmOptions" class="inline-flex items-center gap-2   
+          -text-sm text-slate-700">\n'                                   
+      180 -    '                                <input type="checkbox"   
+          -[checked]="hasHashAlgorithm(algo.value)"                      
+          -(change)="toggleHashAlgorithm(algo.value)"\n'                 
+      181 -    '                                    class="rounded       
+          -border-slate-300 text-indigo-600 focus:ring-indigo-500">\n'   
+      182 -    '                                <span>{{ algo.label      
+          -}}</span>\n'                                                  
+      183 -    '                            </label>\n'                  
+      184 -    '                        </div>\n'                        
+      185 -    '                    </div>\n'                            
+      186 -    '                    <div class="space-y-3">\n'           
+      187 -    '                        <div>\n'                         
+      188 -    '                            <label class="block text-xs  
+          -font-bold text-slate-500 uppercase mb-1">Programa de          
+          -Hash</label>\n'                                               
+      189 -    '                            <input                       
+          -[(ngModel)]="form.hash_program"                               
+          -(ngModelChange)="markDirty(\'hash_program\')"                 
+          -name="hash_program" type="text"\n'                            
+      190 -    '                                                         
+          -placeholder="HashMyFiles"\n'                                  
+      191 -    '                                class="' + INPUT_CLS +   
+          -'">\n'                                                        
+      192 -    '                        </div>\n'                        
+      193 -    '                        <div>\n'                         
+      194 -    '                            <label class="block text-xs  
+          -font-bold text-slate-500 uppercase mb-1">Autenticidad del     
+          -Material Exportado</label>\n'                                 
+      195 -    '                            <select                      
+          -[(ngModel)]="form.vms_authenticity_mode"                      
+          -(ngModelChange)="onVmsAuthenticityModeChange($event)"         
+          -name="vms_authenticity_mode"\n'                               
+      196 -    '                                class="' + INPUT_CLS +   
+          -'">\n'                                                        
+      197 -    '                                <option                  
+          -value="">Seleccione opción...</option>\n'                     
+      198 -    '                                <option *ngFor="let      
+          -option of vmsAuthenticityOptions"                             
+          -[ngValue]="option.value">\n'                                  
+      199 -    '                                    {{ option.label      
+          -}}\n'                                                         
+      200 -    '                                </option>\n'             
+      201 -    '                            </select>\n'                 
+      202 -    '                        </div>\n'                        
+      203 -    '                    </div>\n'                            
+      204 -    '                </div>\n'                                
+      205 -    '                <div *ngIf="form.vms_authenticity_mode   
+          -=== \'otro\'">\n'                                             
+      206 -    '                    <label class="block text-xs          
+          -font-bold text-slate-500 uppercase mb-1">Detalle de           
+          -Autenticidad *</label>\n'                                     
+      207 -    '                    <input                               
+          -[(ngModel)]="form.vms_authenticity_detail"                    
+          -(ngModelChange)="markDirty(\'vms_authenticity_detail\')"      
+          -name="vms_authenticity_detail"\n'                             
+      208 -    '                        type="text"                      
+          -placeholder="Detallar método alternativo"\n'                  
+      209 -    '                        class="' + INPUT_CLS + '">\n'    
+      210 -    '                </div>'                                  
+      211 -)                                                             
+      212 -                                                              
+      213 -if old_integridad in content:                                 
+      214 -    content = content.replace(old_integridad, new_integridad) 
+      215 -    print("Cambio 2 OK: seccion integridad")                  
+      216 -else:                                                         
+      217 -    print("ERROR Cambio 2")                                   
+      218 -                                                              
+      219 -# =========================================================== 
+          -==================                                            
+      220 -# CAMBIO 3: Paso 3 - datos rapidos con cantidad_observada y   
+          -layout 3-col                                                  
+      221 -# =========================================================== 
+          -==================                                            
+      222 -old_datos_rapidos = (                                         
+      223 -    '                <div class="grid grid-cols-1             
+          -md:grid-cols-2 gap-3">\n'                                     
+      224 -    '                    <div>\n'                             
+      225 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-1">Sectores             
+          -analizados</label>\n'                                         
+      226 -    '                        <input                           
+          -[(ngModel)]="form.sectores_analizados"                        
+          -(ngModelChange)="markDirty(\'sectores_analizados\')"          
+          -name="sectores_analizados"\n'                                 
+      227 -    '                            type="text" placeholder="Ej: 
+          - Hall de arribos, cinta 3, plataforma norte"\n'               
+      228 -    '                            class="' + INPUT_CLS +       
+          -'">\n'                                                        
+      229 -    '                    </div>\n'                            
+      230 -    '                    <div>\n'                             
+      231 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-1">Franja horaria       
+          -analizada</label>\n'                                          
+      232 -    '                        <input                           
+          -[(ngModel)]="form.franja_horaria_analizada"                   
+          -(ngModelChange)="markDirty(\'franja_horaria_analizada\')"     
+          -name="franja_horaria_analizada"\n'                            
+      233 -    '                            type="text" placeholder="Ej: 
+          - 14:05 a 15:42"\n'                                            
+      234 -    '                            class="' + INPUT_CLS +       
+          -'">\n'                                                        
+      235 -    '                    </div>\n'                            
+      236 -    '                    <div>\n'                             
+      237 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-1">Tiempo total de      
+          -análisis</label>\n'                                           
+      238 -    '                        <input                           
+          -[(ngModel)]="form.tiempo_total_analisis"                      
+          -(ngModelChange)="markDirty(\'tiempo_total_analisis\')"        
+          -name="tiempo_total_analisis"\n'                               
+      239 -    '                            type="text" placeholder="Ej: 
+          - 1 hora 37 minutos"\n'                                        
+      240 -    '                            class="' + INPUT_CLS +       
+          -'">\n'                                                        
+      241 -    '                    </div>\n'                            
+      242 -    '                    <div>\n'                             
+      243 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-1">Síntesis para        
+          -conclusión</label>\n'                                         
+      244 -    '                        <input                           
+          -[(ngModel)]="form.sintesis_conclusion"                        
+          -(ngModelChange)="markDirty(\'sintesis_conclusion\')"          
+          -name="sintesis_conclusion"\n'                                 
+      245 -    '                            type="text" placeholder="Ej: 
+          - No se observa manipulación posterior del bulto"\n'           
+      246 -    '                            class="' + INPUT_CLS +       
+          -'">\n'                                                        
+      247 -    '                    </div>\n'                            
+      248 -    '                </div>'                                  
+      249 -)                                                             
+      250 -                                                              
+      251 -new_datos_rapidos = (                                         
+      252 -    '                <div class="grid grid-cols-1             
+          -md:grid-cols-3 gap-3">\n'                                     
+      253 -    '                    <div>\n'                             
+      254 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-1">Franja horaria       
+          -analizada</label>\n'                                          
+      255 -    '                        <input                           
+          -[(ngModel)]="form.franja_horaria_analizada"                   
+          -(ngModelChange)="markDirty(\'franja_horaria_analizada\')"     
+          -name="franja_horaria_analizada"\n'                            
+      256 -    '                            type="text" placeholder="Ej: 
+          - 14:05 a 15:42"\n'                                            
+      257 -    '                            class="' + INPUT_CLS +       
+          -'">\n'                                                        
+      258 -    '                    </div>\n'                            
+      259 -    '                    <div>\n'                             
+      260 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-1">Tiempo total de      
+          -análisis</label>\n'                                           
+      261 -    '                        <input                           
+          -[(ngModel)]="form.tiempo_total_analisis"                      
+          -(ngModelChange)="markDirty(\'tiempo_total_analisis\')"        
+          -name="tiempo_total_analisis"\n'                               
+      262 -    '                            type="text" placeholder="Ej: 
+          - 1 hora 37 minutos"\n'                                        
+      263 -    '                            class="' + INPUT_CLS +       
+          -'">\n'                                                        
+      264 -    '                    </div>\n'                            
+      265 -    '                    <div>\n'                             
+      266 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-1">Cantidad             
+          -observada</label>\n'                                          
+      267 -    '                        <input                           
+          -[(ngModel)]="form.cantidad_observada"                         
+          -(ngModelChange)="markDirty(\'cantidad_observada\')"           
+          -name="cantidad_observada"\n'                                  
+      268 -    '                            type="text" placeholder="Ej: 
+          - 2 personas / 1 bulto"\n'                                     
+      269 -    '                            class="' + INPUT_CLS +       
+          -'">\n'                                                        
+      270 -    '                    </div>\n'                            
+      271 -    '                    <div class="md:col-span-2">\n'       
+      272 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-1">Sectores             
+          -analizados</label>\n'                                         
+      273 -    '                        <input                           
+          -[(ngModel)]="form.sectores_analizados"                        
+          -(ngModelChange)="markDirty(\'sectores_analizados\')"          
+          -name="sectores_analizados"\n'                                 
+      274 -    '                            type="text" placeholder="Ej: 
+          - Hall de arribos, cinta 3, plataforma norte"\n'               
+      275 -    '                            class="' + INPUT_CLS +       
+          -'">\n'                                                        
+      276 -    '                    </div>\n'                            
+      277 -    '                    <div>\n'                             
+      278 -    '                        <label class="block text-xs      
+          -font-bold text-slate-500 uppercase mb-1">Síntesis para        
+          -conclusión</label>\n'                                         
+      279 -    '                        <input                           
+          -[(ngModel)]="form.sintesis_conclusion"                        
+          -(ngModelChange)="markDirty(\'sintesis_conclusion\')"          
+          -name="sintesis_conclusion"\n'                                 
+      280 -    '                            type="text" placeholder="Ej: 
+          - No se observa manipulación posterior del bulto"\n'           
+      281 -    '                            class="' + INPUT_CLS +       
+          -'">\n'                                                        
+      282 -    '                    </div>\n'                            
+      283 -    '                </div>'                                  
+      284 -)                                                             
+      285 -                                                              
+      286 -if old_datos_rapidos in content:                              
+      287 -    content = content.replace(old_datos_rapidos,              
+          -new_datos_rapidos)                                            
+      288 -    print("Cambio 3 OK: datos rapidos Paso 3")                
+      289 -else:                                                         
+      290 -    print("ERROR Cambio 3")                                   
+      291 -                                                              
+      292 -open(path, 'w', encoding='utf-8').write(content)              
+      293 -print("Archivo guardado.")                                    
+        1 +path = 'C:/Repositorio/gestorcoc/frontend/src/app/pages/inform
+          +es/informes.html'                                             
+        2 +content = open(path, encoding='utf-8').read()                 
+        3 +                                                              
+        4 +# =========================================================== 
+          +==================                                            
+        5 +# CAMBIO 4: Paso 4 - Revision final con secciones agrupadas   
+        6 +# ============================================================
+          +=================                                             
+        7 +old_revision = (                                              
+        8 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Numero de Informe:</strong> {{        
+          +form.numero_informe }}</p>\n'                                 
+        9 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Fecha:</strong> {{ form.report_date   
+          +}}</p>\n'                                                     
+       10 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Destinatarios:</strong> {{            
+          +form.destinatarios }}</p>\n'                                  
+       11 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Operador:</strong> {{ form.grado }}   
+          +{{ form.operador }}, LUP: {{ form.lup }}</p>\n'               
+       12 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Aeropuerto:</strong> {{               
+          +form.aeropuerto || \'No consignado\' }}</p>\n'                
+       13 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Datos de vuelo/equipaje:</strong> {{  
+          +incluirDatosVuelo ? \'Si\' : \'No\' }}</p>\n'                 
+       14 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Sistema:</strong> {{ form.sistema     
+          +}}</p>\n'                                                     
+       15 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Cantidad observada:</strong> {{       
+          +form.cantidad_observada || \'No consignada\' }}</p>\n'        
+       16 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Sectores analizados:</strong> {{      
+          +form.sectores_analizados || \'No consignados\' }}</p>\n'      
+       17 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Franja horaria analizada:</strong> {{ 
+          + form.franja_horaria_analizada || \'No consignada\' }}</p>\n' 
+       18 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Tiempo total de análisis:</strong> {{ 
+          + form.tiempo_total_analisis || \'No consignado\' }}</p>\n'    
+       19 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Síntesis para conclusión:</strong> {{ 
+          + form.sintesis_conclusion || \'No consignada\' }}</p>\n'      
+       20 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Algoritmos SHA:</strong> {{           
+          +form.hash_algorithms.length > 0 ?                             
+          +(form.hash_algorithms.join(\', \') | uppercase) : \'No        
+          +consignado\' }}</p>\n'                                        
+       21 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Programa de hash:</strong> {{         
+          +form.hash_program || \'No consignado\' }}</p>\n'              
+       22 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Autenticidad de exportación:</strong> 
+          + {{ form.vms_authenticity_mode || \'No consignada\' }}{{      
+          +form.vms_authenticity_mode === \'otro\' &&                    
+          +form.vms_authenticity_detail ? \' - \' +                      
+          +form.vms_authenticity_detail : \'\' }}</p>\n'                 
+       23 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Prevencion sumaria:</strong> {{       
+          +form.prevencion_sumaria }}</p>\n'                             
+       24 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Caratula:</strong> {{ form.caratula   
+          +}}</p>\n'                                                     
+       25 +    '                <p *ngIf="form.fiscalia" class="text-sm  
+          +text-slate-700"><strong>Fiscalia / Juzgado:</strong> {{       
+          +form.fiscalia }}</p>\n'                                       
+       26 +    '                <p *ngIf="form.fiscal" class="text-sm    
+          +text-slate-700"><strong>Fiscal / Juez / Secretario:</strong>  
+          +{{ form.fiscal }}</p>\n'                                      
+       27 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Denunciante:</strong> {{              
+          +form.denunciante }}</p>\n'                                    
+       28 +    '                <div class="bg-amber-50 rounded-xl p-3   
+          +border border-amber-100 my-2"\n'                              
+       29 +    '                    *ngIf="incluirDatosVuelo &&          
+          +(form.vuelo || form.empresa_aerea || form.destino ||          
+          +form.fecha_hecho)">\n'                                        
+       30 +    '                    <h5 class="font-bold text-amber-900  
+          +text-xs mb-1 uppercase">Lugar y Vuelo</h5>\n'                 
+       31 +    '                    <p *ngIf="form.fecha_hecho"          
+          +class="text-sm text-slate-700"><strong>Fecha del              
+          +hecho:</strong> {{\n'                                         
+       32 +    '                        form.fecha_hecho }}</p>\n'       
+       33 +    '                    <p *ngIf="form.vuelo" class="text-sm 
+          + text-slate-700"><strong>Vuelo:</strong> {{ form.vuelo        
+          +}}</p>\n'                                                     
+       34 +    '                    <p *ngIf="form.empresa_aerea"        
+          +class="text-sm text-slate-700"><strong>Empresa                
+          +Aérea:</strong> {{\n'                                         
+       35 +    '                        form.empresa_aerea }}</p>\n'     
+       36 +    '                    <p *ngIf="form.destino"              
+          +class="text-sm text-slate-700"><strong>Destino:</strong> {{   
+          +form.destino }}\n'                                            
+       37 +    '                    </p>\n'                              
+       38 +    '                </div>\n'                                
+       39 +    '                <p class="text-sm                        
+          +text-slate-700"><strong>Objeto denunciado:</strong> {{        
+          +form.objeto_denunciado }}</p>'                                
+       40 +)                                                             
+       41 +                                                              
+       42 +new_revision = (                                              
+       43 +    '                <!-- Seccion: Datos generales -->\n'     
+       44 +    '                <div class="grid grid-cols-1             
+          +md:grid-cols-2 gap-x-6 gap-y-1 bg-white rounded-xl p-3 border 
+          + border-slate-100">\n'                                        
+       45 +    '                    <p class="text-sm                    
+          +text-slate-700"><strong>Numero de Informe:</strong> {{        
+          +form.numero_informe }}</p>\n'                                 
+       46 +    '                    <p class="text-sm                    
+          +text-slate-700"><strong>Fecha:</strong> {{ form.report_date   
+          +}}</p>\n'                                                     
+       47 +    '                    <p class="text-sm                    
+          +text-slate-700"><strong>Destinatarios:</strong> {{            
+          +form.destinatarios }}</p>\n'                                  
+       48 +    '                    <p class="text-sm                    
+          +text-slate-700"><strong>Operador:</strong> {{ form.grado }}   
+          +{{ form.operador }}, LUP: {{ form.lup }}</p>\n'               
+       49 +    '                    <p class="text-sm                    
+          +text-slate-700"><strong>Aeropuerto/Lugar:</strong> {{         
+          +form.aeropuerto || \'No consignado\' }}</p>\n'                
+       50 +    '                    <p class="text-sm                    
+          +text-slate-700"><strong>Sistema CCTV:</strong> {{             
+          +form.sistema }}</p>\n'                                        
+       51 +    '                </div>\n'                                
+       52 +    '\n'                                                      
+       53 +    '                <!-- Seccion: Causa -->\n'               
+       54 +    '                <div class="bg-indigo-50/50 rounded-xl   
+          +p-3 border border-indigo-100 space-y-1">\n'                   
+       55 +    '                    <h5 class="text-xs font-bold         
+          +text-indigo-800 uppercase mb-2">Causa</h5>\n'                 
+       56 +    '                    <div class="grid grid-cols-1         
+          +md:grid-cols-2 gap-x-6 gap-y-1">\n'                           
+       57 +    '                        <p class="text-sm                
+          +text-slate-700"><strong>Prevencion sumaria:</strong> {{       
+          +form.prevencion_sumaria }}</p>\n'                             
+       58 +    '                        <p class="text-sm                
+          +text-slate-700"><strong>Denunciante:</strong> {{              
+          +form.denunciante }}</p>\n'                                    
+       59 +    '                        <p class="text-sm text-slate-700 
+          + md:col-span-2"><strong>Caratula:</strong> {{ form.caratula   
+          +}}</p>\n'                                                     
+       60 +    '                        <p class="text-sm                
+          +text-slate-700"><strong>Objeto denunciado:</strong> {{        
+          +form.objeto_denunciado }}</p>\n'                              
+       61 +    '                        <p *ngIf="form.fiscalia"         
+          +class="text-sm text-slate-700"><strong>Fiscalia /             
+          +Juzgado:</strong> {{ form.fiscalia }}</p>\n'                  
+       62 +    '                        <p *ngIf="form.fiscal"           
+          +class="text-sm text-slate-700"><strong>Fiscal / Juez /        
+          +Secretario:</strong> {{ form.fiscal }}</p>\n'                 
+       63 +    '                    </div>\n'                            
+       64 +    '                    <div *ngIf="incluirDatosVuelo &&     
+          +(form.vuelo || form.empresa_aerea || form.destino ||          
+          +form.fecha_hecho)"\n'                                         
+       65 +    '                        class="bg-amber-50 rounded-lg    
+          +p-2 border border-amber-100 mt-2">\n'                         
+       66 +    '                        <h5 class="font-bold             
+          +text-amber-900 text-xs mb-1 uppercase">Vuelo /                
+          +Equipaje</h5>\n'                                              
+       67 +    '                        <div class="grid grid-cols-2     
+          +md:grid-cols-4 gap-x-4 gap-y-1">\n'                           
+       68 +    '                            <p *ngIf="form.fecha_hecho"  
+          +class="text-sm text-slate-700"><strong>Fecha hecho:</strong>  
+          +{{ form.fecha_hecho }}</p>\n'                                 
+       69 +    '                            <p *ngIf="form.vuelo"        
+          +class="text-sm text-slate-700"><strong>Vuelo:</strong> {{     
+          +form.vuelo }}</p>\n'                                          
+       70 +    '                            <p                           
+          +*ngIf="form.empresa_aerea" class="text-sm                     
+          +text-slate-700"><strong>Empresa:</strong> {{                  
+          +form.empresa_aerea }}</p>\n'                                  
+       71 +    '                            <p *ngIf="form.destino"      
+          +class="text-sm text-slate-700"><strong>Destino:</strong> {{   
+          +form.destino }}</p>\n'                                        
+       72 +    '                        </div>\n'                        
+       73 +    '                    </div>\n'                            
+       74 +    '                </div>\n'                                
+       75 +    '\n'                                                      
+       76 +    '                <!-- Seccion: Analisis -->\n'            
+       77 +    '                <div class="bg-sky-50/50 rounded-xl p-3  
+          +border border-sky-100 space-y-1">\n'                          
+       78 +    '                    <h5 class="text-xs font-bold         
+          +text-sky-800 uppercase mb-2">Datos del Análisis</h5>\n'       
+       79 +    '                    <div class="grid grid-cols-1         
+          +md:grid-cols-3 gap-x-6 gap-y-1">\n'                           
+       80 +    '                        <p class="text-sm                
+          +text-slate-700"><strong>Franja horaria:</strong> {{           
+          +form.franja_horaria_analizada || \'No consignada\' }}</p>\n'  
+       81 +    '                        <p class="text-sm                
+          +text-slate-700"><strong>Tiempo total:</strong> {{             
+          +form.tiempo_total_analisis || \'No consignado\' }}</p>\n'     
+       82 +    '                        <p class="text-sm                
+          +text-slate-700"><strong>Cantidad observada:</strong> {{       
+          +form.cantidad_observada || \'No consignada\' }}</p>\n'        
+       83 +    '                        <p class="text-sm text-slate-700 
+          + md:col-span-2"><strong>Sectores:</strong> {{                 
+          +form.sectores_analizados || \'No consignados\' }}</p>\n'      
+       84 +    '                        <p class="text-sm                
+          +text-slate-700"><strong>Síntesis:</strong> {{                 
+          +form.sintesis_conclusion || \'No consignada\' }}</p>\n'       
+       85 +    '                    </div>\n'                            
+       86 +    '                </div>\n'                                
+       87 +    '\n'                                                      
+       88 +    '                <!-- Seccion: Integridad -->\n'          
+       89 +    '                <div class="bg-emerald-50/50 rounded-xl  
+          +p-3 border border-emerald-100">\n'                            
+       90 +    '                    <h5 class="text-xs font-bold         
+          +text-emerald-800 uppercase mb-2">Integridad y                 
+          +Autenticidad</h5>\n'                                          
+       91 +    '                    <div class="grid grid-cols-1         
+          +md:grid-cols-3 gap-x-6 gap-y-1">\n'                           
+       92 +    '                        <p class="text-sm                
+          +text-slate-700"><strong>Algoritmos SHA:</strong> {{           
+          +form.hash_algorithms.length > 0 ?                             
+          +(form.hash_algorithms.join(\', \') | uppercase) : \'No        
+          +consignado\' }}</p>\n'                                        
+       93 +    '                        <p class="text-sm                
+          +text-slate-700"><strong>Programa de hash:</strong> {{         
+          +form.hash_program || \'No consignado\' }}</p>\n'              
+       94 +    '                        <p class="text-sm                
+          +text-slate-700"><strong>Autenticidad:</strong> {{             
+          +form.vms_authenticity_mode || \'No consignada\' }}{{          
+          +form.vms_authenticity_mode === \'otro\' &&                    
+          +form.vms_authenticity_detail ? \' - \' +                      
+          +form.vms_authenticity_detail : \'\' }}</p>\n'                 
+       95 +    '                    </div>\n'                            
+       96 +    '                </div>'                                  
+       97 +)                                                             
+       98 +                                                              
+       99 +if old_revision in content:                                   
+      100 +    content = content.replace(old_revision, new_revision)     
+      101 +    print("Cambio 4 OK: revision final agrupada")             
+      102 +else:                                                         
+      103 +    print("ERROR Cambio 4 - buscando fragmento...")           
+      104 +    # debug: find partial match                               
+      105 +    check = '                <p class="text-sm                
+          +text-slate-700"><strong>Numero de Informe:</strong>'          
+      106 +    if check in content:                                      
+      107 +        print("  fragmento inicial encontrado")               
+      108 +    check2 = '                <p class="text-sm               
+          +text-slate-700"><strong>Objeto denunciado:</strong>'          
+      109 +    if check2 in content:                                     
+      110 +        print("  fragmento final encontrado")                 
+      111 +                                                              
+      112 +open(path, 'w', encoding='utf-8').write(content)              
+      113 +print("Archivo guardado.")                                    
+
+● Bash(cd /c/Repositorio && python3 fix_html.py)
+  ⎿  Cambio 4 OK: revision final agrupada
+     Archivo guardado.
+
+● Ahora verifico que todo compile:
+
+● Bash(cd /c/Repositorio/gestorcoc/frontend && npx ng build --configuration
+      development 2>&1 | tail -12)
+  ⎿  ❯ Building...
+     ✔ Building...
+     Initial chunk files | Names         | Raw size
+     … +9 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+
+● Bash(cd /c/Repositorio/gestorcoc/backend/src && ../.venv/Scripts/python.exe
+      manage.py test records 2>&1 | tail -6)
+  ⎿  ----------------------------------------------------------------------
+     Ran 31 tests in 0.578s
+     … +3 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)
+
+● 31/31 tests + build OK. Limpio el script temporal:
+
+● Bash(rm /c/Repositorio/fix_html.py)
+  ⎿  Done
+
+● Todo funcionando. Resumen de los cambios de layout:
+
+  ---
+  Reorganización del formulario
+
+  Paso 2 - Datos de causa
+
+  ┌─────────────────────────────────┬───────────────────────────────────────┐
+  │              Antes              │                Después                │
+  ├─────────────────────────────────┼───────────────────────────────────────┤
+  │ Sistema (4) | Cantidad (4) |    │ Sistema (4) | Prevención (4) |        │
+  │ Prevención (4)                  │ Denunciante (4)                       │
+  ├─────────────────────────────────┼───────────────────────────────────────┤
+  │ Denunciante (4) separado        │ Caratula full width                   │
+  ├─────────────────────────────────┼───────────────────────────────────────┤
+  │ SHA (full) → hash_program       │ SHA checkboxes (izq) | hash_program + │
+  │ (full) → VMS grid               │  VMS (der) en grid 2-col              │
+  ├─────────────────────────────────┼───────────────────────────────────────┤
+  │ cantidad_observada acá          │ Movido al Paso 3                      │
+  └─────────────────────────────────┴───────────────────────────────────────┘
+
+  Paso 3 - Desarrollo y fotogramas
+
+  ┌───────────────────┬──────────────────────────────┐
+  │   Antes (2-col)   │       Después (3-col)        │
+  ├───────────────────┼──────────────────────────────┤
+  │ Sectores | Franja │ Franja | Tiempo | Cantidad   │
+  ├───────────────────┼──────────────────────────────┤
+  │ Tiempo | Síntesis │ Sectores (span 2) | Síntesis │
+  ├───────────────────┼──────────────────────────────┤
+  │ Sin cantidad      │ Cantidad observada agregada  │
+  └───────────────────┴──────────────────────────────┘
+
+  Paso 4 - Revisión final
+
+  Antes: lista plana de ~20 <p> sin estructura.
+
+  Después: 4 secciones agrupadas con fondo de color:
+  - Datos generales (grid 2-col): número, fecha, destinatarios, operador,
+  aeropuerto, sistema
+  - Causa (fondo indigo): prevención, denunciante, carátula, objeto, fiscalía,
+  vuelo/equipaje colapsado
+  - Datos del análisis (fondo sky): franja, tiempo, cantidad, sectores, síntesis
+  - Integridad (fondo emerald): SHA, programa, autenticidad
+
+  Límites de frames (ya coincidían)
+
+  - Frontend: 30 frames, 8 MB/imagen, 80 MB total
+  - Backend: idem ✅
+
+✻ Cooked for 5m 23s
+
+❯ lo cambiaste lo vas a cambiar  
+
+● Read 1 file (ctrl+o to expand)
+
+● No toqué ni voy a tocar ese archivo. Son los permisos de herramientas que vos
+  configuraste para esta sesión — no tiene relación con el trabajo que estamos
+  haciendo.
+
+❯ ademas verifica por que si esta poniendo el sistema  hash myfiles tiene   
+  que ser lo bastante intelignete para no preguuntar otras cosas adxemas    
+  eso , verificar en los datos isi   Después: 4 secciones agrupadas con     
+  fondo de color:                                                           
+    - Datos generales (grid 2-col): número, fecha, destinatarios, operador, 
+   aeropuerto, sistema                                                      
+    - Causa (fondo indigo): prevención, denunciante, carátula, objeto,      
+  fiscalía, vuelo/equipaje colapsado                                        
+    - Datos del análisis (fondo sky): franja, tiempo, cantidad, sectores,   
+  síntesis                                                                  
+    - Integridad (fondo emerald): SHA, programa, autenticidad               
+   ENTIENDO YA HICISTE LOS PASOS ESO O LO VAS HACER , VAMOS A VERIFICAR DE  
+  VUELTA EL TEMA DE INFORME PARA QUE NO PIDA DATOS REDUNDANTES              
+
+● Explore(Explorar flujo de datos form→DOCX→IA)
+  ⎿  Done (29 tool uses · 98.7k tokens · 1m 34s)
+  (ctrl+o to expand)
+
+● Tengo el análisis completo. Voy a leer los puntos específicos que necesito
+  verificar:
+
+● Explore(Verificar validaciones y seed builders del form)
+  ⎿  Done (0 tool uses · 0 tokens · 1s)
+  (ctrl+o to expand)
+
+❯ /export 
+  ⎿  You've hit your limit · resets 1am (America/Buenos_Aires)
+     /upgrade or /extra-usage to finish what you’re working on.
+
+✻ Cogitated for 2m 48s
+
+❯ /rate-limit-options 
+  ⎿  Login interrupted

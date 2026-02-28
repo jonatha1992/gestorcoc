@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(tail:*)",
+      "Bash(/c/Users/jonat/AppData/Local/Programs/Python/Python311/python.exe:*)",
+      "Bash(python3:*)"
+    ]
+  }
+}

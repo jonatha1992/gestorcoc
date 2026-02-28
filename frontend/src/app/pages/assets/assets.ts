@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AssetService } from '../../services/asset.service';
 import { ApiService } from '../../services/api.service';
@@ -20,7 +20,6 @@ export class AssetsComponent implements OnInit {
   private apiService = inject(ApiService);
   loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
-  private cdr = inject(ChangeDetectorRef);
   systems: any[] = [];
   units: any[] = [];
   groupedSystems: { unitId: number, unitName: string, unitCode: string, systems: any[] }[] = [];
@@ -74,7 +73,6 @@ export class AssetsComponent implements OnInit {
         this.isLoadingCctv = false;
         this.isLoadingGear = false;
         this.loadingService.hide();
-        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading assets:', err);
@@ -83,7 +81,6 @@ export class AssetsComponent implements OnInit {
         this.isLoadingCctv = false;
         this.isLoadingGear = false;
         this.loadingService.hide();
-        this.cdr.detectChanges();
       }
     });
   }

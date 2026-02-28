@@ -4,6 +4,7 @@ import base64
 import binascii
 import json
 import re
+from threading import Lock
 from io import BytesIO
 from datetime import datetime
 from reportlab.lib.pagesizes import A4, landscape
@@ -14,11 +15,164 @@ from django.conf import settings
 import requests
 
 class IntegrityService:
+    _provider_rotation_lock = Lock()
+    _provider_rotation_index = 0
+
     @staticmethod
     def _as_text(value, default=''):
         if value is None:
             return default
         return str(value)
+
+    @staticmethod
+    def _as_list(value):
+        if isinstance(value, list):
+            return value
+        return []
+
+    @staticmethod
+    def _normalize_hash_algorithms(value):
+        allowed = {'sha1', 'sha3', 'sha256', 'sha512'}
+        output = []
+        for item in IntegrityService._as_list(value):
+            normalized = str(item or '').strip().lower()
+            if normalized in allowed and normalized not in output:
+                output.append(normalized)
+        return output
+
+    @staticmethod
+    def _hash_algorithm_label(code):
+        labels = {
+            'sha1': 'SHA-1',
+            'sha3': 'SHA-3',
+            'sha256': 'SHA-256',
+            'sha512': 'SHA-512',
+        }
+        return labels.get(str(code or '').lower(), str(code or '').upper())
+
+    @staticmethod
+    def _vms_authenticity_label(mode):
+        labels = {
+            'vms_propio': 'autenticación provista por el propio sistema VMS',
+            'hash_preventivo': 'autenticación basada en hash preventivo externo',
+            'sin_autenticacion': 'sin autenticación técnica declarada',
+            'otro': 'autenticación declarada por método alternativo',
+        }
+        return labels.get(str(mode or '').strip().lower(), 'autenticación no consignada')
+
+    @staticmethod
+    def _build_material_filmico_fallback(context):
+        ctx = context or {}
+        sistema = IntegrityService._as_text(ctx.get('sistema'), 'sistema no consignado').strip() or 'sistema no consignado'
+        lugar = IntegrityService._as_text(ctx.get('aeropuerto'), 'lugar de origen no consignado').strip() or 'lugar de origen no consignado'
+        cantidad_observada = IntegrityService._as_text(ctx.get('cantidad_observada'), '').strip()
+        sectores_analizados = IntegrityService._as_text(ctx.get('sectores_analizados'), '').strip()
+        franja_horaria_analizada = IntegrityService._as_text(ctx.get('franja_horaria_analizada'), '').strip()
+        tiempo_total_analisis = IntegrityService._as_text(ctx.get('tiempo_total_analisis'), '').strip()
+        medida = IntegrityService._as_text(ctx.get('medida_seguridad_interna'), '').strip()
+        hash_program = IntegrityService._as_text(ctx.get('hash_program'), '').strip()
+        hash_algorithms = IntegrityService._normalize_hash_algorithms(ctx.get('hash_algorithms'))
+        hash_labels = [IntegrityService._hash_algorithm_label(item) for item in hash_algorithms]
+        motivo_sin_hash = IntegrityService._as_text(ctx.get('motivo_sin_hash'), '').strip()
+        vms_mode = IntegrityService._as_text(ctx.get('vms_authenticity_mode'), '').strip()
+        vms_detail = IntegrityService._as_text(ctx.get('vms_authenticity_detail'), '').strip()
+
+        measure_clause = (
+            f"posee como medida de seguridad interna {medida}"
+            if medida else
+            "posee medidas de seguridad interna no consignadas"
+        )
+        if hash_labels:
+            hash_algorithms_text = ' y '.join(hash_labels) if len(hash_labels) <= 2 else ', '.join(hash_labels[:-1]) + f" y {hash_labels[-1]}"
+            hash_program_text = hash_program or 'herramienta de hash no consignada'
+            hash_clause = (
+                "asimismo, previamente a su examen, esta instancia procedió a efectuar sobre el material digital ut supra descripto "
+                f"un hash de seguridad mediante {hash_program_text}, bajo los algoritmos {hash_algorithms_text}, "
+                "con la finalidad de preservar su integridad."
+            )
+        elif motivo_sin_hash:
+            hash_clause = (
+                f"asimismo, se deja constancia que no se efectuó hash sobre el material ({motivo_sin_hash})."
+            )
+        else:
+            hash_clause = (
+                "asimismo, se deja constancia que no se efectuó hash sobre el material."
+            )
+
+        authenticity_clause = IntegrityService._vms_authenticity_label(vms_mode)
+        if vms_mode == 'otro' and vms_detail:
+            authenticity_clause = f"{authenticity_clause}: {vms_detail}"
+
+        quantity_clause = (
+            f"En cuanto a la cantidad observada, se consignó {cantidad_observada}."
+            if cantidad_observada else
+            "En cuanto a la cantidad observada, no fue consignada."
+        )
+        sectors_clause = (
+            f"Los sectores analizados fueron: {sectores_analizados}."
+            if sectores_analizados else
+            "No se consignaron sectores analizados."
+        )
+        timing_parts = []
+        if franja_horaria_analizada:
+            timing_parts.append(f"franja horaria analizada: {franja_horaria_analizada}")
+        if tiempo_total_analisis:
+            timing_parts.append(f"tiempo total de análisis: {tiempo_total_analisis}")
+        timing_clause = (
+            f"En cuanto al período de revisión, se consignó {'; '.join(timing_parts)}."
+            if timing_parts else
+            "En cuanto al período de revisión, no fue consignado."
+        )
+
+        return (
+            f"Es oportuno mencionar que el sistema de video vigilancia denominado \"{sistema}\", "
+            f"desde donde se obtuvo la información en \"{lugar}\", {measure_clause}; {hash_clause} "
+            f"{quantity_clause} {sectors_clause} {timing_clause} En cuanto a la autenticidad del material exportado, "
+            f"se deja constancia de {authenticity_clause}."
+        )
+
+    @staticmethod
+    def _build_desarrollo_fallback(context):
+        ctx = context or {}
+        sectores_analizados = IntegrityService._as_text(ctx.get('sectores_analizados'), '').strip()
+        franja_horaria_analizada = IntegrityService._as_text(ctx.get('franja_horaria_analizada'), '').strip()
+        tiempo_total_analisis = IntegrityService._as_text(ctx.get('tiempo_total_analisis'), '').strip()
+        cantidad_observada = IntegrityService._as_text(ctx.get('cantidad_observada'), '').strip()
+
+        sectores_text = sectores_analizados or 'sectores no consignados'
+        franja_text = franja_horaria_analizada or 'franja horaria no consignada'
+        tiempo_text = tiempo_total_analisis or 'tiempo total no consignado'
+        cantidad_text = cantidad_observada or 'cantidad observada no consignada'
+
+        return (
+            "Del análisis visual practicado sobre los registros fílmicos, se deja constancia de que la revisión "
+            f"se centró en {sectores_text}, abarcando la {franja_text}, con un {tiempo_text}. "
+            f"Como dato cuantitativo relevante se consignó: {cantidad_text}. "
+            "La presente descripción se limita al contenido visual observado, sin interpretación pericial."
+        )
+
+    @staticmethod
+    def _build_conclusion_fallback(context):
+        ctx = context or {}
+        sintesis_conclusion = IntegrityService._as_text(ctx.get('sintesis_conclusion'), '').strip()
+        cantidad_observada = IntegrityService._as_text(ctx.get('cantidad_observada'), '').strip()
+
+        if sintesis_conclusion:
+            return (
+                "En virtud del análisis efectuado, y sin apartarse de los extremos objetivamente observables, "
+                f"se concluye preliminarmente: {sintesis_conclusion}."
+            )
+
+        cantidad_clause = (
+            f"con una cantidad observada declarada de {cantidad_observada}, "
+            if cantidad_observada else
+            ""
+        )
+        return (
+            "En virtud del análisis efectuado, y dentro de los límites propios de la revisión visual, "
+            f"se concluye que {cantidad_clause}no se advierten elementos adicionales a los ya consignados "
+            "en el desarrollo, quedando la valoración jurídica sujeta a la autoridad competente."
+        )
 
     @staticmethod
     def _add_heading_safe(document, text, level=1):
@@ -107,12 +261,27 @@ class IntegrityService:
     @staticmethod
     def _replace_text_in_docx(document, replacements):
         def replace_in_paragraph(paragraph):
-            original = paragraph.text
-            updated = original
+            # First pass: replace within individual runs (preserves per-run formatting).
+            for run in paragraph.runs:
+                for src, dst in replacements:
+                    if src in run.text:
+                        run.text = run.text.replace(src, dst)
+
+            # Second pass: handle placeholders split across multiple runs.
+            # Re-read the full paragraph text after the first pass.
+            full_text = paragraph.text
+            if not any(src in full_text for src, _ in replacements):
+                return
+            updated = full_text
             for src, dst in replacements:
                 updated = updated.replace(src, dst)
-            if updated != original:
-                paragraph.text = updated
+            if updated == full_text:
+                return
+            # Merge all run texts into the first run; clear the rest.
+            if paragraph.runs:
+                paragraph.runs[0].text = updated
+                for run in paragraph.runs[1:]:
+                    run.text = ''
 
         for paragraph in document.paragraphs:
             replace_in_paragraph(paragraph)
@@ -153,37 +322,140 @@ class IntegrityService:
             raise RuntimeError("No se pudo interpretar la respuesta JSON de la API de IA.") from exc
 
     @staticmethod
-    def improve_report_text_with_ai(desarrollo, conclusion, custom_api_key=""):
-        api_key_from_settings = str(getattr(settings, 'AI_TEXT_API_KEY', '') or '').strip()
-        api_key = custom_api_key.strip() or api_key_from_settings
-        api_url = str(getattr(settings, 'AI_TEXT_API_URL', '') or '').strip()
-        model = str(getattr(settings, 'AI_TEXT_MODEL', '') or '').strip()
-        timeout_seconds = int(getattr(settings, 'AI_TEXT_TIMEOUT_SECONDS', 45))
+    def _vms_mode_to_text(vms_mode, vms_detail=''):
+        mapping = {
+            'vms_propio': 'VMS propio del sistema de grabacion',
+            'hash_preventivo': 'hash preventivo aplicado al material filmico',
+            'sin_autenticacion': 'sin medida de autenticacion adicional',
+            'otro': vms_detail.strip() if (vms_detail or '').strip() else 'metodo de autenticidad no consignado',
+        }
+        return mapping.get(str(vms_mode or '').strip(), 'metodo de autenticidad no consignado')
 
-        if not api_key:
-            raise RuntimeError("No se configuro AI_TEXT_API_KEY y no se ingreso ninguna manualmente.")
-        if not api_url:
-            raise RuntimeError("No se configuro AI_TEXT_API_URL.")
-        if not model:
-            raise RuntimeError("No se configuro AI_TEXT_MODEL.")
+    @staticmethod
+    def _build_ai_request_payload(material_filmico, desarrollo, conclusion, model, material_context=None, mode='full'):
+        ctx = material_context if isinstance(material_context, dict) else {}
 
-        system_prompt = (
-            "Eres un redactor profesional de informes formales en espanol. "
-            "Mejora redaccion, coherencia, ortografia y puntuacion, sin inventar hechos nuevos. "
-            "Mantener un tono tecnico y objetivo."
+        STYLE_NOTE = (
+            "Usa estilo de acta policial argentina: oraciones completas, voz pasiva institucional, "
+            "sin abreviaturas, sin inventar hechos. Cuando falte un dato usa 'no consignado'."
         )
 
-        payload_prompt = {
-            "instrucciones": "Mejora el texto y devuelve SOLO JSON valido.",
-            "formato_estricto": {
-                "desarrollo": "texto mejorado",
-                "conclusion": "texto mejorado",
-            },
-            "desarrollo_original": str(desarrollo or ''),
-            "conclusion_original": str(conclusion or ''),
-        }
+        if mode == 'material_filmico':
+            sistema = (ctx.get('sistema') or 'sistema no consignado').strip()
+            aeropuerto = (ctx.get('aeropuerto') or 'lugar no consignado').strip()
+            hash_algorithms = ctx.get('hash_algorithms') or []
+            hash_program = (ctx.get('hash_program') or 'programa no consignado').strip()
+            vms_mode = ctx.get('vms_authenticity_mode') or ''
+            vms_detail = ctx.get('vms_authenticity_detail') or ''
+            medida = IntegrityService._vms_mode_to_text(vms_mode, vms_detail)
+            hash_text = ', '.join(h.upper() for h in hash_algorithms) if hash_algorithms else 'algoritmo no consignado'
 
-        request_payload = {
+            system_prompt = (
+                "Eres redactor de informes policiales argentinos. "
+                "Tu tarea es redactar el apartado 'MATERIAL FILMICO ANALIZADO' de un informe de analisis de video. "
+                "El apartado debe describir: el sistema de CCTV utilizado, el material filmico observado, "
+                "y las medidas de integridad y autenticidad aplicadas (hash y/o VMS). " + STYLE_NOTE
+            )
+            payload_prompt = {
+                "instrucciones": (
+                    "Redacta o mejora el texto del apartado de material filmico analizado. "
+                    "Incorpora los datos del sistema de manera natural en la redaccion. "
+                    "Devuelve SOLO JSON valido con la clave 'material_filmico'."
+                ),
+                "formato_estricto": {"material_filmico": "texto redactado"},
+                "texto_original": str(material_filmico or ''),
+                "datos_del_sistema": {
+                    "sistema_cctv": sistema,
+                    "lugar_o_aeropuerto": aeropuerto,
+                    "algoritmos_hash": hash_text,
+                    "programa_hash": hash_program,
+                    "medida_autenticidad": medida,
+                },
+            }
+
+        elif mode == 'desarrollo':
+            sectores = (ctx.get('sectores_analizados') or 'sectores no consignados').strip()
+            franja = (ctx.get('franja_horaria_analizada') or 'franja horaria no consignada').strip()
+            tiempo = (ctx.get('tiempo_total_analisis') or 'tiempo total no consignado').strip()
+            cantidad = (ctx.get('cantidad_observada') or 'cantidad no consignada').strip()
+            caratula = (ctx.get('caratula') or '').strip()
+            sistema = (ctx.get('sistema') or 'sistema no consignado').strip()
+
+            system_prompt = (
+                "Eres redactor de informes policiales argentinos. "
+                "Tu tarea es redactar el apartado 'DESARROLLO' de un informe de analisis de video de CCTV. "
+                "El apartado debe narrar de forma objetiva el analisis visual practicado: "
+                "sectores revisados, franja horaria abarcada, tiempo invertido y observaciones cuantitativas. "
+                "No debe incluir interpretaciones juridicas ni conclusiones. " + STYLE_NOTE
+            )
+            payload_prompt = {
+                "instrucciones": (
+                    "Redacta o mejora el texto del apartado de desarrollo del analisis. "
+                    "Describe el proceso de revision del material filmico con los datos provistos. "
+                    "Devuelve SOLO JSON valido con la clave 'desarrollo'."
+                ),
+                "formato_estricto": {"desarrollo": "texto redactado"},
+                "texto_original": str(desarrollo or ''),
+                "datos_del_analisis": {
+                    "sistema_cctv": sistema,
+                    "sectores_analizados": sectores,
+                    "franja_horaria": franja,
+                    "tiempo_total_analisis": tiempo,
+                    "cantidad_observada": cantidad,
+                    "caratula_causa": caratula,
+                },
+            }
+
+        elif mode == 'conclusion':
+            sintesis = (ctx.get('sintesis_conclusion') or '').strip()
+            cantidad = (ctx.get('cantidad_observada') or 'cantidad no consignada').strip()
+            caratula = (ctx.get('caratula') or '').strip()
+
+            system_prompt = (
+                "Eres redactor de informes policiales argentinos. "
+                "Tu tarea es redactar el apartado 'CONCLUSION' de un informe de analisis de video de CCTV. "
+                "La conclusion debe sintetizar el resultado del analisis visual de manera objetiva e institucional, "
+                "sin apartarse de los hechos observados y remitiendo la valoracion juridica a la autoridad competente. "
+                + STYLE_NOTE
+            )
+            payload_prompt = {
+                "instrucciones": (
+                    "Redacta o mejora el texto de la conclusion del informe. "
+                    "Debe ser un parrafo de cierre formal que sintetice lo observado. "
+                    "Devuelve SOLO JSON valido con la clave 'conclusion'."
+                ),
+                "formato_estricto": {"conclusion": "texto redactado"},
+                "texto_original": str(conclusion or ''),
+                "datos_para_conclusion": {
+                    "sintesis_del_analisis": sintesis,
+                    "cantidad_observada": cantidad,
+                    "caratula_causa": caratula,
+                },
+            }
+
+        else:  # mode == 'full'
+            system_prompt = (
+                "Eres redactor de informes policiales argentinos. "
+                "Tu tarea es mejorar los tres apartados narrativos de un informe de analisis de video: "
+                "'material filmico analizado', 'desarrollo' y 'conclusion'. " + STYLE_NOTE
+            )
+            payload_prompt = {
+                "instrucciones": (
+                    "Mejora y/o completa los tres apartados usando el contexto estructurado provisto. "
+                    "No inventes hechos. Devuelve SOLO JSON valido."
+                ),
+                "formato_estricto": {
+                    "material_filmico": "texto mejorado",
+                    "desarrollo": "texto mejorado",
+                    "conclusion": "texto mejorado",
+                },
+                "material_filmico_original": str(material_filmico or ''),
+                "desarrollo_original": str(desarrollo or ''),
+                "conclusion_original": str(conclusion or ''),
+                "material_context": ctx,
+            }
+
+        return {
             "model": model,
             "temperature": 0.2,
             "messages": [
@@ -193,73 +465,240 @@ class IntegrityService:
             "response_format": {"type": "json_object"},
         }
 
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
+    @staticmethod
+    def _extract_ai_error_detail(response):
+        detail = ""
+        try:
+            error_payload = response.json()
+            error_node = error_payload.get('error', {})
+            if isinstance(error_node, dict):
+                detail = str(error_node.get('message', '') or '')
+            elif error_node:
+                detail = str(error_node)
+        except Exception:
+            detail = response.text[:200]
+        return detail
+
+    @staticmethod
+    def _is_quota_or_tokens_error(provider, status_code, detail):
+        message = str(detail or '').lower()
+
+        if provider == 'openrouter':
+            return (
+                status_code in (402, 429)
+                or 'insufficient credits' in message
+                or 'out of credits' in message
+                or 'quota' in message
+                or 'token' in message
+            )
+
+        if provider == 'gemini':
+            return (
+                status_code == 429
+                or 'resource_exhausted' in message
+                or 'resource has been exhausted' in message
+                or 'quota' in message
+                or 'token' in message
+            )
+
+        if provider == 'groq':
+            return (
+                status_code == 429
+                or 'rate limit' in message
+                or 'quota' in message
+                or 'token' in message
+            )
+
+        return False
+
+    @staticmethod
+    def _get_ai_provider_chain(custom_api_key=''):
+        provider_order_raw = str(
+            getattr(settings, 'AI_TEXT_PROVIDER_ORDER', 'gemini,openrouter,groq') or ''
+        ).strip()
+        provider_order = [item.strip().lower() for item in provider_order_raw.split(',') if item.strip()]
+        if not provider_order:
+            provider_order = ['gemini', 'openrouter', 'groq']
+
+        selection_mode = str(
+            getattr(settings, 'AI_TEXT_PROVIDER_SELECTION', 'ordered') or 'ordered'
+        ).strip().lower()
+        if selection_mode == 'round_robin' and len(provider_order) > 1:
+            with IntegrityService._provider_rotation_lock:
+                start_idx = IntegrityService._provider_rotation_index % len(provider_order)
+                IntegrityService._provider_rotation_index += 1
+            provider_order = provider_order[start_idx:] + provider_order[:start_idx]
+
+        providers = {
+            'gemini': {
+                'name': 'gemini',
+                'api_key': str(getattr(settings, 'GEMINI_API_KEY', '') or '').strip(),
+                'api_url': str(getattr(settings, 'AI_TEXT_GEMINI_API_URL', '') or '').strip(),
+                'model': str(getattr(settings, 'AI_TEXT_GEMINI_MODEL', '') or '').strip(),
+            },
+            'openrouter': {
+                'name': 'openrouter',
+                'api_key': str(
+                    getattr(settings, 'OPEN_ROUTER_API_KEY', '') or getattr(settings, 'AI_TEXT_API_KEY', '') or ''
+                ).strip(),
+                'api_url': str(
+                    getattr(settings, 'AI_TEXT_OPENROUTER_API_URL', '') or getattr(settings, 'AI_TEXT_API_URL', '') or ''
+                ).strip(),
+                'model': str(
+                    getattr(settings, 'AI_TEXT_OPENROUTER_MODEL', '') or getattr(settings, 'AI_TEXT_MODEL', '') or ''
+                ).strip(),
+            },
+            'groq': {
+                'name': 'groq',
+                'api_key': str(getattr(settings, 'GROQ_API_KEY', '') or '').strip(),
+                'api_url': str(getattr(settings, 'AI_TEXT_GROQ_API_URL', '') or '').strip(),
+                'model': str(getattr(settings, 'AI_TEXT_GROQ_MODEL', '') or '').strip(),
+            },
         }
 
-        try:
-            response = requests.post(
-                api_url,
-                headers=headers,
-                json=request_payload,
-                timeout=timeout_seconds,
-            )
-        except requests.RequestException as exc:
-            raise RuntimeError("No se pudo conectar con la API de IA.") from exc
+        chain = []
+        manual_key = str(custom_api_key or '').strip()
 
-        if response.status_code >= 400:
-            detail = ""
-            try:
-                error_payload = response.json()
-                error_node = error_payload.get('error', {})
-                if isinstance(error_node, dict):
-                    detail = str(error_node.get('message', '') or '')
-                elif error_node:
-                    detail = str(error_node)
-            except Exception:
-                detail = response.text[:200]
+        for index, provider_name in enumerate(provider_order):
+            if provider_name not in providers:
+                continue
 
-            suffix = f" Detalle: {detail}" if detail else ""
+            provider = dict(providers[provider_name])
+            if index == 0 and manual_key:
+                provider['api_key'] = manual_key
+
+            if not provider.get('api_key') or not provider.get('api_url') or not provider.get('model'):
+                continue
+
+            chain.append(provider)
+
+        return chain
+
+    @staticmethod
+    def improve_report_text_with_ai(material_filmico, desarrollo, conclusion, custom_api_key="", material_context=None, mode='full'):
+        timeout_seconds = int(getattr(settings, 'AI_TEXT_TIMEOUT_SECONDS', 45))
+        fallback_mode = str(getattr(settings, 'AI_TEXT_FALLBACK_MODE', 'quota_only') or 'quota_only').strip().lower()
+        providers = IntegrityService._get_ai_provider_chain(custom_api_key)
+
+        if not providers:
             raise RuntimeError(
-                f"La API de IA devolvio un error ({response.status_code}).{suffix}"
+                "No se configuro AI_TEXT_PROVIDER_KEYS "
+                "(GEMINI_API_KEY, OPEN_ROUTER_API_KEY o GROQ_API_KEY) "
+                "y no se ingreso ninguna manualmente."
             )
 
-        try:
-            response_payload = response.json()
-            choices = response_payload.get('choices') or []
-            if not choices:
-                raise RuntimeError("La API de IA no devolvio opciones de respuesta.")
-
-            message = choices[0].get('message') if isinstance(choices[0], dict) else None
-            content = message.get('content') if isinstance(message, dict) else None
-            if isinstance(content, list):
-                parts = []
-                for item in content:
-                    if isinstance(item, dict):
-                        parts.append(str(item.get('text', '') or ''))
-                    else:
-                        parts.append(str(item))
-                content = ''.join(parts)
-
-            parsed_content = IntegrityService._extract_json_object(content)
-            improved_desarrollo = IntegrityService._as_text(
-                parsed_content.get('desarrollo'),
-                str(desarrollo or '')
-            ).strip()
-            improved_conclusion = IntegrityService._as_text(
-                parsed_content.get('conclusion'),
-                str(conclusion or '')
-            ).strip()
-
-            return {
-                'desarrollo': improved_desarrollo,
-                'conclusion': improved_conclusion,
+        for index, provider in enumerate(providers):
+            request_payload = IntegrityService._build_ai_request_payload(
+                material_filmico,
+                desarrollo,
+                conclusion,
+                provider['model'],
+                material_context=material_context,
+                mode=mode,
+            )
+            headers = {
+                "Authorization": f"Bearer {provider['api_key']}",
+                "Content-Type": "application/json",
             }
-        except RuntimeError:
-            raise
-        except Exception as exc:
-            raise RuntimeError("Respuesta invalida al mejorar texto con IA.") from exc
+
+            try:
+                response = requests.post(
+                    url=provider['api_url'],
+                    headers=headers,
+                    json=request_payload,
+                    timeout=timeout_seconds,
+                )
+            except requests.RequestException as exc:
+                raise RuntimeError("No se pudo conectar con la API de IA.") from exc
+
+            if response.status_code >= 400:
+                detail = IntegrityService._extract_ai_error_detail(response)
+                if (
+                    fallback_mode == 'quota_only'
+                    and IntegrityService._is_quota_or_tokens_error(
+                        provider['name'],
+                        response.status_code,
+                        detail,
+                    )
+                ):
+                    if index < len(providers) - 1:
+                        continue
+                    raise RuntimeError("Todos los proveedores de IA alcanzaron su limite de cuota/tokens.")
+
+                suffix = f" Detalle: {detail}" if detail else ""
+                raise RuntimeError(
+                    f"La API de IA devolvio un error ({response.status_code}).{suffix}"
+                )
+
+            try:
+                response_payload = response.json()
+                choices = response_payload.get('choices') or []
+                if not choices:
+                    raise RuntimeError("La API de IA no devolvio opciones de respuesta.")
+
+                message = choices[0].get('message') if isinstance(choices[0], dict) else None
+                content = message.get('content') if isinstance(message, dict) else None
+                if isinstance(content, list):
+                    parts = []
+                    for item in content:
+                        if isinstance(item, dict):
+                            parts.append(str(item.get('text', '') or ''))
+                        else:
+                            parts.append(str(item))
+                    content = ''.join(parts)
+
+                parsed_content = IntegrityService._extract_json_object(content)
+
+                orig_mf = str(material_filmico or '').strip()
+                orig_des = str(desarrollo or '').strip()
+                orig_con = str(conclusion or '').strip()
+
+                if mode == 'material_filmico':
+                    improved_material_filmico = IntegrityService._as_text(
+                        parsed_content.get('material_filmico'), orig_mf
+                    ).strip()
+                    improved_desarrollo = orig_des
+                    improved_conclusion = orig_con
+                elif mode == 'desarrollo':
+                    improved_material_filmico = orig_mf
+                    improved_desarrollo = IntegrityService._as_text(
+                        parsed_content.get('desarrollo'), orig_des
+                    ).strip()
+                    improved_conclusion = orig_con
+                elif mode == 'conclusion':
+                    improved_material_filmico = orig_mf
+                    improved_desarrollo = orig_des
+                    improved_conclusion = IntegrityService._as_text(
+                        parsed_content.get('conclusion'), orig_con
+                    ).strip()
+                else:
+                    improved_material_filmico = IntegrityService._as_text(
+                        parsed_content.get('material_filmico'), orig_mf
+                    ).strip()
+                    improved_desarrollo = IntegrityService._as_text(
+                        parsed_content.get('desarrollo'), orig_des
+                    ).strip()
+                    improved_conclusion = IntegrityService._as_text(
+                        parsed_content.get('conclusion'), orig_con
+                    ).strip()
+
+                ai_applied = any([
+                    improved_material_filmico != orig_mf,
+                    improved_desarrollo != orig_des,
+                    improved_conclusion != orig_con,
+                ])
+                return {
+                    'material_filmico': improved_material_filmico,
+                    'desarrollo': improved_desarrollo,
+                    'conclusion': improved_conclusion,
+                    'ai_applied': ai_applied,
+                }
+            except RuntimeError:
+                raise
+            except Exception as exc:
+                raise RuntimeError("Respuesta invalida al mejorar texto con IA.") from exc
+
+        raise RuntimeError("No se encontro un proveedor de IA utilizable.")
 
     @staticmethod
     def generate_video_analysis_docx(payload):
@@ -301,67 +740,136 @@ class IntegrityService:
         operador = IntegrityService._as_text(report_data.get("operador"), "Operador")
         lup = IntegrityService._as_text(report_data.get("lup"), "0000")
         sistema = IntegrityService._as_text(report_data.get("sistema"), "MILESTONE")
+        cantidad_observada = IntegrityService._as_text(report_data.get("cantidad_observada"), "").strip()
+        sectores_analizados = IntegrityService._as_text(report_data.get("sectores_analizados"), "").strip()
+        franja_horaria_analizada = IntegrityService._as_text(report_data.get("franja_horaria_analizada"), "").strip()
+        tiempo_total_analisis = IntegrityService._as_text(report_data.get("tiempo_total_analisis"), "").strip()
+        sintesis_conclusion = IntegrityService._as_text(report_data.get("sintesis_conclusion"), "").strip()
+        hash_algorithms = IntegrityService._normalize_hash_algorithms(report_data.get("hash_algorithms"))
+        hash_program = IntegrityService._as_text(report_data.get("hash_program"), "").strip()
+        medida_seguridad_interna = IntegrityService._as_text(report_data.get("medida_seguridad_interna"), "").strip()
+        vms_authenticity_mode = IntegrityService._as_text(report_data.get("vms_authenticity_mode"), "").strip()
+        vms_authenticity_detail = IntegrityService._as_text(report_data.get("vms_authenticity_detail"), "").strip()
         prevencion_sumaria = IntegrityService._as_text(report_data.get("prevencion_sumaria"), "000BAR/2026")
         caratula = IntegrityService._as_text(report_data.get("caratula"), "DENUNCIA S/ PRESUNTO HURTO")
         unidad = IntegrityService._as_text(report_data.get("unidad"), "Coordinación Regional de Video Seguridad I del Este")
         material_filmico = IntegrityService._as_text(report_data.get("material_filmico"), "material fílmico")
-        fiscalia = IntegrityService._as_text(report_data.get("fiscalia"), "Fiscalia Nro. 02")
-        fiscal = IntegrityService._as_text(report_data.get("fiscal"), "Fiscal Interviniente")
+        fiscalia = IntegrityService._as_text(report_data.get("fiscalia"), "").strip()
+        fiscal = IntegrityService._as_text(report_data.get("fiscal"), "").strip()
+        fiscalia_doc = fiscalia or "Fiscalia / Juzgado no consignado"
+        fiscal_doc = fiscal or "Autoridad interviniente no consignada"
         denunciante = IntegrityService._as_text(report_data.get("denunciante"), "Denunciante")
         vuelo = IntegrityService._as_text(report_data.get("vuelo"), "---")
         empresa_aerea = IntegrityService._as_text(report_data.get("empresa_aerea"), "---")
         destino = IntegrityService._as_text(report_data.get("destino"), "---")
         fecha_hecho = IntegrityService._as_text(report_data.get("fecha_hecho"), "---")
-        unidad_aeroportuaria = IntegrityService._as_text(report_data.get("unidad_aeroportuaria"), "---")
-        asiento = IntegrityService._as_text(report_data.get("asiento"), "---")
         aeropuerto = IntegrityService._as_text(report_data.get("aeropuerto"), "---")
         objeto_denunciado = IntegrityService._as_text(report_data.get("objeto_denunciado"), "objeto denunciado")
         conclusion = IntegrityService._as_text(report_data.get("conclusion"), "")
         desarrollo = IntegrityService._as_text(report_data.get("desarrollo"), "")
         firma = IntegrityService._as_text(report_data.get("firma"), "Coordinador CReV I DEL ESTE")
 
+        if not material_filmico.strip():
+            material_filmico = IntegrityService._build_material_filmico_fallback({
+                "sistema": sistema,
+                "aeropuerto": aeropuerto,
+                "cantidad_observada": cantidad_observada,
+                "sectores_analizados": sectores_analizados,
+                "franja_horaria_analizada": franja_horaria_analizada,
+                "tiempo_total_analisis": tiempo_total_analisis,
+                "hash_algorithms": hash_algorithms,
+                "hash_program": hash_program,
+                "medida_seguridad_interna": medida_seguridad_interna,
+                "vms_authenticity_mode": vms_authenticity_mode,
+                "vms_authenticity_detail": vms_authenticity_detail,
+            })
+
+        if not desarrollo.strip():
+            desarrollo = IntegrityService._build_desarrollo_fallback({
+                "sectores_analizados": sectores_analizados,
+                "franja_horaria_analizada": franja_horaria_analizada,
+                "tiempo_total_analisis": tiempo_total_analisis,
+                "cantidad_observada": cantidad_observada,
+            })
+
+        if not conclusion.strip():
+            conclusion = IntegrityService._build_conclusion_fallback({
+                "sintesis_conclusion": sintesis_conclusion,
+                "cantidad_observada": cantidad_observada,
+            })
+
         op_info = f"{grado} {operador}, LUP: {lup}"
 
+        # Curly-quote characters used by Word as default punctuation
+        LQ = "\u201c"  # “ left double quotation mark
+        RQ = "\u201d"  # ” right double quotation mark
+
+        # Build hash algorithm text for paragraph [9] replacement
+        if hash_algorithms:
+            algo_labels = [IntegrityService._hash_algorithm_label(a) for a in hash_algorithms]
+            if len(algo_labels) == 1:
+                hash_algo_text = f"{algo_labels[0]} respectivamente"
+            elif len(algo_labels) == 2:
+                hash_algo_text = f"{algo_labels[0]} y {algo_labels[1]} respectivamente"
+            else:
+                hash_algo_text = f"{chr(44).join(algo_labels[:-1])} y {algo_labels[-1]} respectivamente"
+        else:
+            hash_algo_text = "algoritmos no consignados respectivamente"
+
+        medida_doc = medida_seguridad_interna or "no consignada"
+
         replacements = [
+            # Header / title fields (may appear in headers or title blocks)
             ("Fecha: Enero de 2026.", f"Fecha: {month_name.capitalize()} de {year}."),
             ("URSA I - Jefe", destinatarios),
             ("IAV - Informe Análisis de Video    /2026", f"{tipo_informe} {numero_informe}"),
             ("IAV - Informe Analisis de Video    /2026", f"{tipo_informe} {numero_informe}"),
+            # Operative info -- paragraph [6]
             ("Oficial Mayor XXX, LUP: XXX", op_info),
-            ("denominado “MILESTONE”", f"denominado \"{sistema}\""),
-            ("denominado \"MILESTONE\"", f"denominado \"{sistema}\""),
+            # sistema: template uses Word curly-quote delimiters around MILESTONE
+            (f"denominado {LQ}MILESTONE{RQ}", f"denominado {LQ}{sistema}{RQ}"),
+            ('denominado \"MILESTONE\"', f'denominado \"{sistema}\"'),
             ("Prevención Sumaria 003BAR/2026", f"Prevencion Sumaria {prevencion_sumaria}"),
-            ("“DENUNCIA S/ PRESUNTO HURTO”", f"\"{caratula}\""),
-            ("\"DENUNCIA S/ PRESUNTO HURTO\"", f"\"{caratula}\""),
-            ("Fiscalía Nro. 02 de San Carlos de Bariloche, Provincia de Rio Negro", fiscalia),
-            ("Dr. INTI ISLA", f"Dr. {fiscal}"),
+            # Caratula: template has "xxxxxxx" placeholder (not the form default value)
+            (f"caratulada {LQ}xxxxxxx{RQ}", f"caratulada {LQ}{caratula}{RQ}"),
+            ('caratulada \"xxxxxxx\"', f'caratulada \"{caratula}\"'),
+            ("Fiscalía Nro. 02 de San Carlos de Bariloche, Provincia de Rio Negro", fiscalia_doc),
+            ("Dr. INTI ISLA", fiscal_doc),
             ("Sr. PONZO Osvaldo", f"Sr. {denunciante}"),
             ("vuelo WJ 3045", f"vuelo {vuelo}"),
+            # empresa_aerea: match the specific airline name used in the template
+            ("empresa aerocomercial Jet Smart", empresa_aerea if empresa_aerea and empresa_aerea != "---" else "empresa aerocomercial Jet Smart"),
             ("RIVER PLATE", objeto_denunciado),
+            # Use full context strings to avoid replacing common words mid-sentence
+            ("con destino a la ciudad de San Carlos de Bariloche", f"con destino a {destino}" if destino and destino != "---" else "con destino a la ciudad de San Carlos de Bariloche"),
+            ("el día cuatro de enero del año en curso", f"el día {fecha_hecho}" if fecha_hecho and fecha_hecho != "---" else "el día cuatro de enero del año en curso"),
+            # Jurisdiction / unit -- paragraph [6]
             ("Coordinación Regional de Video Seguridad I del Este", unidad),
-            ("material fílmico", material_filmico),
+            ("asiento de la Coordinación Regional de Video Seguridad I del Este", f"de la {unidad}"),
+            ("Aeropuerto Internacional Mtro. Pistarini", aeropuerto),
+            ("Aeroparque Jorge Newbery", aeropuerto),
+            # Paragraph [9]: security measure, hash program and algorithms
+            ("medida de seguridad Interna xxxxxxx,", f"medida de seguridad Interna {medida_doc},"),
+            ("HASH MI FYLE", hash_program if hash_program else "programa no consignado"),
+            ("SHA - 256 y SHA - 512 respectivamente", hash_algo_text),
+            # Signature
             ("Coordinador CReV I DEL ESTE", firma),
-            ("empresa aerea", empresa_aerea),
-            ("empresa aérea", empresa_aerea),
-            ("destino", destino),
-            ("fecha del hecho", fecha_hecho),
-            ("unidad aeroportuaria", unidad_aeroportuaria),
-            ("asiento", asiento),
-            ("aeropuerto", aeropuerto),
         ]
 
         document = Document(str(template_path))
         IntegrityService._replace_text_in_docx(document, replacements)
 
-        if desarrollo or conclusion:
-            document.add_page_break()
-            IntegrityService._add_heading_safe(document, "Ampliacion del informe", level=1)
-            if desarrollo:
-                IntegrityService._add_heading_safe(document, "Desarrollo", level=2)
-                document.add_paragraph(desarrollo)
-            if conclusion:
-                IntegrityService._add_heading_safe(document, "Conclusion", level=2)
-                document.add_paragraph(conclusion)
+        # Populate content tables (T0=Material Filmico, T1=Desarrollo, T2=Conclusion)
+        tables = document.tables
+        if len(tables) > 0:
+            row = tables[0].add_row()
+            row.cells[0].paragraphs[0].add_run(material_filmico)
+        if len(tables) > 1:
+            row = tables[1].add_row()
+            row.cells[0].paragraphs[0].add_run(desarrollo)
+        if len(tables) > 2:
+            row = tables[2].add_row()
+            row.cells[0].paragraphs[0].add_run(conclusion)
 
         IntegrityService._append_frames_annex(document, frames)
 
