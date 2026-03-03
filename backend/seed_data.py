@@ -145,7 +145,7 @@ def seed():
                             name=cam_name,
                             server=srv,
                             defaults={
-                                'ip_address': f"{srv.ip_address}.{j+50}",
+                                'ip_address': f"10.{100 + locations.index(unit_obj)}.{systems_list.index(s) + 10}.{50 + i*20 + j}",
                                 'status': random.choice(['ONLINE', 'ONLINE', 'ONLINE', 'ONLINE', 'OFFLINE']),
                                 'resolution': random.choice(['1080p', '4MP', '5MP', '4K'])
                             }

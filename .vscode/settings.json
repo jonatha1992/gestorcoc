@@ -18,5 +18,16 @@
         "titleBar.inactiveBackground": "#1857a499",
         "titleBar.inactiveForeground": "#e7e7e799"
     },
-    "peacock.color": "#1857a4"
+    "peacock.color": "#1857a4",
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "driver": "PostgreSQL",
+            "name": "gestorcoc",
+            "connectString": "postgresql://postgres:WtrsPcmhpYVeieplYSJrPnKGiKAnuawI@switchyard.proxy.rlwy.net:17507/railway",
+            "group": "PSA"
+        }
+    ]
 }
