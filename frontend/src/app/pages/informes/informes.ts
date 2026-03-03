@@ -649,7 +649,7 @@ export class InformesComponent implements OnDestroy {
     grado: '',
     operador: '',
     lup: '',
-    sistema: 'MILESTONE',
+    sistema: '',
     cantidad_observada: '',
     sectores_analizados: '',
     franja_horaria_analizada: '',
@@ -675,9 +675,9 @@ export class InformesComponent implements OnDestroy {
     destino: '',
     fecha_hecho: '',
     objeto_denunciado: '',
-    aeropuerto: 'Aeropuerto Internacional Mtro. Pistarini',
-    desarrollo: 'Al proceder a la reproducción y análisis del material fílmico obrante, pude observar e interpretar que, [DETALLAR OBSERVACIÓN AQUÍ].\n\nEn cumplimiento de las tareas solicitadas, es imperativo informar el siguiente resultado del análisis efectuado: Producto de la inspección visual minuciosa realizada en los autos ut supra mencionados, es dable destacar que [RESULTADO DE LA OBSERVACIÓN].\n\nPara finalizar, es relevante mencionar, que el análisis de imágenes realizado se limita únicamente a la visualización e interpretación de los registros fílmicos, sin constituir una pericia ni una tarea forense. Es todo CONSTE.',
-    conclusion: 'Se determina que las imágenes analizadas coinciden con la descripción de los hechos mencionados en la denuncia.',
+    aeropuerto: '',
+    desarrollo: '',
+    conclusion: '',
     firma: '',
   };
 
@@ -1391,8 +1391,8 @@ export class InformesComponent implements OnDestroy {
     const nativeHashPart =
       this.form.vms_authenticity_mode === 'vms_propio'
         ? ((this.form.vms_native_hash_algorithms || []).length > 0
-            ? `hashes nativos: ${nativeAlgos}`
-            : 'autenticación propietaria del sistema')
+          ? `hashes nativos: ${nativeAlgos}`
+          : 'autenticación propietaria del sistema')
         : nativeAlgos;
     const autenticidad = this.getVmsAuthenticityLabel(this.form.vms_authenticity_mode || '');
     const cantidad = (this.form.cantidad_observada || '').trim();
