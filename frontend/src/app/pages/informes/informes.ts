@@ -8,7 +8,6 @@ import {
   ImproveVideoTextMode,
   ImproveVideoTextResponse,
   MaterialSpeechContext,
-  VideoReportExportFormat,
   VideoReportFormData,
   VideoReportFrame,
   VideoReportHashAlgorithm,
@@ -48,7 +47,7 @@ export class InformesComponent implements OnDestroy {
   readonly MAX_TOTAL_FRAMES_SIZE_MB = this.MAX_TOTAL_FRAMES_SIZE / (1024 * 1024);
   readonly allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
   readonly motivoSinHashOptions: string[] = [
-    'El material fue exportado por el propio VMS con autenticación incorporada',
+    'El sistema no permitía efectuar hash al momento del análisis',
     'No se contó con las herramientas necesarias al momento del análisis',
     'El material fue recibido sin posibilidad de aplicar hash previo',
     'No correspondía por el tipo de análisis solicitado',
@@ -108,24 +107,11 @@ export class InformesComponent implements OnDestroy {
     { value: 'sha512', label: 'SHA-512' },
     { value: 'otro', label: 'Otro' },
   ];
-  readonly exportFormatOptions: { value: VideoReportExportFormat; label: string }[] = [
-    { value: 'mp4', label: 'MP4' },
-    { value: 'avi', label: 'AVI' },
-    { value: 'mkv', label: 'MKV' },
-    { value: 'mov', label: 'MOV' },
-    { value: 'asf', label: 'ASF' },
-    { value: 'dav', label: 'DAV' },
-    { value: 'ave', label: 'AVE (Avigilon)' },
-    { value: 'xprotect', label: 'XProtect nativo (Milestone)' },
-    { value: 'jpg', label: 'JPG/JPEG' },
-    { value: 'png', label: 'PNG' },
-    { value: 'zip', label: 'ZIP' },
-    { value: 'otro', label: 'Otro' },
-  ];
+
   readonly vmsAuthenticityOptions: { value: VideoReportVmsAuthenticityMode; label: string }[] = [
     { value: 'vms_propio', label: 'Propio VMS (Milestone / Avigilon)' },
-    { value: 'hash_preventivo', label: 'Hash externo preventivo' },
-    { value: 'sin_autenticacion', label: 'Sin autenticación declarada' },
+    { value: 'hash_preventivo', label: 'Hash calculado externamente (ej: HashMyFiles)' },
+    { value: 'sin_autenticacion', label: 'Sin método de verificación' },
     { value: 'otro', label: 'Otro' },
   ];
   private readonly hashAlgorithmLabelByCode: Record<VideoReportHashAlgorithm, string> = {
@@ -135,20 +121,7 @@ export class InformesComponent implements OnDestroy {
     sha512: 'SHA-512',
     otro: 'OTRO',
   };
-  private readonly exportFormatLabelByCode: Record<VideoReportExportFormat, string> = {
-    mp4: 'MP4',
-    avi: 'AVI',
-    mkv: 'MKV',
-    mov: 'MOV',
-    asf: 'ASF',
-    dav: 'DAV',
-    ave: 'AVE (Avigilon)',
-    xprotect: 'XProtect nativo (Milestone)',
-    jpg: 'JPG/JPEG',
-    png: 'PNG',
-    zip: 'ZIP',
-    otro: 'OTRO',
-  };
+
   openHelpKey: HelpKey | null = null;
 
   get isAiProcessing(): boolean {
@@ -156,6 +129,9 @@ export class InformesComponent implements OnDestroy {
   }
 
   ngOnInit() {
+    if (!this.form.report_date) {
+      this.form.report_date = new Date().toISOString().split('T')[0];
+    }
     this.loadUnits();
     this.loadPersonnel();
   }
@@ -253,6 +229,23 @@ export class InformesComponent implements OnDestroy {
       this.form.operador = `${person.last_name}, ${person.first_name}`;
       this.form.grado = this.normalizeGrade((person.rank || '').trim());
       this.form.lup = person.badge_number || '';
+
+      // Auto-seleccionar la unidad asignada al operador (si la tiene y existe en las opciones)
+      if (person.unit_details && person.unit_details.name) {
+        const unitName = person.unit_details.name.trim();
+        if (this.unidadOptions.includes(unitName)) {
+          this.form.unidad = unitName;
+          this.syncAirportFromUnitSelection();
+        }
+      } else if (person.unit) {
+        // Si por alguna razon solo viene el ID o el codigo
+        const unitMatches = this.unidadOptions.filter(opt => opt.includes(person.unit) || this.unitCodeByName[opt] === person.unit);
+        if (unitMatches.length > 0) {
+          this.form.unidad = unitMatches[0];
+          this.syncAirportFromUnitSelection();
+        }
+      }
+
       this.markDirty('operador');
     }
   }
@@ -411,18 +404,46 @@ export class InformesComponent implements OnDestroy {
     return (this.form.hash_algorithms || []).includes(algorithm);
   }
 
-  onExportFormatChange(value: VideoReportExportFormat | ''): void {
-    this.form.export_file_format = value;
-    if (value !== 'otro') {
-      this.form.export_file_format_other = '';
+  toggleNativeHashAlgorithm(algorithm: VideoReportHashAlgorithm): void {
+    const current = this.form.vms_native_hash_algorithms || [];
+    if (current.includes(algorithm)) {
+      this.form.vms_native_hash_algorithms = current.filter((item) => item !== algorithm);
+    } else {
+      this.form.vms_native_hash_algorithms = [...current, algorithm];
     }
-    this.markDirty('export_file_format');
+    this.markDirty('vms_native_hash_algorithms');
+  }
+
+  hasNativeHashAlgorithm(algorithm: VideoReportHashAlgorithm): boolean {
+    return (this.form.vms_native_hash_algorithms || []).includes(algorithm);
+  }
+
+  getSelectedNativeHashAlgorithmsSummary(): string {
+    const algorithms = this.form.vms_native_hash_algorithms || [];
+    const labels = algorithms.map(item => this.getHashAlgorithmLabel(item, this.form.vms_native_hash_algorithm_other || ''));
+    return labels.length > 0 ? labels.join(', ') : 'No consignado';
   }
 
   onVmsAuthenticityModeChange(value: VideoReportVmsAuthenticityMode | ''): void {
     this.form.vms_authenticity_mode = value;
     if (value !== 'otro') {
       this.form.vms_authenticity_detail = '';
+    }
+    if (value !== 'vms_propio') {
+      this.form.vms_native_hash_algorithms = [];
+      this.form.vms_native_hash_algorithm_other = '';
+    }
+    if (value === 'sin_autenticacion' || value === 'otro') {
+      this.utilizoHash = false;
+      this.form.hash_program = '';
+      this.form.hash_algorithms = [];
+      this.form.hash_algorithm_other = '';
+    }
+    if (value === 'vms_propio') {
+      this.utilizoHash = false;
+      this.form.hash_program = '';
+      this.form.hash_algorithms = [];
+      this.form.hash_algorithm_other = '';
     }
     if (value === 'hash_preventivo') {
       this.utilizoHash = true;
@@ -442,6 +463,13 @@ export class InformesComponent implements OnDestroy {
       this.form.hash_algorithm_other = '';
     } else {
       this.form.motivo_sin_hash = '';
+      if (
+        this.form.vms_authenticity_mode === 'vms_propio' &&
+        !(this.form.hash_program || '').trim()
+      ) {
+        this.form.hash_program = 'HashMyFiles';
+        this.markDirty('hash_program');
+      }
     }
   }
 
@@ -450,12 +478,7 @@ export class InformesComponent implements OnDestroy {
     return labels.length > 0 ? labels.join(', ') : 'No consignado';
   }
 
-  getExportFormatSummary(): string {
-    return this.getExportFormatLabel(
-      this.form.export_file_format,
-      this.form.export_file_format_other
-    );
-  }
+
 
   getVmsAuthenticitySummary(): string {
     const mode = this.form.vms_authenticity_mode || '';
@@ -632,8 +655,8 @@ export class InformesComponent implements OnDestroy {
     franja_horaria_analizada: '',
     tiempo_total_analisis: '',
     sintesis_conclusion: '',
-    export_file_format: '',
-    export_file_format_other: '',
+    vms_native_hash_algorithms: [],
+    vms_native_hash_algorithm_other: '',
     hash_algorithms: [],
     hash_algorithm_other: '',
     hash_program: '',
@@ -667,14 +690,14 @@ export class InformesComponent implements OnDestroy {
     operador: 'Operador',
     lup: 'Legajo (LUP)',
     unidad: 'Unidad',
-    sistema: 'Sistema',
+    sistema: 'Sistema o Dispositivo proveniente de la información',
     cantidad_observada: 'Cantidad observada',
     sectores_analizados: 'Sectores analizados',
     franja_horaria_analizada: 'Franja horaria analizada',
     tiempo_total_analisis: 'Tiempo total de análisis',
     sintesis_conclusion: 'Síntesis para conclusión',
-    export_file_format: 'Formato de archivo exportado',
-    export_file_format_other: 'Otro formato de archivo',
+    vms_native_hash_algorithms: 'Algoritmos Hash Nativos del VMS',
+    vms_native_hash_algorithm_other: 'Otro algoritmo de hash nativo',
     hash_algorithms: 'Algoritmos SHA',
     hash_algorithm_other: 'Otro algoritmo de hash',
     hash_program: 'Programa de hash',
@@ -760,13 +783,13 @@ export class InformesComponent implements OnDestroy {
       quePoner: 'Resumen breve que quieras ver reflejado en la conclusión.',
       ejemplo: 'No se observa manipulación posterior del bulto denunciado',
     },
-    export_file_format: {
-      quePoner: 'Formato en que fue exportado el archivo de video/imágenes.',
-      ejemplo: 'MP4',
+    vms_native_hash_algorithms: {
+      quePoner: 'Algoritmos hash generados nativamente por el VMS.',
+      ejemplo: 'SHA-256',
     },
-    export_file_format_other: {
-      quePoner: 'Nombre exacto del formato cuando no figura en la lista.',
-      ejemplo: 'Formato propietario XProtect',
+    vms_native_hash_algorithm_other: {
+      quePoner: 'Especificar otras firmas o hashes nativos generados.',
+      ejemplo: 'Watermark propietaria Milestone',
     },
     hash_algorithms: {
       quePoner: 'Selecciona los algoritmos SHA usados para preservar integridad del material.',
@@ -857,15 +880,19 @@ export class InformesComponent implements OnDestroy {
       ejemplo: 'Subir JPG/PNG de capturas clave del hecho.',
     },
     frame_description: {
-      quePoner: 'Describe brevemente que muestra cada fotograma.',
+      quePoner: 'Desycribe brevemente que muestra cada fotograma.',
       ejemplo: 'Se observa al sospechoso retirando equipaje de cinta 3.',
+    },
+    motivo_sin_hash: {
+      quePoner: 'Indica la razón por la que no se adjuntó un archivo de hash o no se verificó.',
+      ejemplo: 'El sistema no permite exportación con hash nativo.',
     },
   };
 
   private readonly requiredFields: (keyof VideoReportFormData)[] = [
     'operador', 'grado', 'lup', 'report_date', 'destinatarios', 'unidad', 'numero_informe',
     'sistema', 'material_filmico', 'prevencion_sumaria', 'caratula', 'denunciante',
-    'objeto_denunciado', 'export_file_format', 'vms_authenticity_mode',
+    'objeto_denunciado', 'vms_authenticity_mode',
   ];
 
   @HostListener('window:beforeunload', ['$event'])
@@ -1066,7 +1093,7 @@ export class InformesComponent implements OnDestroy {
 
     let hasFormatError = false;
     let hasVmsDetailError = false;
-    let hasExportFormatOtherError = false;
+    let hasNativeHashOtherError = false;
     let hasCustomHashError = false;
     let hasHashProgramError = false;
     let hasExternalHashWithoutAlgorithmError = false;
@@ -1079,9 +1106,9 @@ export class InformesComponent implements OnDestroy {
       invalid.add('vms_authenticity_detail');
       hasVmsDetailError = true;
     }
-    if (this.form.export_file_format === 'otro' && !(this.form.export_file_format_other || '').trim()) {
-      invalid.add('export_file_format_other');
-      hasExportFormatOtherError = true;
+    if (this.hasNativeHashAlgorithm('otro') && !(this.form.vms_native_hash_algorithm_other || '').trim()) {
+      invalid.add('vms_native_hash_algorithm_other');
+      hasNativeHashOtherError = true;
     }
     if (this.hasHashAlgorithm('otro') && !(this.form.hash_algorithm_other || '').trim()) {
       invalid.add('hash_algorithm_other');
@@ -1108,7 +1135,7 @@ export class InformesComponent implements OnDestroy {
     const labels = missing.map((field) => this.fieldLabels[field]);
     if (hasFormatError) labels.push('Numero de Informe (formato NNNNCODIGO/YYYY)');
     if (hasVmsDetailError) labels.push('Detalle de autenticidad (obligatorio cuando autenticidad = Otro)');
-    if (hasExportFormatOtherError) labels.push('Otro formato de archivo (completa el nombre del formato)');
+    if (hasNativeHashOtherError) labels.push('Otro algoritmo de hash nativo (completa el nombre)');
     if (hasCustomHashError) labels.push('Otro algoritmo de hash (completa el nombre del algoritmo)');
     if (hasHashProgramError) labels.push('Programa de hash (obligatorio cuando autenticidad = Hash externo)');
     if (hasExternalHashWithoutAlgorithmError) labels.push('Algoritmo SHA (obligatorio cuando autenticidad = Hash externo)');
@@ -1281,14 +1308,21 @@ export class InformesComponent implements OnDestroy {
 
   private buildPayload(): VideoReportPayload {
     const reportData: VideoReportFormData = { ...this.form };
-    if (reportData.export_file_format !== 'otro') {
-      reportData.export_file_format_other = '';
+    if (!reportData.vms_native_hash_algorithms.includes('otro')) {
+      reportData.vms_native_hash_algorithm_other = '';
     }
     if (!reportData.hash_algorithms.includes('otro')) {
       reportData.hash_algorithm_other = '';
     }
     if (
       (reportData.vms_authenticity_mode || '') === 'hash_preventivo' &&
+      !(reportData.hash_program || '').trim()
+    ) {
+      reportData.hash_program = 'HashMyFiles';
+    }
+    if (
+      (reportData.vms_authenticity_mode || '') === 'vms_propio' &&
+      this.utilizoHash &&
       !(reportData.hash_program || '').trim()
     ) {
       reportData.hash_program = 'HashMyFiles';
@@ -1339,8 +1373,8 @@ export class InformesComponent implements OnDestroy {
       empresa_aerea: this.form.empresa_aerea,
       destino: this.form.destino,
       unidad: this.form.unidad,
-      export_file_format: this.form.export_file_format,
-      export_file_format_other: this.form.export_file_format_other,
+      vms_native_hash_algorithms: this.form.vms_native_hash_algorithms,
+      vms_native_hash_algorithm_other: this.form.vms_native_hash_algorithm_other,
       hash_algorithms: this.form.hash_algorithms,
       hash_algorithm_other: this.form.hash_algorithm_other,
       hash_program: this.form.hash_program,
@@ -1353,10 +1387,13 @@ export class InformesComponent implements OnDestroy {
   private buildMaterialFilmicoSeedFromContext(): string {
     const sistema = (this.form.sistema || '').trim() || 'sistema no consignado';
     const lugar = (this.form.aeropuerto || '').trim() || 'lugar de origen no consignado';
-    const formato = this.getExportFormatLabel(
-      this.form.export_file_format,
-      this.form.export_file_format_other
-    ).toLowerCase();
+    const nativeAlgos = this.getSelectedNativeHashAlgorithmsSummary();
+    const nativeHashPart =
+      this.form.vms_authenticity_mode === 'vms_propio'
+        ? ((this.form.vms_native_hash_algorithms || []).length > 0
+            ? `hashes nativos: ${nativeAlgos}`
+            : 'autenticación propietaria del sistema')
+        : nativeAlgos;
     const autenticidad = this.getVmsAuthenticityLabel(this.form.vms_authenticity_mode || '');
     const cantidad = (this.form.cantidad_observada || '').trim();
     const sectores = (this.form.sectores_analizados || '').trim();
@@ -1385,7 +1422,7 @@ export class InformesComponent implements OnDestroy {
           ? `Hash no efectuado (${motivoSinHash}).`
           : 'Hash no efectuado.';
 
-    return `Material obtenido del sistema ${sistema}, con origen en ${lugar}, exportado en formato ${formato}. Método de autenticidad: ${autenticidad}. ${hashDetail}${quantityText}${sectorText}${timingText}`;
+    return `Material obtenido del sistema ${sistema}, con origen en ${lugar}. Método de autenticidad: ${autenticidad} (${nativeHashPart}). ${hashDetail}${quantityText}${sectorText}${timingText}`;
   }
 
   private hasStructuredSpeechContext(): boolean {
@@ -1397,7 +1434,7 @@ export class InformesComponent implements OnDestroy {
       this.form.sintesis_conclusion,
       this.form.sistema,
       this.form.aeropuerto,
-      this.form.export_file_format,
+      (this.form.vms_native_hash_algorithms || []).join(','),
       this.form.vms_authenticity_mode,
     ];
     return values.some((value) => !!(value || '').trim());
@@ -1433,15 +1470,7 @@ export class InformesComponent implements OnDestroy {
     return this.hashAlgorithmLabelByCode[code] || code.toUpperCase();
   }
 
-  private getExportFormatLabel(value: VideoReportExportFormat | '', otherValue: string): string {
-    if (!value) {
-      return 'No consignado';
-    }
-    if (value === 'otro') {
-      return (otherValue || '').trim() || 'OTRO';
-    }
-    return this.exportFormatLabelByCode[value] || String(value).toUpperCase();
-  }
+
 
   private getVmsAuthenticityLabel(mode: VideoReportVmsAuthenticityMode | ''): string {
     if (mode === 'vms_propio') {
@@ -1460,58 +1489,84 @@ export class InformesComponent implements OnDestroy {
   }
 
   private buildMaterialFilmicoFallbackTextFromReport(report: VideoReportFormData): string {
-    const sistema = (report.sistema || '').trim() || 'sistema no consignado';
-    const lugar = (report.aeropuerto || '').trim() || 'lugar de origen no consignado';
-    const formato = this.getExportFormatLabel(report.export_file_format, report.export_file_format_other).toLowerCase();
-    const cantidad = (report.cantidad_observada || '').trim();
-    const hashProgram = (report.hash_program || '').trim() || 'herramienta de hash no consignada';
-    const hashLabels = (report.hash_algorithms || [])
-      .map((item) => this.getHashAlgorithmLabel(item, report.hash_algorithm_other));
+    const sistema = (report.sistema || '').trim() || 'el sistema de videovigilancia';
+    const lugar = (report.aeropuerto || '').trim();
+    const hashProgram = (report.hash_program || '').trim() || 'herramienta de hash';
+    const hashLabels = (report.hash_algorithms || []).map((item) =>
+      this.getHashAlgorithmLabel(item, report.hash_algorithm_other),
+    );
     const motivoSinHash = (report.motivo_sin_hash || '').trim();
-    const hashText =
-      hashLabels.length > 0
-        ? hashLabels.join(' y ')
-        : motivoSinHash
-          ? `no aplicado (${motivoSinHash})`
-          : 'no aplicado';
-    const authenticity = this.getVmsAuthenticityLabel(report.vms_authenticity_mode || '');
-    const authenticityDetail = (report.vms_authenticity_detail || '').trim();
-    const authenticityText =
-      report.vms_authenticity_mode === 'otro' && authenticityDetail
-        ? `${authenticity}: ${authenticityDetail}`
-        : authenticity;
+    const vmsMode = (report.vms_authenticity_mode || '').trim();
+    const vmsDetail = (report.vms_authenticity_detail || '').trim();
+    const nativeAlgos = (report.vms_native_hash_algorithms || []).map((item) =>
+      this.getHashAlgorithmLabel(item, report.vms_native_hash_algorithm_other || ''),
+    );
 
-    const quantityText = cantidad
-      ? ` En cuanto a la cantidad observada, se consignó ${cantidad}.`
-      : ' En cuanto a la cantidad observada, no fue consignada.';
+    const lugarClause = lugar
+      ? `desde donde se obtuvo la información en "**${lugar}**"`
+      : 'desde donde se obtuvo el material analizado';
 
-    const hashSentence =
-      hashLabels.length > 0
-        ? `asimismo, previamente a su examen, esta instancia procedió a efectuar sobre el material digital un hash de seguridad mediante ${hashProgram}, bajo los algoritmos ${hashText}, con la finalidad de preservar su integridad`
-        : motivoSinHash
-          ? `asimismo, se deja constancia que no se efectuó hash sobre el material (${motivoSinHash})`
-          : `asimismo, se deja constancia que no se efectuó hash sobre el material`;
+    let authClause: string;
+    if (vmsMode === 'vms_propio') {
+      if (nativeAlgos.length > 0) {
+        authClause = `posee como medida de seguridad autenticación provista por el propio sistema "**${sistema}**", que incorpora algoritmos de hash nativos (**${nativeAlgos.join(' y ')}**)`;
+      } else {
+        authClause = `posee como medida de seguridad autenticación propietaria provista por el propio sistema "**${sistema}**"`;
+      }
+    } else if (vmsMode === 'hash_preventivo') {
+      authClause = 'fue sometido a verificación de integridad mediante hash preventivo externo';
+    } else if (vmsMode === 'sin_autenticacion') {
+      const motivoPart = motivoSinHash ? ` (**${motivoSinHash}**)` : '';
+      authClause = `no se aplicó método de verificación de integridad al material exportado${motivoPart}`;
+    } else if (vmsMode === 'otro') {
+      authClause = `se empleó un método alternativo de autenticación: **${vmsDetail || 'método alternativo no detallado'}**`;
+    } else {
+      authClause = 'cuenta con medidas de seguridad propias del sistema';
+    }
 
-    return `Es oportuno mencionar que el sistema de video vigilancia denominado "${sistema}", desde donde se obtuvo la información en "${lugar}", exportada en formato ${formato}, posee medidas de seguridad propias; ${hashSentence}.${quantityText} En cuanto a la autenticidad del material exportado, se deja constancia de ${authenticityText}.`;
+    let hashClause = '';
+    if (hashLabels.length > 0) {
+      hashClause = ` Asimismo, previamente a su examen, esta instancia procedió a efectuar sobre el material digital un hash de seguridad mediante **${hashProgram}**, bajo los algoritmos **${hashLabels.join(' y ')}**, con la finalidad de preservar su integridad.`;
+    } else if (motivoSinHash && vmsMode !== 'sin_autenticacion') {
+      hashClause = ` Se deja constancia de que no se efectuó hash sobre el material (**${motivoSinHash}**).`;
+    }
+
+    return `Es oportuno mencionar que el sistema de videovigilancia denominado "**${sistema}**", ${lugarClause}, ${authClause}.${hashClause}`;
   }
 
   private buildDesarrolloFallbackTextFromReport(report: VideoReportFormData): string {
-    const sectores = (report.sectores_analizados || '').trim() || 'sectores no consignados';
-    const franja = (report.franja_horaria_analizada || '').trim() || 'franja horaria no consignada';
-    const tiempo = (report.tiempo_total_analisis || '').trim() || 'tiempo total no consignado';
-    const cantidad = (report.cantidad_observada || '').trim() || 'cantidad observada no consignada';
+    const sectores = (report.sectores_analizados || '').trim();
+    const franja = (report.franja_horaria_analizada || '').trim();
+    const tiempo = (report.tiempo_total_analisis || '').trim();
+    const cantidad = (report.cantidad_observada || '').trim();
 
-    return `Del análisis visual practicado sobre los registros fílmicos, se deja constancia de que la revisión se centró en ${sectores}, abarcando la ${franja}, con un ${tiempo}. Como dato cuantitativo relevante se consignó: ${cantidad}. La presente descripción se limita al contenido visual observado, sin interpretación pericial.`;
+    const partes: string[] = [];
+    if (sectores) partes.push(`centrado en los sectores: **${sectores}**`);
+    if (franja) partes.push(`abarcando la franja horaria **${franja}**`);
+    if (tiempo) partes.push(`con una duración total de análisis de **${tiempo}**`);
+
+    const base =
+      partes.length > 0
+        ? `Del análisis visual practicado sobre los registros fílmicos, se deja constancia de que la revisión fue ${partes.join(', ')}.`
+        : 'Del análisis visual practicado sobre los registros fílmicos, se deja constancia de la revisión efectuada sobre el material disponible.';
+
+    const cantidadPart = cantidad
+      ? ` En cuanto al dato cuantitativo relevante, se consignó: **${cantidad}**.`
+      : '';
+
+    return `${base}${cantidadPart} La presente descripción se limita al contenido visual observado, sin interpretación pericial.`;
   }
 
   private buildConclusionFallbackTextFromReport(report: VideoReportFormData): string {
     const sintesis = (report.sintesis_conclusion || '').trim();
     if (sintesis) {
-      return `En virtud del análisis efectuado, y sin apartarse de los extremos objetivamente observables, se concluye preliminarmente: ${sintesis}.`;
+      return `En virtud del análisis efectuado, y sin apartarse de los extremos objetivamente observables, se concluye: **${sintesis}**.`;
     }
     const cantidad = (report.cantidad_observada || '').trim();
-    const cantidadTexto = cantidad ? `con una cantidad observada declarada de ${cantidad}, ` : '';
-    return `En virtud del análisis efectuado, y dentro de los límites propios de la revisión visual, se concluye que ${cantidadTexto}no se advierten elementos adicionales a los ya consignados en el desarrollo, quedando la valoración jurídica sujeta a la autoridad competente.`;
+    if (cantidad) {
+      return `En virtud del análisis efectuado, y dentro de los límites propios de la revisión visual, se concluye que la cantidad observada fue de **${cantidad}**. No se advierten elementos adicionales a los ya consignados en el desarrollo, quedando la valoración jurídica sujeta a la autoridad competente.`;
+    }
+    return 'En virtud del análisis efectuado sobre el material fílmico, y dentro de los límites propios de la revisión visual practicada, no se advierten elementos adicionales a los ya consignados en el desarrollo. La valoración jurídica del material queda sujeta a la autoridad competente.';
   }
 
   async improveNarrativeWithAi(): Promise<void> {
@@ -1593,12 +1648,8 @@ export class InformesComponent implements OnDestroy {
     if (this.isImprovingMaterialFilmico) {
       return;
     }
-    if (!this.form.export_file_format) {
-      this.toastService.warning('Selecciona el formato del archivo exportado antes de usar IA.');
-      return;
-    }
-    if (this.form.export_file_format === 'otro' && !(this.form.export_file_format_other || '').trim()) {
-      this.toastService.warning('Completa el nombre del formato exportado.');
+    if (this.form.vms_native_hash_algorithms?.includes('otro') && !(this.form.vms_native_hash_algorithm_other || '').trim()) {
+      this.toastService.warning('Completa el nombre del algoritmo hash nativo.');
       return;
     }
     if (!this.form.vms_authenticity_mode) {
@@ -1722,10 +1773,7 @@ export class InformesComponent implements OnDestroy {
       (report.hash_algorithms || [])
         .map((item) => this.getHashAlgorithmLabel(item, report.hash_algorithm_other))
         .join(', ') || (report.motivo_sin_hash || '').trim() || 'No aplicado';
-    const exportFormatText = this.getExportFormatLabel(
-      report.export_file_format,
-      report.export_file_format_other
-    );
+    const nativeHashesText = this.getSelectedNativeHashAlgorithmsSummary();
     const hashProgramText = (report.hash_program || '').trim() || 'No consignado';
     const vmsModeText = this.getVmsAuthenticityLabel(report.vms_authenticity_mode || '');
     const vmsDetailText =
@@ -1763,32 +1811,33 @@ export class InformesComponent implements OnDestroy {
           <p><strong>Unidad:</strong> ${this.escapeHtml(unidad || 'No consignada')}</p>
         `
         : '';
-    const introLocationClause =
-      aeropuerto || unidad
-        ? `En el ${this.escapeHtml(aeropuerto || 'aeropuerto no consignado')}, de la ${this.escapeHtml(unidad || 'unidad no consignada')}, de la Policía de Seguridad Aeroportuaria,`
-        : 'En relación con grabaciones externas sin unidad de causa consignada,';
-    const fiscaliaIntroClause = fiscalia
-      ? `, en tramite por ante la ${this.escapeHtml(fiscalia)}`
-      : '';
-    const fiscalIntroClause = fiscal
-      ? `, con intervencion de ${this.escapeHtml(fiscal)}`
-      : '';
+    const fiscaliaText = report.fiscalia ? this.escapeHtml(report.fiscalia) : '';
+    const fiscalText = report.fiscal ? this.escapeHtml(report.fiscal) : '';
+
+    const reqClause = fiscaliaText
+      ? `En cumplimiento al requerimiento efectuado por la ${fiscaliaText}${fiscalText ? `, a cargo de ${fiscalText}` : ''}, relacionado a la Prevención Sumaria ${this.escapeHtml(report.prevencion_sumaria)} caratulada &quot;${this.escapeHtml(report.caratula)}&quot;`
+      : `En relación a la Prevención Sumaria ${this.escapeHtml(report.prevencion_sumaria)} caratulada &quot;${this.escapeHtml(report.caratula)}&quot;`;
+
     const flightDetails: string[] = [];
     if (report.vuelo) {
       flightDetails.push(`del vuelo ${this.escapeHtml(report.vuelo)}`);
     }
     if (report.empresa_aerea) {
-      flightDetails.push(`de la empresa aerocomercial ${this.escapeHtml(report.empresa_aerea)}`);
+      flightDetails.push(`perteneciente a la empresa aerocomercial ${this.escapeHtml(report.empresa_aerea)}`);
     }
     if (report.destino) {
       flightDetails.push(`con destino a la ciudad de ${this.escapeHtml(report.destino)}`);
     }
     if (report.fecha_hecho) {
+      // In a real application, consider converting date object into a nicely formatted string
       flightDetails.push(`el dia ${this.escapeHtml(report.fecha_hecho)}`);
     }
+
     const flightIntroClause = flightDetails.length > 0
-      ? `, vinculado ${flightDetails.join(', ')}`
+      ? `, la cual se encontraba en el interior de su equipaje despachado por bodega ${flightDetails.join(', ')}`
       : '';
+
+    const introParagraph = `${reqClause}, el ${this.escapeHtml(report.unidad || 'CReV')} eleva el presente informe, a los efectos de llevar a su conocimiento el resultado del análisis efectuado por personal de esta dependencia, según lo aportado en los registros fílmicos obrantes en el ${this.escapeHtml(report.aeropuerto || 'aeropuerto')}, sistema ${this.escapeHtml(report.sistema || 'No consignado')}, respecto de los hechos denunciados por ${this.escapeHtml(report.denunciante)}, quien manifiesta el faltante de ${this.escapeHtml(report.objeto_denunciado)}${flightIntroClause}.`;
 
     return `
       <!DOCTYPE html>
@@ -1833,7 +1882,7 @@ export class InformesComponent implements OnDestroy {
           <p><strong>Franja horaria analizada:</strong> ${this.escapeHtml((report.franja_horaria_analizada || '').trim() || 'No consignada')}</p>
           <p><strong>Tiempo total de análisis:</strong> ${this.escapeHtml((report.tiempo_total_analisis || '').trim() || 'No consignado')}</p>
           <p><strong>Síntesis para conclusión:</strong> ${this.escapeHtml((report.sintesis_conclusion || '').trim() || 'No consignada')}</p>
-          <p><strong>Formato de archivo exportado:</strong> ${this.escapeHtml(exportFormatText)}</p>
+          <p><strong>Algoritmos Hash Nativos del VMS:</strong> ${this.escapeHtml(nativeHashesText)}</p>
           <p><strong>Algoritmos SHA:</strong> ${this.escapeHtml(hashAlgorithmsText)}</p>
           <p><strong>Programa de hash:</strong> ${this.escapeHtml(hashProgramText)}</p>
           <p><strong>Autenticidad de exportación:</strong> ${this.escapeHtml(vmsModeText)}${vmsDetailText}</p>
@@ -1852,20 +1901,20 @@ export class InformesComponent implements OnDestroy {
 
         <h2>Introduccion</h2>
         <p style="text-align: justify; text-indent: 2em; line-height: 1.5;">
-          ${introLocationClause} a los XXXXX días del mes de XXXXX del año XXXXX, siendo la hora XXXXX, quien suscribe ${this.escapeHtml(report.grado)} ${this.escapeHtml(report.operador)}, LUP: ${this.escapeHtml(report.lup)}, en mi carácter de Operador de Video Vigilancia (OVV), labro el presente a los fines legales de dejar debida constancia del resultado obtenido en virtud al análisis visual minucioso efectuado sobre el material fílmico, obrante en el sistema denominado “${this.escapeHtml(report.sistema)}”, en el marco de la Prevención Sumaria ${this.escapeHtml(report.prevencion_sumaria)}, caratulada “${this.escapeHtml(report.caratula)}”${fiscaliaIntroClause}${fiscalIntroClause}, respecto de los hechos denunciados por el Sr/a. ${this.escapeHtml(report.denunciante)}, quien manifiesta el faltante de ${this.escapeHtml(report.objeto_denunciado)}${flightIntroClause}.
+          ${introParagraph}
         </p>
 
         <h2>Material Fílmico Analizado</h2>
-        <p>${this.escapeHtml(materialFilmicoText).replace(/\n/g, '<br>')}</p>
+        <p>${this.escapeHtmlWithBold(materialFilmicoText).replace(/\n/g, '<br>')}</p>
 
         <h2>Desarrollo</h2>
-        <p>${this.escapeHtml(desarrolloText).replace(/\n/g, '<br>')}</p>
+        <p>${this.escapeHtmlWithBold(desarrolloText).replace(/\n/g, '<br>')}</p>
 
         <h2>Anexo de fotogramas (${orderedFrames.length})</h2>
         ${frameBlocks}
 
         <h2>Conclusion</h2>
-        <p>${this.escapeHtml(conclusionText).replace(/\n/g, '<br>')}</p>
+        <p>${this.escapeHtmlWithBold(conclusionText).replace(/\n/g, '<br>')}</p>
 
         <br><br><br>
         <div style="text-align: center; margin-top: 50px;">
@@ -1886,6 +1935,10 @@ export class InformesComponent implements OnDestroy {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  private escapeHtmlWithBold(value: string): string {
+    return this.escapeHtml(value).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   }
 
   private formatValidationErrors(errors: unknown): string {
