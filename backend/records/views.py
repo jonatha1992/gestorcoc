@@ -134,6 +134,29 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
             content_type='application/pdf'
         )
 
+    @action(detail=True, methods=['post', 'put', 'patch'])
+    def save_report_draft(self, request, pk=None):
+        """
+        Guarda el estado actual del informe (borrador) asociado a este registro.
+        
+        POST/PUT/PATCH /api/film-records/{id}/save_report_draft/
+        Body: JSON con los campos del informe.
+        """
+        film_record = self.get_object()
+        report, created = VideoAnalysisReport.objects.get_or_create(
+            film_record=film_record,
+            defaults={'form_data': request.data}
+        )
+        if not created:
+            # Update existing form data
+            report.form_data = request.data
+            report.save()
+            
+        return Response({
+            'message': 'Borrador guardado exitosamente',
+            'report_id': report.id
+        }, status=status.HTTP_200_OK)
+
 class CatalogViewSet(viewsets.ModelViewSet):
     queryset = Catalog.objects.all()
     serializer_class = CatalogSerializer
@@ -292,6 +315,7 @@ class VideoAnalysisImproveTextView(views.APIView):
                 custom_api_key=serializer.validated_data.get('api_key', ''),
                 material_context=serializer.validated_data.get('material_context', {}),
                 mode=serializer.validated_data.get('mode', 'full'),
+                preferred_provider=serializer.validated_data.get('preferred_provider', ''),
             )
             return Response(improved_text, status=status.HTTP_200_OK)
         except Exception as exc:

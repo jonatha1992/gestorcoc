@@ -103,6 +103,7 @@ export interface ImproveVideoTextPayload {
     material_context?: MaterialSpeechContext;
     api_key?: string;
     mode?: ImproveVideoTextMode;
+    preferred_provider?: string;
 }
 
 export interface ImproveVideoTextResponse {
@@ -129,6 +130,10 @@ export class InformeService {
 
     improveVideoText(payload: ImproveVideoTextPayload): Observable<ImproveVideoTextResponse> {
         return this.http.post<ImproveVideoTextResponse>(`${this.baseUrl}/api/video-analysis-improve-text/`, payload);
+    }
+
+    saveReportDraft(filmRecordId: number, formData: any): Observable<any> {
+        return this.http.post<any>(`${this.baseUrl}/api/film-records/${filmRecordId}/save_report_draft/`, formData);
     }
 
     saveReport(data: { film_record?: number | null; numero_informe?: string; report_date?: string; form_data?: any }): Observable<any> {

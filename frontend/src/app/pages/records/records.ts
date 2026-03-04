@@ -8,15 +8,13 @@ import { ToastService } from '../../services/toast.service';
 import { AssetService } from '../../services/asset.service';
 import { PersonnelService } from '../../services/personnel.service';
 import { InformeService } from '../../services/informe.service';
-import { EncryptionService, AesAlgorithm } from '../../services/encryption.service';
-import { HashService, SupportedHashAlgorithm } from '../../services/hash.service';
 
 @Component({
   selector: 'app-records',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './records.html',
-  providers: [RecordsService, AssetService, PersonnelService, InformeService, EncryptionService, HashService]
+  providers: [RecordsService, AssetService, PersonnelService, InformeService]
 })
 export class RecordsComponent implements OnInit {
   private recordsService = inject(RecordsService);
@@ -24,8 +22,6 @@ export class RecordsComponent implements OnInit {
   private personnelService = inject(PersonnelService);
   private toastService = inject(ToastService);
   private informeService = inject(InformeService);
-  private encryptionService = inject(EncryptionService);
-  private hashService = inject(HashService);
   private router = inject(Router);
 
   records = signal<any[]>([]);
@@ -42,16 +38,6 @@ export class RecordsComponent implements OnInit {
 
   verifiedCount = signal(0);
   pendingCount = signal(0);
-
-  // Encryption Modal State
-  showEncryptionModal = signal(false);
-  encryptionMode: 'encrypt' | 'decrypt' | 'hash' = 'encrypt';
-  encryptionPassword = '';
-  encryptionAlgorithm: AesAlgorithm = 'AES-256';
-  hashAlgorithm: SupportedHashAlgorithm = 'sha256';
-  encryptionFile: File | null = null;
-  isProcessingEncryption = signal(false);
-  hashResult = signal<{ hash: string, time: number } | null>(null);
 
   newRecord: any = this.createEmptyRecord();
 
@@ -94,7 +80,7 @@ export class RecordsComponent implements OnInit {
     if (informe?.id) {
       this.informeService.getReport(informe.id).subscribe({
         next: (full) => this.selectedInforme.set(full),
-        error: () => {}
+        error: () => { }
       });
     }
   }
@@ -273,99 +259,5 @@ export class RecordsComponent implements OnInit {
     this.ensureDefaultSelections();
     this.isEditing.set(false);
     this.editingRecordId = null;
-  }
-
-  // Encryption Modal Methods
-  openEncryptionModal() {
-    this.showEncryptionModal.set(true);
-    this.encryptionPassword = '';
-    this.encryptionFile = null;
-    this.encryptionAlgorithm = 'AES-256';
-    this.hashAlgorithm = 'sha256';
-    this.encryptionMode = 'encrypt';
-    this.isProcessingEncryption.set(false);
-    this.hashResult.set(null);
-  }
-
-  closeEncryptionModal() {
-    this.showEncryptionModal.set(false);
-    this.encryptionFile = null;
-    this.encryptionPassword = '';
-    this.hashResult.set(null);
-  }
-
-  onEncryptionFileDrop(event: DragEvent) {
-    event.preventDefault();
-    const files = event.dataTransfer?.files;
-    if (files && files.length > 0) {
-      this.encryptionFile = files[0];
-    }
-  }
-
-  onEncryptionFileSelect(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.encryptionFile = input.files[0];
-    }
-  }
-
-  async processEncryption() {
-    if (!this.encryptionFile) {
-      this.toastService.show('Debe seleccionar un archivo.', 'error');
-      return;
-    }
-
-    if (this.encryptionMode !== 'hash' && !this.encryptionPassword) {
-      this.toastService.show('Debe ingresar una contraseña.', 'error');
-      return;
-    }
-
-    this.isProcessingEncryption.set(true);
-    this.hashResult.set(null);
-
-    try {
-      if (this.encryptionMode === 'hash') {
-        const result = await this.hashService.hashFile(this.encryptionFile, this.hashAlgorithm);
-        this.hashResult.set(result);
-        this.toastService.show('Cálculo de integridad completado.', 'success');
-      } else {
-        let resultBlob: Blob;
-        const originalName = this.encryptionFile.name;
-        let newName = '';
-
-        if (this.encryptionMode === 'encrypt') {
-          resultBlob = await this.encryptionService.encryptFile(
-            this.encryptionFile,
-            this.encryptionPassword,
-            this.encryptionAlgorithm
-          );
-          newName = `${originalName}.aes`;
-        } else {
-          resultBlob = await this.encryptionService.decryptFile(
-            this.encryptionFile,
-            this.encryptionPassword,
-            this.encryptionAlgorithm
-          );
-          newName = originalName.endsWith('.aes') ? originalName.slice(0, -4) : `decrypted_${originalName}`;
-        }
-
-        // Download the file programmatically
-        const url = URL.createObjectURL(resultBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = newName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        this.toastService.show(`Archivo ${this.encryptionMode === 'encrypt' ? 'cifrado' : 'descifrado'} con éxito.`, 'success');
-        this.closeEncryptionModal();
-      }
-    } catch (err: any) {
-      this.toastService.show(`Error al procesar el archivo: ${err.message || err}`, 'error');
-    } finally {
-      this.isProcessingEncryption.set(false);
-    }
   }
 }

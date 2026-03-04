@@ -1,12 +1,15 @@
 <div class="space-y-6 informes-view">
     @if (isReadOnly()) {
     <div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
         <div>
             <div class="text-sm font-bold text-amber-800">Informe en modo lectura</div>
-            <div class="text-xs text-amber-600">Este informe ya fue generado y no puede ser modificado. Solo podés volver a descargar el documento.</div>
+            <div class="text-xs text-amber-600">Este informe ya fue generado y no puede ser modificado. Solo podés
+                volver a descargar el documento.</div>
         </div>
     </div>
     }
@@ -196,7 +199,8 @@
                 </div>
                 <div class="lg:col-span-3">
                     <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Prevención Sumaria *</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Prevención Sumaria
+                            *</label>
                         <span class="block text-[10px] text-slate-400 mb-0">Número de actuación policial inicial</span>
                         <button type="button" data-help-trigger (click)="toggleHelp('prevencion_sumaria', $event)"
                             class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
@@ -234,7 +238,8 @@
                 </div>
                 <div class="lg:col-span-9">
                     <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Descripción del objeto o persona involucrada *</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Descripción del objeto o
+                            persona involucrada *</label>
                         <button type="button" data-help-trigger (click)="toggleHelp('objeto_denunciado', $event)"
                             class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
                             aria-label="Ayuda Objeto Denunciado">?</button>
@@ -348,7 +353,8 @@
                     <!-- Sistema -->
                     <div class="md:col-span-12">
                         <div class="flex items-center gap-1 mb-1">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">VMS / Sistema de cámaras *</label>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">VMS / Sistema de
+                                cámaras *</label>
                             <button type="button" data-help-trigger (click)="toggleHelp('sistema', $event)"
                                 class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
                                 aria-label="Ayuda Sistema">?</button>
@@ -361,7 +367,8 @@
 
                     <!-- 1. Autenticidad del material (va primero) -->
                     <div class="md:col-span-6">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Método de verificación de integridad *</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Método de verificación de
+                            integridad *</label>
                         <select [(ngModel)]="form.vms_authenticity_mode"
                             (ngModelChange)="onVmsAuthenticityModeChange($event)" name="vms_authenticity_mode"
                             [attr.data-invalid]="isFieldInvalid('vms_authenticity_mode') ? 'true' : null"
@@ -420,7 +427,8 @@
                             <input type="checkbox" [checked]="utilizoHash"
                                 (change)="onUtilizaHashChange($any($event.target).checked)"
                                 class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="text-sm font-semibold text-slate-700">¿Se realizó también un hash externo preventivo?</span>
+                            <span class="text-sm font-semibold text-slate-700">¿Se realizó también un hash externo
+                                preventivo?</span>
                         </label>
 
                         <ng-container *ngIf="utilizoHash">
@@ -451,8 +459,8 @@
                                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Especificar
                                         algoritmo *</label>
                                     <input [(ngModel)]="form.hash_algorithm_other"
-                                        (ngModelChange)="markDirty('hash_algorithm_other')"
-                                        name="hash_algorithm_other" type="text" placeholder="Ej: BLAKE3"
+                                        (ngModelChange)="markDirty('hash_algorithm_other')" name="hash_algorithm_other"
+                                        type="text" placeholder="Ej: BLAKE3"
                                         [attr.data-invalid]="isFieldInvalid('hash_algorithm_other') ? 'true' : null"
                                         class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                                 </div>
@@ -491,8 +499,8 @@
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Especificar
                                     algoritmo *</label>
                                 <input [(ngModel)]="form.hash_algorithm_other"
-                                    (ngModelChange)="markDirty('hash_algorithm_other')"
-                                    name="hash_algorithm_other" type="text" placeholder="Ej: BLAKE3"
+                                    (ngModelChange)="markDirty('hash_algorithm_other')" name="hash_algorithm_other"
+                                    type="text" placeholder="Ej: BLAKE3"
                                     [attr.data-invalid]="isFieldInvalid('hash_algorithm_other') ? 'true' : null"
                                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                             </div>
@@ -536,7 +544,8 @@
                         class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold">
                         <span *ngIf="isImprovingMaterialFilmico"
                             class="w-3.5 h-3.5 rounded-full border border-indigo-200 border-t-white animate-spin"></span>
-                        {{ isImprovingMaterialFilmico ? 'Procesando con IA...' : 'Completar con IA — Material Fílmico' }}
+                        {{ isImprovingMaterialFilmico ? 'Procesando con IA...' : 'Completar con IA — Material Fílmico'
+                        }}
                     </button>
                 </div>
                 <div *ngIf="isImprovingMaterialFilmico"
@@ -565,15 +574,27 @@
             <div class="shadow-sm p-4 rounded-xl bg-sky-50/60 border border-sky-100 space-y-3">
                 <h4 class="text-sm font-bold text-sky-900">Contexto para la IA</h4>
                 <p class="text-xs text-slate-600">
-                    Completá estos datos para que la IA genere texto de mayor calidad. Si redactás el desarrollo y conclusión manualmente, podés omitirlos.
+                    Completá estos datos para que la IA genere texto de mayor calidad. Si redactás el desarrollo y
+                    conclusión manualmente, podés omitirlos.
                 </p>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Hora inicio</label>
+                        <input [(ngModel)]="hora_inicio" (ngModelChange)="onTimeChange()" name="hora_inicio" type="time"
+                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Hora fin</label>
+                        <input [(ngModel)]="hora_fin" (ngModelChange)="onTimeChange()" name="hora_fin" type="time"
+                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                    </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Franja horaria
                             analizada</label>
                         <input [(ngModel)]="form.franja_horaria_analizada"
                             (ngModelChange)="markDirty('franja_horaria_analizada')" name="franja_horaria_analizada"
-                            type="text" placeholder="Ej: 14:05 a 15:42"
+                            type="text" placeholder="Auto: 14:05 a 15:42" [readonly]="!!hora_inicio && !!hora_fin"
+                            [class.bg-slate-50]="!!hora_inicio && !!hora_fin"
                             class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     </div>
                     <div>
@@ -581,7 +602,8 @@
                             análisis</label>
                         <input [(ngModel)]="form.tiempo_total_analisis"
                             (ngModelChange)="markDirty('tiempo_total_analisis')" name="tiempo_total_analisis"
-                            type="text" placeholder="Ej: 1 hora 37 minutos"
+                            type="text" placeholder="Auto: 1 hora 37 min" [readonly]="!!hora_inicio && !!hora_fin"
+                            [class.bg-slate-50]="!!hora_inicio && !!hora_fin"
                             class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     </div>
                     <div>
@@ -619,6 +641,14 @@
                 <textarea [ngModel]="form.desarrollo" (ngModelChange)="onDesarrolloChange($event)" name="desarrollo"
                     rows="6" placeholder="Describa cronologicamente lo observado en las camaras y horarios relevantes."
                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
+                <div class="mt-2 flex justify-end">
+                    <button type="button" (click)="improveDesarrolloWithAi()" [disabled]="isImprovingDesarrollo"
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold">
+                        <span *ngIf="isImprovingDesarrollo"
+                            class="w-3.5 h-3.5 rounded-full border border-indigo-200 border-t-white animate-spin"></span>
+                        {{ isImprovingDesarrollo ? 'Procesando con IA...' : 'Completar con IA — Desarrollo' }}
+                    </button>
+                </div>
             </div>
             <div>
                 <div class="flex items-center gap-1 mb-1">
@@ -630,22 +660,38 @@
                 <textarea [ngModel]="form.conclusion" (ngModelChange)="onConclusionChange($event)" name="conclusion"
                     rows="5" placeholder="Indique el resultado final del analisis de forma concreta y verificable."
                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
+                <div class="mt-2 flex justify-end">
+                    <button type="button" (click)="improveConclusionWithAi()" [disabled]="isImprovingConclusion"
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold">
+                        <span *ngIf="isImprovingConclusion"
+                            class="w-3.5 h-3.5 rounded-full border border-indigo-200 border-t-white animate-spin"></span>
+                        {{ isImprovingConclusion ? 'Procesando con IA...' : 'Completar con IA — Conclusión' }}
+                    </button>
+                </div>
             </div>
 
-            <div class="flex flex-col md:flex-row items-end justify-between gap-3">
-                <div class="w-full md:w-64">
-                    <p class="text-xs text-slate-500 italic">
-                        La IA optimizará el texto automáticamente usando la configuración del servidor.
-                    </p>
+            <!-- Opciones globales de IA -->
+            <div
+                class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex flex-col gap-1 w-full md:w-auto">
+                    <label class="text-xs font-bold text-slate-600 uppercase">Proveedor de IA</label>
+                    <select [(ngModel)]="selectedAiProvider" name="aiProvider"
+                        class="px-3 py-2 text-sm border border-indigo-200 rounded-xl bg-white text-indigo-900 shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400">
+                        <option value="ollama">Local (Ollama)</option>
+                        <option value="gemini">Gemini</option>
+                        <option value="openrouter">OpenRouter</option>
+                    </select>
                 </div>
-                <button type="button" (click)="improveNarrativeWithAi()" [disabled]="isImprovingNarrative"
-                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold shrink-0">
-                    <span *ngIf="isImprovingNarrative"
-                        class="w-4 h-4 rounded-full border border-indigo-200 border-t-white animate-spin"></span>
-                    {{ isImprovingNarrative ? 'Procesando con IA...' : 'Completar con IA — Desarrollo y Conclusión' }}
+
+                <button type="button" (click)="generateFullReportWithAi()" [disabled]="isGeneratingFullReport"
+                    class="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md text-white text-sm font-bold shrink-0">
+                    <span *ngIf="isGeneratingFullReport"
+                        class="w-4 h-4 rounded-full border-2 border-indigo-200 border-t-white animate-spin"></span>
+                    ✨ {{ isGeneratingFullReport ? 'Generando todo el informe...' : 'Completar Todo el Informe con IA' }}
                 </button>
             </div>
-            <div *ngIf="isImprovingNarrative"
+
+            <div *ngIf="isGeneratingFullReport || isImprovingDesarrollo || isImprovingConclusion"
                 class="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-cyan-50 to-indigo-50 px-3 py-2">
                 <div class="flex items-center justify-between text-xs text-slate-700">
                     <span class="inline-flex items-center gap-2 font-medium">
@@ -731,11 +777,17 @@
             </div>
         </div>
 
-        <div class="flex justify-end pt-2 border-t border-slate-200">
-            <button type="submit" [disabled]="isGenerating"
-                class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-semibold transition-colors"
+        <div class="flex flex-col md:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-200">
+            <button type="button" (click)="saveReportToDatabase()" [disabled]="isGenerating || isReadOnly()"
+                class="px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-semibold transition-colors shadow-sm disabled:opacity-60"
                 style="pointer-events: auto !important;">
-                {{ isGenerating ? 'Generando...' : (isReadOnly() ? 'Volver a descargar (DOC)' : 'Generar Informe (DOC)') }}
+                💾 Guardar Borrador
+            </button>
+            <button type="submit" [disabled]="isGenerating"
+                class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-semibold transition-colors shadow-sm"
+                style="pointer-events: auto !important;">
+                {{ isGenerating ? 'Generando...' : (isReadOnly() ? 'Volver a descargar (DOC)' : '📄 Generar Informe
+                (DOC)') }}
             </button>
         </div>
     </form>

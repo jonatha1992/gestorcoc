@@ -60,8 +60,11 @@ export class InformesComponent implements OnInit, OnDestroy {
   ];
 
   isGenerating = false;
-  isImprovingNarrative = false;
+  isImprovingNarrative = false; // Legacy (can be removed later if not used)
   isImprovingMaterialFilmico = false;
+  isImprovingDesarrollo = false;
+  isImprovingConclusion = false;
+  isGeneratingFullReport = false;
   isProcessingFrames = false;
   utilizoHash = false;
   isDirty = false;
@@ -76,8 +79,11 @@ export class InformesComponent implements OnInit, OnDestroy {
   isDrawingSignature = false;
   incluirFirma = false;
   incluirDatosVuelo = false;
-  private airportManualOverride = false;
+  airportManualOverride = false;
   api_key = '';
+  selectedAiProvider = 'ollama';
+  hora_inicio = '';
+  hora_fin = '';
   private lastPos = { x: 0, y: 0 };
   frames: VideoReportFrame[] = [];
   personnelOptions: any[] = [];
@@ -91,11 +97,11 @@ export class InformesComponent implements OnInit, OnDestroy {
   private unitCodeByName: Record<string, string> = {};
   private unitAirportByName: Record<string, string> = {};
   private readonly fallbackUnidadOptions: string[] = [
-    'Coordinacion Regional de Video Seguridad I del Este',
-    'Coordinacion Regional de Video Seguridad II del Centro',
-    'Coordinacion Regional de Video Seguridad III del Norte',
-    'Coordinacion Regional de Video Seguridad IV del Litoral',
-    'Coordinacion Regional de Video Seguridad V de la Patagonia',
+    'Coordinacion Regional de Video Vigilancia I del Este',
+    'Coordinacion Regional de Video Vigilancia II del Centro',
+    'Coordinacion Regional de Video Vigilancia III del Norte',
+    'Coordinacion Regional de Video Vigilancia IV del Litoral',
+    'Coordinacion Regional de Video Vigilancia V de la Patagonia',
     'CEAC',
   ];
   unidadOptions: string[] = [...this.fallbackUnidadOptions];
@@ -131,7 +137,7 @@ export class InformesComponent implements OnInit, OnDestroy {
   openHelpKey: HelpKey | null = null;
 
   get isAiProcessing(): boolean {
-    return this.isImprovingNarrative || this.isImprovingMaterialFilmico;
+    return this.isImprovingNarrative || this.isImprovingMaterialFilmico || this.isImprovingDesarrollo || this.isImprovingConclusion || this.isGeneratingFullReport;
   }
 
   ngOnInit() {
@@ -215,10 +221,71 @@ export class InformesComponent implements OnInit, OnDestroy {
         if (record.description) {
           this.form.objeto_denunciado = record.description;
         }
+
+        // Auto-detectar hash y algoritmo del registro
+        this.prefillHashFromRecord(record);
+
         this.toastService.show('Campos pre-cargados desde el registro.', 'info');
       },
-      error: () => {}
+      error: () => { }
     });
+  }
+
+  /**
+   * Detecta el hash y el algoritmo utilizado en el registro fílmico
+   * y auto-configura los campos de integridad del informe.
+   */
+  private prefillHashFromRecord(record: any): void {
+    const fileHash = (record.file_hash || '').trim();
+    if (!fileHash) {
+      return;
+    }
+
+    // Determinar el algoritmo: primero usar el campo explícito, sino inferir por longitud
+    let detectedAlgorithm = (record.hash_algorithm || '').trim().toLowerCase();
+
+    if (!detectedAlgorithm) {
+      detectedAlgorithm = this.inferHashAlgorithmByLength(fileHash);
+    }
+
+    if (!detectedAlgorithm) {
+      return;
+    }
+
+    // Mapear a los valores del formulario
+    const algorithmMap: Record<string, typeof this.form.hash_algorithms[number]> = {
+      sha256: 'sha256',
+      sha512: 'sha512',
+      sha3: 'sha3',
+    };
+
+    const formAlgorithm = algorithmMap[detectedAlgorithm];
+
+    // Auto-configurar modo de autenticidad y algoritmos
+    this.form.vms_authenticity_mode = 'hash_preventivo';
+    this.utilizoHash = true;
+    this.onVmsAuthenticityModeChange('hash_preventivo');
+
+    if (formAlgorithm) {
+      this.form.hash_algorithms = [formAlgorithm];
+    }
+
+    // Pre-setear programa de hash por defecto si no tiene
+    if (!(this.form.hash_program || '').trim()) {
+      this.form.hash_program = 'HashMyFiles';
+    }
+  }
+
+  /**
+   * Infiere el algoritmo de hash basándose en la longitud del string hexadecimal.
+   * SHA-256 = 64 chars, SHA-512 = 128 chars, SHA-1 = 40 chars, SHA-3 (256) = 64 chars
+   */
+  private inferHashAlgorithmByLength(hash: string): string {
+    const length = hash.length;
+    if (length === 128) return 'sha512';
+    if (length === 64) return 'sha256'; // También podría ser SHA-3 (256), pero asumimos SHA-256
+    if (length === 40) return 'sha1';
+    return '';
   }
 
   private loadUnits() {
@@ -256,7 +323,9 @@ export class InformesComponent implements OnInit, OnDestroy {
         this.unitCodeByName[name] = code;
       }
       if (name) {
-        this.unitAirportByName[name] = this.inferAirportFromUnit(name, code);
+        // Priorizar el aeropuerto que viene de la BD; fallback a inferencia local
+        const apiAirport = (unit.airport || '').trim();
+        this.unitAirportByName[name] = apiAirport || this.inferAirportFromUnit(name, code);
       }
     }
     this.refreshAirportOptions();
@@ -455,6 +524,43 @@ export class InformesComponent implements OnInit, OnDestroy {
     this.markDirty('unidad');
     this.markDirty('numero_informe');
     this.markDirty('aeropuerto');
+  }
+
+  /**
+   * Calcula automáticamente franja_horaria_analizada y tiempo_total_analisis
+   * a partir de hora_inicio y hora_fin.
+   */
+  onTimeChange(): void {
+    const start = this.hora_inicio;
+    const end = this.hora_fin;
+
+    if (!start || !end) {
+      return;
+    }
+
+    // Construir franja horaria como texto legible
+    this.form.franja_horaria_analizada = `${start} a ${end}`;
+    this.markDirty('franja_horaria_analizada');
+
+    // Calcular duración total en minutos
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    let totalMinutes = (eh * 60 + em) - (sh * 60 + sm);
+    if (totalMinutes < 0) {
+      totalMinutes += 24 * 60; // Si cruza medianoche
+    }
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const parts: string[] = [];
+    if (hours > 0) {
+      parts.push(`${hours} hora${hours > 1 ? 's' : ''}`);
+    }
+    if (minutes > 0) {
+      parts.push(`${minutes} minuto${minutes > 1 ? 's' : ''}`);
+    }
+    this.form.tiempo_total_analisis = parts.length > 0 ? parts.join(' ') : '0 minutos';
+    this.markDirty('tiempo_total_analisis');
   }
 
   onDatosVueloToggle(): void {
@@ -1654,76 +1760,195 @@ export class InformesComponent implements OnInit, OnDestroy {
     return 'En virtud del análisis efectuado sobre el material fílmico, y dentro de los límites propios de la revisión visual practicada, no se advierten elementos adicionales a los ya consignados en el desarrollo. La valoración jurídica del material queda sujeta a la autoridad competente.';
   }
 
-  async improveNarrativeWithAi(): Promise<void> {
-    if (this.isImprovingNarrative) {
-      return;
-    }
+  async improveDesarrolloWithAi(): Promise<void> {
+    if (this.isImprovingDesarrollo) return;
 
     const desarrollo = (this.form.desarrollo || '').trim();
-    const conclusion = (this.form.conclusion || '').trim();
     const hasStructuredContext = this.hasStructuredSpeechContext();
     const desarrolloSeed = desarrollo || this.buildDesarrolloSeedFromContext();
-    const conclusionSeed = conclusion || this.buildConclusionSeedFromContext();
 
-    if (!desarrollo && !conclusion && !hasStructuredContext) {
-      this.toastService.error('Completa texto o datos rápidos (sectores/tiempos/síntesis) para usar la mejora con IA.');
+    if (!desarrollo && !hasStructuredContext) {
+      this.toastService.error('Completa algunos datos estructurados o inicia el texto para mejorarlo.');
       return;
     }
 
     const materialContext = this.buildMaterialSpeechContext();
-    this.isImprovingNarrative = true;
-    this.startAiFeedback('Mejorando desarrollo y conclusión con IA');
+    this.isImprovingDesarrollo = true;
+    this.startAiFeedback('Mejorando desarrollo con IA');
 
     let deferredSuccess = false;
     try {
-      const responses = await firstValueFrom(
-        forkJoin({
-          desarrollo: this.informeService.improveVideoText({
-            material_filmico: '',
-            desarrollo: desarrolloSeed,
-            conclusion: '',
-            material_context: materialContext,
-            mode: 'desarrollo' as ImproveVideoTextMode,
-          }),
-          conclusion: this.informeService.improveVideoText({
-            material_filmico: '',
-            desarrollo: '',
-            conclusion: conclusionSeed,
-            material_context: materialContext,
-            mode: 'conclusion' as ImproveVideoTextMode,
-          }),
+      const response = await firstValueFrom(
+        this.informeService.improveVideoText({
+          material_filmico: '',
+          desarrollo: desarrolloSeed,
+          conclusion: '',
+          material_context: materialContext,
+          mode: 'desarrollo',
+          preferred_provider: this.selectedAiProvider,
         })
       );
 
       const elapsedSeconds = this.getAiElapsedSeconds();
-      const newDesarrollo = (responses.desarrollo?.desarrollo || '').trim();
-      const newConclusion = (responses.conclusion?.conclusion || '').trim();
-      const aiApplied = (responses.desarrollo?.ai_applied !== false) || (responses.conclusion?.ai_applied !== false);
+      const newDesarrollo = (response?.desarrollo || '').trim();
+
       deferredSuccess = true;
       window.setTimeout(() => {
         if (newDesarrollo) {
           this.form.desarrollo = newDesarrollo;
+          this.markDirty('desarrollo');
         }
-        if (newConclusion) {
-          this.form.conclusion = newConclusion;
-        }
-        this.markDirty();
         this.cdr.detectChanges();
-        if (!aiApplied) {
-          this.toastService.warning(`Proceso IA finalizado en ${elapsedSeconds}s sin cambios en el texto.`);
+        if (response.ai_applied === false) {
+          this.toastService.warning(`Proceso IA finalizado en ${elapsedSeconds}s sin cambios en el desarrollo.`);
         } else {
-          this.toastService.success(`Desarrollo y conclusión mejorados con IA en ${elapsedSeconds}s.`);
+          this.toastService.success(`Desarrollo mejorado con IA en ${elapsedSeconds}s.`);
         }
-        this.isImprovingNarrative = false;
+        this.isImprovingDesarrollo = false;
         this.stopAiFeedback();
       }, 50);
     } catch (error) {
       this.toastService.error(
-        this.getSimpleApiErrorMessage(error as HttpErrorResponse, 'No se pudo mejorar el texto con IA.')
+        this.getSimpleApiErrorMessage(error as HttpErrorResponse, 'No se pudo mejorar el desarrollo con IA.')
       );
     } finally {
       if (!deferredSuccess) {
-        this.isImprovingNarrative = false;
+        this.isImprovingDesarrollo = false;
+        this.stopAiFeedback();
+      }
+    }
+  }
+
+  async improveConclusionWithAi(): Promise<void> {
+    if (this.isImprovingConclusion) return;
+
+    const conclusion = (this.form.conclusion || '').trim();
+    const hasStructuredContext = this.hasStructuredSpeechContext();
+    const conclusionSeed = conclusion || this.buildConclusionSeedFromContext();
+
+    if (!conclusion && !hasStructuredContext) {
+      this.toastService.error('Completa algunos datos estructurados o inicia el texto para mejorarlo.');
+      return;
+    }
+
+    const materialContext = this.buildMaterialSpeechContext();
+    this.isImprovingConclusion = true;
+    this.startAiFeedback('Mejorando conclusión con IA');
+
+    let deferredSuccess = false;
+    try {
+      const response = await firstValueFrom(
+        this.informeService.improveVideoText({
+          material_filmico: '',
+          desarrollo: '',
+          conclusion: conclusionSeed,
+          material_context: materialContext,
+          mode: 'conclusion',
+          preferred_provider: this.selectedAiProvider,
+        })
+      );
+
+      const elapsedSeconds = this.getAiElapsedSeconds();
+      const newConclusion = (response?.conclusion || '').trim();
+
+      deferredSuccess = true;
+      window.setTimeout(() => {
+        if (newConclusion) {
+          this.form.conclusion = newConclusion;
+          this.markDirty('conclusion');
+        }
+        this.cdr.detectChanges();
+        if (response.ai_applied === false) {
+          this.toastService.warning(`Proceso IA finalizado en ${elapsedSeconds}s sin cambios en la conclusión.`);
+        } else {
+          this.toastService.success(`Conclusión mejorada con IA en ${elapsedSeconds}s.`);
+        }
+        this.isImprovingConclusion = false;
+        this.stopAiFeedback();
+      }, 50);
+    } catch (error) {
+      this.toastService.error(
+        this.getSimpleApiErrorMessage(error as HttpErrorResponse, 'No se pudo mejorar la conclusión con IA.')
+      );
+    } finally {
+      if (!deferredSuccess) {
+        this.isImprovingConclusion = false;
+        this.stopAiFeedback();
+      }
+    }
+  }
+
+  async generateFullReportWithAi(): Promise<void> {
+    if (this.isGeneratingFullReport) return;
+
+    const hasStructuredContext = this.hasStructuredSpeechContext();
+    if (!hasStructuredContext) {
+      this.toastService.warning('Completa los campos iniciales del informe para proveer contexto a la IA.');
+      // Permitir continuar de igual modo
+    }
+
+    // Pre-seed any unpopulated values from context in case they are empty
+    const materialFilmico = (this.form.material_filmico || '').trim();
+    const desarrollo = (this.form.desarrollo || '').trim();
+    const conclusion = (this.form.conclusion || '').trim();
+
+    const materialSeed = materialFilmico || this.buildMaterialFilmicoSeedFromContext();
+    const desarrolloSeed = desarrollo || this.buildDesarrolloSeedFromContext();
+    const conclusionSeed = conclusion || this.buildConclusionSeedFromContext();
+
+    const materialContext = this.buildMaterialSpeechContext();
+    this.isGeneratingFullReport = true;
+    this.startAiFeedback('Completando todo el informe con IA');
+
+    let deferredSuccess = false;
+    try {
+      const response = await firstValueFrom(
+        this.informeService.improveVideoText({
+          material_filmico: materialSeed,
+          desarrollo: desarrolloSeed,
+          conclusion: conclusionSeed,
+          material_context: materialContext,
+          mode: 'full',
+          preferred_provider: this.selectedAiProvider,
+        })
+      );
+
+      const elapsedSeconds = this.getAiElapsedSeconds();
+      const newMF = (response?.material_filmico || '').trim();
+      const newDesarrollo = (response?.desarrollo || '').trim();
+      const newConclusion = (response?.conclusion || '').trim();
+
+      deferredSuccess = true;
+      window.setTimeout(() => {
+        if (newMF) {
+          this.form.material_filmico = newMF;
+          this.markDirty('material_filmico');
+        }
+        if (newDesarrollo) {
+          this.form.desarrollo = newDesarrollo;
+          this.markDirty('desarrollo');
+        }
+        if (newConclusion) {
+          this.form.conclusion = newConclusion;
+          this.markDirty('conclusion');
+        }
+
+        this.cdr.detectChanges();
+        if (response.ai_applied === false) {
+          this.toastService.warning(`Proceso IA finalizado en ${elapsedSeconds}s sin cambios en el texto.`);
+        } else {
+          this.toastService.success(`Informe completado con IA en ${elapsedSeconds}s.`);
+        }
+        this.isGeneratingFullReport = false;
+        this.stopAiFeedback();
+      }, 50);
+    } catch (error) {
+      this.toastService.error(
+        this.getSimpleApiErrorMessage(error as HttpErrorResponse, 'No se pudo generar el informe completo con IA.')
+      );
+    } finally {
+      if (!deferredSuccess) {
+        this.isGeneratingFullReport = false;
         this.stopAiFeedback();
       }
     }
@@ -1766,6 +1991,7 @@ export class InformesComponent implements OnInit, OnDestroy {
           conclusion: '',
           material_context: materialContext,
           mode: 'material_filmico' as ImproveVideoTextMode,
+          preferred_provider: this.selectedAiProvider,
         })
       );
 
@@ -1852,8 +2078,8 @@ export class InformesComponent implements OnInit, OnDestroy {
     const existingId = this.existingReportId();
     if (existingId) {
       this.informeService.updateReport(existingId, reportData).subscribe({
-        next: () => {},
-        error: () => {}
+        next: () => { },
+        error: () => { }
       });
     } else {
       this.informeService.saveReport(reportData).subscribe({
@@ -1861,7 +2087,7 @@ export class InformesComponent implements OnInit, OnDestroy {
           this.existingReportId.set(saved.id);
           this.isReadOnly.set(true);
         },
-        error: () => {}
+        error: () => { }
       });
     }
   }
@@ -2043,6 +2269,30 @@ export class InformesComponent implements OnInit, OnDestroy {
       </body>
       </html>
     `;
+  }
+
+  saveReportToDatabase(): void {
+    if (!this.linkedRecordId()) {
+      this.toastService.warning('No hay un registro fílmico vinculado para guardar el borrador.');
+      return;
+    }
+
+    // We update the data that we want to save
+    const currentData = { ...this.form };
+
+    this.informeService.saveReportDraft(this.linkedRecordId()!, currentData).subscribe({
+      next: (res) => {
+        this.toastService.success('Borrador del informe guardado en la base de datos exitosamente.');
+        if (res.report_id && !this.existingReportId()) {
+          this.existingReportId.set(res.report_id);
+        }
+      },
+      error: (err) => {
+        this.toastService.error(
+          this.getSimpleApiErrorMessage(err, 'Error al guardar el borrador del informe.')
+        );
+      }
+    });
   }
 
   private escapeHtml(value: string): string {

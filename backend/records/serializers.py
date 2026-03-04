@@ -305,6 +305,7 @@ class VideoReportImproveTextSerializer(serializers.Serializer):
     material_context = VideoReportMaterialContextSerializer(required=False)
     api_key = serializers.CharField(required=False, allow_blank=True)
     mode = serializers.ChoiceField(choices=AI_IMPROVE_MODE_CHOICES, required=False, default='full')
+    preferred_provider = serializers.CharField(required=False, allow_blank=True, max_length=50)
 
     def validate(self, attrs):
         material_filmico = (attrs.get('material_filmico') or '').strip()

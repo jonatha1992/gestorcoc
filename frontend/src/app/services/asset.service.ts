@@ -6,6 +6,7 @@ export interface Unit {
     id: number;
     name: string;
     code: string;
+    airport: string | null;
     parent: number | null;
 }
 

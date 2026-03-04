@@ -4,6 +4,7 @@ from core.models import TimeStampedModel
 class Unit(TimeStampedModel):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=10, unique=True, help_text="e.g., AEP, EZE")
+    airport = models.CharField(max_length=100, blank=True, null=True, help_text="Aeropuerto")
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_units', help_text="Entidad Superior (e.g., CREV)")
 
     def __str__(self):
