@@ -130,4 +130,24 @@ export class InformeService {
     improveVideoText(payload: ImproveVideoTextPayload): Observable<ImproveVideoTextResponse> {
         return this.http.post<ImproveVideoTextResponse>(`${this.baseUrl}/api/video-analysis-improve-text/`, payload);
     }
+
+    saveReport(data: { film_record?: number | null; numero_informe?: string; report_date?: string; form_data?: any }): Observable<any> {
+        return this.http.post<any>(`${this.baseUrl}/api/video-analysis-reports/`, data);
+    }
+
+    updateReport(id: number, data: any): Observable<any> {
+        return this.http.put<any>(`${this.baseUrl}/api/video-analysis-reports/${id}/`, data);
+    }
+
+    getReportByRecord(filmRecordId: number): Observable<any[]> {
+        return this.http.get<any[]>(`${this.baseUrl}/api/video-analysis-reports/?film_record=${filmRecordId}`);
+    }
+
+    getReport(id: number): Observable<any> {
+        return this.http.get<any>(`${this.baseUrl}/api/video-analysis-reports/${id}/`);
+    }
+
+    listReports(): Observable<any[]> {
+        return this.http.get<any[]>(`${this.baseUrl}/api/video-analysis-reports/`);
+    }
 }

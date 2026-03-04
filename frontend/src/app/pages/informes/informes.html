@@ -1,5 +1,17 @@
 <div class="space-y-6 informes-view">
-    <form (ngSubmit)="generateReport()" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+    @if (isReadOnly()) {
+    <div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+        <div>
+            <div class="text-sm font-bold text-amber-800">Informe en modo lectura</div>
+            <div class="text-xs text-amber-600">Este informe ya fue generado y no puede ser modificado. Solo podés volver a descargar el documento.</div>
+        </div>
+    </div>
+    }
+    <form (ngSubmit)="generateReport()" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6"
+        [class.opacity-70]="isReadOnly()" [class.pointer-events-none]="isReadOnly()">
         <h2 class="text-xl font-bold text-slate-800">Informe de Analisis de Video</h2>
         <p *ngIf="validationMessage"
             class="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
@@ -721,8 +733,9 @@
 
         <div class="flex justify-end pt-2 border-t border-slate-200">
             <button type="submit" [disabled]="isGenerating"
-                class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-semibold transition-colors">
-                {{ isGenerating ? 'Generando...' : 'Generar Informe (DOC)' }}
+                class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-semibold transition-colors"
+                style="pointer-events: auto !important;">
+                {{ isGenerating ? 'Generando...' : (isReadOnly() ? 'Volver a descargar (DOC)' : 'Generar Informe (DOC)') }}
             </button>
         </div>
     </form>

@@ -1,0 +1,25 @@
+# Entornos virtuales Python
+backend/.venv/
+backend/venv/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Node
+frontend/node_modules/
+frontend/.angular/
+
+# Archivos de desarrollo/test
+backend/db.sqlite3
+backend/staticfiles/
+.env
+**/.env
+
+# Git y herramientas
+.git/
+.gitignore
+.vscode/
+.e2e-runs/
+
+# Logs y temporales
+*.log

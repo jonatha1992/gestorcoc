@@ -5,7 +5,7 @@ class Unit(TimeStampedModel):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=10, unique=True, help_text="e.g., AEP, EZE")
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_units', help_text="Entidad Superior (e.g., CREV)")
-    
+
     def __str__(self):
         return f"{self.name} ({self.code})"
 
@@ -14,7 +14,7 @@ class System(TimeStampedModel):
         ('NVR', 'NVR (Grabador)'),
         ('CCTV', 'Sistema CCTV Completo'),
     ]
-    
+
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='systems', null=True, blank=True)
     name = models.CharField(max_length=100, unique=True, help_text="e.g., SITE-01-NVR")
     system_type = models.CharField(max_length=10, choices=SYSTEM_TYPE_CHOICES, default='CCTV')
@@ -40,8 +40,6 @@ class Camera(TimeStampedModel):
     ]
 
     server = models.ForeignKey(Server, on_delete=models.CASCADE, related_name='cameras', null=True, blank=True)
-    # Temporary system field for migration or dual access if needed, but primary link is server.
-    # Actually, let's just use server as the primary link.
     name = models.CharField(max_length=100)
     ip_address = models.GenericIPAddressField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ONLINE')

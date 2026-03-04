@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.conf import settings
 import base64
 import binascii
-from .models import FilmRecord, Catalog
+from .models import FilmRecord, Catalog, VideoAnalysisReport
 from assets.models import Camera
 from personnel.models import Person
 
@@ -287,6 +287,12 @@ class VideoReportPayloadSerializer(serializers.Serializer):
             orders.add(order)
 
         return attrs
+
+
+class VideoAnalysisReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VideoAnalysisReport
+        fields = ['id', 'film_record', 'numero_informe', 'report_date', 'form_data', 'created_at', 'updated_at']
 
 
 AI_IMPROVE_MODE_CHOICES = ('material_filmico', 'desarrollo', 'conclusion', 'full')

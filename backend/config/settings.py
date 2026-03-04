@@ -96,7 +96,7 @@ INSTALLED_APPS = [
     'core',
     'assets',
     'novedades',
-    'personnel',
+    'personnel.apps.PersonnelConfig',
     'records',
     'hechos',
 ]

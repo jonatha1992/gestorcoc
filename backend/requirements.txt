@@ -1,17 +1,22 @@
-Django>=4.2
-psycopg2-binary  # For Postgres support (optional dev)
-oracledb         # For Oracle support
-requests
-django-tailwind
-django-browser-reload
-faker            # For data seeding
+# Core Django
+Django>=6.0
 django-cors-headers
 djangorestframework
 django-filter
 drf-spectacular
+
+# Base de datos
+psycopg2-binary  # soporte Postgres (Railway/cloud)
+dj-database-url
+
+# Servidor de producción
+gunicorn
+whitenoise
+
+# Generación de documentos
 reportlab
 python-docx
 Pillow
-gunicorn
-whitenoise
-dj-database-url
+
+# HTTP
+requests

@@ -1,7 +1,8 @@
-import { Component, HostListener, OnDestroy, inject, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, inject, signal, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import {
   InformeService,
@@ -32,13 +33,18 @@ type FieldHelpContent = {
   imports: [CommonModule, FormsModule],
   templateUrl: './informes.html'
 })
-export class InformesComponent implements OnDestroy {
+export class InformesComponent implements OnInit, OnDestroy {
   private informeService = inject(InformeService);
   private toastService = inject(ToastService);
   private loadingService = inject(LoadingService);
   private personnelService = inject(PersonnelService);
   private assetService = inject(AssetService);
   private cdr = inject(ChangeDetectorRef);
+  private route = inject(ActivatedRoute);
+
+  existingReportId = signal<number | null>(null);
+  linkedRecordId = signal<number | null>(null);
+  isReadOnly = signal(false);
 
   readonly MAX_FRAMES = 30;
   readonly MAX_FRAME_SIZE = 8 * 1024 * 1024;
@@ -134,6 +140,85 @@ export class InformesComponent implements OnDestroy {
     }
     this.loadUnits();
     this.loadPersonnel();
+    this.handleQueryParams();
+  }
+
+  private handleQueryParams(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const recordId = params.get('record_id');
+    const informeId = params.get('informe_id');
+
+    if (informeId) {
+      const id = parseInt(informeId, 10);
+      if (!isNaN(id)) {
+        this.informeService.getReport(id).subscribe({
+          next: (informe) => {
+            this.existingReportId.set(informe.id);
+            this.isReadOnly.set(true);
+            if (informe.film_record != null) {
+              this.linkedRecordId.set(informe.film_record);
+            }
+            if (informe.form_data && typeof informe.form_data === 'object') {
+              Object.assign(this.form, informe.form_data);
+            }
+            this.toastService.show('Informe en modo lectura — no se puede modificar.', 'info');
+          },
+          error: () => this.toastService.show('No se pudo cargar el informe.', 'error')
+        });
+      }
+    } else if (recordId) {
+      const id = parseInt(recordId, 10);
+      if (!isNaN(id)) {
+        this.linkedRecordId.set(id);
+        this.informeService.getReportByRecord(id).subscribe({
+          next: (informes) => {
+            if (informes.length > 0) {
+              const informe = informes[0];
+              this.existingReportId.set(informe.id);
+              this.isReadOnly.set(true);
+              if (informe.form_data && typeof informe.form_data === 'object') {
+                Object.assign(this.form, informe.form_data);
+              }
+              this.toastService.show('Informe en modo lectura — no se puede modificar.', 'info');
+            } else {
+              this.prefillFromRecord(id);
+            }
+          },
+          error: () => this.prefillFromRecord(id)
+        });
+      }
+    }
+  }
+
+  private prefillFromRecord(recordId: number): void {
+    // GET film-records/{id}/ via HttpClient directly
+    const baseUrl: string = (this.informeService as any).baseUrl || '';
+    const http = (this.informeService as any).http as import('@angular/common/http').HttpClient | undefined;
+    if (!http) return;
+    (http.get(`${baseUrl}/api/film-records/${recordId}/`) as import('rxjs').Observable<any>).subscribe({
+      next: (record: any) => {
+        if (record.judicial_case_number) {
+          this.form.prevencion_sumaria = record.judicial_case_number;
+        }
+        if (record.case_title) {
+          this.form.caratula = record.case_title;
+        }
+        if (record.incident_date) {
+          this.form.fecha_hecho = record.incident_date;
+        }
+        if (record.operator_full_name) {
+          this.form.operador = record.operator_full_name;
+        }
+        if (record.camera_name) {
+          this.form.sistema = record.camera_name;
+        }
+        if (record.description) {
+          this.form.objeto_denunciado = record.description;
+        }
+        this.toastService.show('Campos pre-cargados desde el registro.', 'info');
+      },
+      error: () => {}
+    });
   }
 
   private loadUnits() {
@@ -1742,11 +1827,42 @@ export class InformesComponent implements OnDestroy {
       window.URL.revokeObjectURL(url);
       this.toastService.success('Informe local generado.');
       this.isDirty = false;
+      this.persistReportToDB(payload);
     } catch {
       this.toastService.error('No se pudo generar el informe local.');
     } finally {
       this.isGenerating = false;
       this.loadingService.hide();
+    }
+  }
+
+  private persistReportToDB(payload: VideoReportPayload): void {
+    if (this.isReadOnly()) {
+      return;
+    }
+
+    const formDataToSave = { ...payload.report_data };
+    const reportData = {
+      film_record: this.linkedRecordId() ?? null,
+      numero_informe: this.form.numero_informe || '',
+      report_date: this.form.report_date || undefined,
+      form_data: formDataToSave,
+    };
+
+    const existingId = this.existingReportId();
+    if (existingId) {
+      this.informeService.updateReport(existingId, reportData).subscribe({
+        next: () => {},
+        error: () => {}
+      });
+    } else {
+      this.informeService.saveReport(reportData).subscribe({
+        next: (saved) => {
+          this.existingReportId.set(saved.id);
+          this.isReadOnly.set(true);
+        },
+        error: () => {}
+      });
     }
   }
 

@@ -1,7 +1,4 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
@@ -10,14 +7,13 @@
             "request": "launch",
             "args": [
                 "runserver",
-                "localhost:8000",
-                "--noreload"
+                "localhost:8000"
             ],
             "django": true,
             "autoStartBrowser": false,
             "program": "manage.py",
             "python": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
-            "cwd": "${workspaceFolder}/backend/src",
+            "cwd": "${workspaceFolder}/backend/",
             "console": "integratedTerminal",
             "env": {
                 "PYTHONUNBUFFERED": "1"
@@ -25,12 +21,15 @@
             "justMyCode": false
         },
         {
-            "name": "Frontend (Angular)",
+            // Recompila Angular al dist/ en cada guardado (~3-8s).
+            // Django sirve el resultado desde :8000 con whitenoise.
+            "name": "Frontend (ng build --watch)",
             "type": "node",
             "request": "launch",
-            "runtimeExecutable": "ng",
+            "runtimeExecutable": "npm",
             "runtimeArgs": [
-                "serve"
+                "run",
+                "watch:dev"
             ],
             "cwd": "${workspaceFolder}/frontend",
             "console": "integratedTerminal",
@@ -39,10 +38,10 @@
     ],
     "compounds": [
         {
-            "name": "🚀 Full Stack (Backend + Frontend)",
+            "name": "🚀 Full Stack (:8000)",
             "configurations": [
                 "Backend (Django)",
-                "Frontend (Angular)"
+                "Frontend (ng build --watch)"
             ],
             "stopAll": true,
             "presentation": {

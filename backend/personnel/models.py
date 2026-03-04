@@ -12,5 +12,9 @@ class Person(TimeStampedModel):
     assigned_systems = models.ManyToManyField('assets.System', blank=True, related_name='personnel', help_text="Sistemas asignados")
     is_active = models.BooleanField(default=True)
 
+    class Meta:
+        verbose_name = 'Persona'
+        verbose_name_plural = 'Personal'
+
     def __str__(self):
         return f"{self.last_name}, {self.first_name} ({self.badge_number})"

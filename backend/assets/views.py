@@ -28,7 +28,8 @@ class ServerViewSet(viewsets.ModelViewSet):
 
 
 class CameraViewSet(viewsets.ModelViewSet):
-    queryset = Camera.objects.all()
+    # select_related evita N+1 queries: el serializer accede a server.name, server.system.name y server.system.id
+    queryset = Camera.objects.select_related('server', 'server__system').all()
     serializer_class = CameraSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'ip_address', 'server__name', 'status']

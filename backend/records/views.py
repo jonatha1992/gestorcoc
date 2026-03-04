@@ -8,12 +8,13 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import FilmRecord, Catalog
+from .models import FilmRecord, Catalog, VideoAnalysisReport
 from .serializers import (
     FilmRecordSerializer,
     CatalogSerializer,
     VideoReportPayloadSerializer,
     VideoReportImproveTextSerializer,
+    VideoAnalysisReportSerializer,
 )
 from .services import IntegrityService
 
@@ -136,6 +137,25 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
 class CatalogViewSet(viewsets.ModelViewSet):
     queryset = Catalog.objects.all()
     serializer_class = CatalogSerializer
+
+
+class VideoAnalysisReportViewSet(viewsets.ModelViewSet):
+    queryset = VideoAnalysisReport.objects.select_related('film_record').all()
+    serializer_class = VideoAnalysisReportSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = {'film_record': ['exact']}
+
+    def update(self, request, *args, **kwargs):
+        return Response(
+            {'detail': 'Un informe ya generado no puede ser modificado.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        return Response(
+            {'detail': 'Un informe ya generado no puede ser modificado.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
 
 class IntegrityReportView(views.APIView):
     parser_classes = (MultiPartParser, FormParser)
@@ -298,4 +318,65 @@ class AIUsageSummaryView(views.APIView):
             .order_by('-day')[:60]
         )
         return Response(list(rows))
+
+
+class DashboardStatsView(views.APIView):
+    def get(self, request):
+        from django.db.models import Count
+        from django.db.models.functions import TruncMonth, TruncDate
+        from datetime import timedelta
+        from records.models import FilmRecord
+        from hechos.models import Hecho
+        from novedades.models import Novedad
+
+        # Últimos 12 meses (mensuales)
+        monthly_records = (
+            FilmRecord.objects
+            .annotate(month=TruncMonth('entry_date'))
+            .values('month').annotate(count=Count('id')).order_by('month')[:12]
+        )
+        monthly_hechos = (
+            Hecho.objects
+            .annotate(month=TruncMonth('timestamp'))
+            .values('month').annotate(count=Count('id')).order_by('month')[:12]
+        )
+        monthly_novedades = (
+            Novedad.objects
+            .annotate(month=TruncMonth('created_at'))
+            .values('month').annotate(count=Count('id')).order_by('month')[:12]
+        )
+
+        # Últimos 30 días (diarios)
+        cutoff = timezone.now() - timedelta(days=30)
+
+        daily_records = (
+            FilmRecord.objects.filter(entry_date__gte=cutoff.date())
+            .annotate(day=TruncDate('entry_date'))
+            .values('day').annotate(count=Count('id')).order_by('day')
+        )
+        daily_hechos = (
+            Hecho.objects.filter(timestamp__gte=cutoff)
+            .annotate(day=TruncDate('timestamp'))
+            .values('day').annotate(count=Count('id')).order_by('day')
+        )
+        daily_novedades = (
+            Novedad.objects.filter(created_at__gte=cutoff)
+            .annotate(day=TruncDate('created_at'))
+            .values('day').annotate(count=Count('id')).order_by('day')
+        )
+
+        # Se convierten month/day a ISO string para garantizar que el frontend
+        # recibe siempre un string (evita TypeError al llamar .startsWith sobre null)
+        return Response({
+            'monthly': {
+                'records': [{'month': str(r['month'])[:10], 'count': r['count']} for r in monthly_records if r['month']],
+                'hechos': [{'month': str(r['month'])[:10], 'count': r['count']} for r in monthly_hechos if r['month']],
+                'novedades': [{'month': str(r['month'])[:10], 'count': r['count']} for r in monthly_novedades if r['month']],
+            },
+            'daily': {
+                'records': [{'day': str(r['day'])[:10], 'count': r['count']} for r in daily_records if r['day']],
+                'hechos': [{'day': str(r['day'])[:10], 'count': r['count']} for r in daily_hechos if r['day']],
+                'novedades': [{'day': str(r['day'])[:10], 'count': r['count']} for r in daily_novedades if r['day']],
+            }
+        })
 
