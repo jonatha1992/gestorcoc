@@ -7,13 +7,28 @@ class UnitSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'code', 'parent']
 
 class CameraSerializer(serializers.ModelSerializer):
-    server_name = serializers.CharField(source='server.name', read_only=True)
-    system_name = serializers.CharField(source='server.system.name', read_only=True)
-    system = serializers.IntegerField(source='server.system.id', read_only=True)
+    # Se usan SerializerMethodField para manejar cámaras con server=null
+    # (el FK admite null=True, y los campos con source anidado fallan silenciosamente ante None)
+    server_name = serializers.SerializerMethodField()
+    system_name = serializers.SerializerMethodField()
+    system = serializers.SerializerMethodField()
 
     class Meta:
         model = Camera
         fields = '__all__'
+
+    def get_server_name(self, obj):
+        return obj.server.name if obj.server else None
+
+    def get_system_name(self, obj):
+        if obj.server and obj.server.system:
+            return obj.server.system.name
+        return None
+
+    def get_system(self, obj):
+        if obj.server and obj.server.system:
+            return obj.server.system.id
+        return None
 
 from .models import CameramanGear
 

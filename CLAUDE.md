@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 Guía técnica para agentes que trabajen sobre este repositorio.
 
 ## Resumen del Proyecto
@@ -13,25 +15,27 @@ No se renderizan templates Django para la UI principal; el backend expone APIs R
 
 ## Comandos
 
-### Backend (ejecutar desde `backend/src/`)
+### Backend (ejecutar desde `backend/`)
+
+El `manage.py` y el venv (`.venv/`) están en `backend/` directamente.
 
 ```powershell
 # Servidor de desarrollo (puerto 8000)
-..\.venv\Scripts\python.exe manage.py runserver
+.venv\Scripts\python.exe manage.py runserver
 
 # Tests
-..\.venv\Scripts\python.exe manage.py test
-..\.venv\Scripts\python.exe manage.py test records
-..\.venv\Scripts\python.exe manage.py test records.tests.FilmRecordAPITest
+.venv\Scripts\python.exe manage.py test
+.venv\Scripts\python.exe manage.py test records
+.venv\Scripts\python.exe manage.py test records.tests.FilmRecordAPITest
 
 # Migraciones
-..\.venv\Scripts\python.exe manage.py makemigrations
-..\.venv\Scripts\python.exe manage.py migrate
+.venv\Scripts\python.exe manage.py makemigrations
+.venv\Scripts\python.exe manage.py migrate
 
 # Seed de datos
-..\.venv\Scripts\python.exe manage.py seed_roles
-..\.venv\Scripts\python.exe manage.py seed_catalogs
-..\.venv\Scripts\python.exe manage.py seed_demo_data
+.venv\Scripts\python.exe manage.py seed_roles
+.venv\Scripts\python.exe manage.py seed_catalogs
+.venv\Scripts\python.exe manage.py seed_demo_data
 ```
 
 ### Frontend (ejecutar desde `frontend/`)
@@ -50,7 +54,7 @@ npm test
 
 ## Arquitectura
 
-### Backend (`backend/src/`)
+### Backend (`backend/`)
 
 Patrón general por app: `models → serializers → views (ViewSets/APIs) → urls`.
 
@@ -152,9 +156,10 @@ En `Informes`, el flujo esperado de carga es:
 
 Contratos/tipos relevantes actuales (`informe.service.ts`):
 
-- `VideoReportExportFormat`: `mp4|avi|mkv|mov|asf|dav|jpg|png|zip|otro`
 - `VideoReportHashAlgorithm`: `sha1|sha3|sha256|sha512|otro`
 - `VideoReportVmsAuthenticityMode`: `vms_propio|hash_preventivo|sin_autenticacion|otro`
+
+Nota: `VideoReportExportFormat` fue eliminado del servicio.
 
 Reglas de negocio actuales documentadas:
 
@@ -204,6 +209,8 @@ Lineamientos importantes:
 
 - `ApiService` es wrapper HTTP base para llamadas estándar.
 - Excepción aceptada en servicios puntuales donde se requiere `HttpClient` directo para `Blob`, `FormData` o respuestas especiales.
+- `EncryptionService`: cifrado/descifrado AES de archivos en frontend (via `crypto-js`), usando PBKDF2 + CBC. Soporta `AES-128`, `AES-192`, `AES-256`. El binario cifrado incluye salt (16 bytes) + IV (16 bytes) + ciphertext.
+- `HashService`: cálculo de hash local de archivos (usado en `/integrity`).
 
 ### Convenciones de código
 

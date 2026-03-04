@@ -114,6 +114,23 @@ class Catalog(TimeStampedModel):
         return self.name
 
 
+class VideoAnalysisReport(TimeStampedModel):
+    """Persiste los datos del wizard de informes. Puede estar vinculado a un FilmRecord o ser independiente."""
+    film_record = models.OneToOneField(
+        FilmRecord, on_delete=models.SET_NULL,
+        related_name='informe', null=True, blank=True
+    )
+    numero_informe = models.CharField(max_length=100, blank=True)
+    report_date = models.DateField(null=True, blank=True)
+    form_data = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Informe {self.numero_informe or self.id}"
+
+
 class AIUsageLog(TimeStampedModel):
     PROVIDER_CHOICES = [
         ('gemini', 'Gemini'),

@@ -21,6 +21,16 @@
                 </div>
             </div>
 
+            <button (click)="exportToExcel()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Exportar Excel
+            </button>
+
             <span
                 class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
@@ -113,11 +123,75 @@
         </div>
     </div>
 
+    <!-- Operational Charts -->
+    @if (dashboardStats()) {
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+            <h3 class="text-base font-bold text-slate-800 mb-1">Actividad Mensual</h3>
+            <p class="text-xs text-slate-400 mb-3">Registros, Hechos y Novedades — últimos 12 meses</p>
+            <apx-chart
+                [series]="monthlyChartOptions().series"
+                [chart]="monthlyChartOptions().chart"
+                [colors]="monthlyChartOptions().colors"
+                [plotOptions]="monthlyChartOptions().plotOptions"
+                [dataLabels]="monthlyChartOptions().dataLabels"
+                [xaxis]="monthlyChartOptions().xaxis"
+                [yaxis]="monthlyChartOptions().yaxis"
+                [legend]="monthlyChartOptions().legend"
+                [grid]="monthlyChartOptions().grid">
+            </apx-chart>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+            <h3 class="text-base font-bold text-slate-800 mb-1">Actividad Diaria</h3>
+            <p class="text-xs text-slate-400 mb-3">Registros, Hechos y Novedades — últimos 30 días</p>
+            <apx-chart
+                [series]="dailyChartOptions().series"
+                [chart]="dailyChartOptions().chart"
+                [colors]="dailyChartOptions().colors"
+                [stroke]="dailyChartOptions().stroke"
+                [markers]="dailyChartOptions().markers"
+                [dataLabels]="dailyChartOptions().dataLabels"
+                [xaxis]="dailyChartOptions().xaxis"
+                [yaxis]="dailyChartOptions().yaxis"
+                [legend]="dailyChartOptions().legend"
+                [grid]="dailyChartOptions().grid">
+            </apx-chart>
+        </div>
+    </div>
+    }
+
     <!-- Charts Section -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Camera Status Chart -->
         <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
             <h3 class="text-lg font-bold text-slate-800 mb-6">Estado de Cámaras por Sistema</h3>
+
+            @if (loadingAssets()) {
+            <!-- Skeleton -->
+            <div class="space-y-4">
+                @for (i of [1,2,3]; track i) {
+                <div class="animate-pulse">
+                    <div class="flex justify-between mb-1">
+                        <div class="h-3.5 bg-slate-200 rounded w-32"></div>
+                        <div class="h-3.5 bg-slate-200 rounded w-20"></div>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2.5"></div>
+                </div>
+                }
+            </div>
+            } @else if (systems().length === 0) {
+            <!-- Estado vacío -->
+            <div class="flex flex-col items-center justify-center py-10 text-slate-400 gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-slate-300" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <p class="text-sm font-medium">No hay sistemas registrados</p>
+                <p class="text-xs">Agregá sistemas en <a routerLink="/assets"
+                        class="text-indigo-500 hover:underline">Equipamiento</a></p>
+            </div>
+            } @else {
             <div class="space-y-4">
                 @for (system of systems(); track system.id) {
                 @if (selectedCoc() === 'ALL' || selectedCoc() == system.id) {
@@ -135,56 +209,62 @@
                 }
                 }
             </div>
+            }
         </div>
 
         <!-- Quick Actions (Moved from Grid) -->
         <div class="space-y-6">
             <h3 class="text-lg font-bold text-slate-800 mb-6">Acciones Rápidas</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <a routerLink="/novedades"
+                <a routerLink="/records"
                     class="group flex items-center p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 transition-all">
                     <div
                         class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                            <circle cx="12" cy="13" r="4" />
                         </svg>
                     </div>
                     <div class="ml-4">
-                        <p class="font-bold text-slate-800 text-lg">Reportar</p>
-                        <p class="text-slate-500 text-sm">Crear novedad</p>
+                        <p class="font-bold text-slate-800 text-lg">Registros</p>
+                        <p class="text-slate-500 text-sm">Material fílmico</p>
                     </div>
                 </a>
 
-                <a routerLink="/assets"
+                <a routerLink="/hechos"
                     class="group flex items-center p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-emerald-200 transition-all">
                     <div
                         class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                            <polyline points="10 9 9 9 8 9" />
                         </svg>
                     </div>
                     <div class="ml-4">
-                        <p class="font-bold text-slate-800 text-lg">Equipos</p>
-                        <p class="text-slate-500 text-sm">Ver inventario</p>
+                        <p class="font-bold text-slate-800 text-lg">Hechos</p>
+                        <p class="text-slate-500 text-sm">Bitácora operativa</p>
                     </div>
                 </a>
 
-                <a routerLink="/integrity"
-                    class="group flex items-center p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-amber-200 transition-all">
+                <a routerLink="/novedades"
+                    class="group flex items-center p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-rose-200 transition-all">
                     <div
-                        class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                        class="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 21a11.955 11.955 0 01-9.618-7.016m19.236 0a11.92 11.92 0 00-1.092-3.118m-17.052 3.118A11.92 11.92 0 013.86 10.882m16.248-3.118A11.955 11.955 0 0012 3a11.955 11.955 0 00-8.108 3.118M15 10a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
                     </div>
                     <div class="ml-4">
-                        <p class="font-bold text-slate-800 text-lg">Integridad</p>
-                        <p class="text-slate-500 text-sm">Validar hashes</p>
+                        <p class="font-bold text-slate-800 text-lg">Novedades</p>
+                        <p class="text-slate-500 text-sm">Registrar novedad</p>
                     </div>
                 </a>
             </div>

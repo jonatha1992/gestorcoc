@@ -84,13 +84,11 @@ export class HashComponent {
 
     const filesToProcess: File[] = [];
 
-    // Función recursiva para procesar entradas (archivos o directorios)
     const traverseFileTree = async (item: FileSystemEntry, path: string = '') => {
       if (item.isFile) {
         const fileEntry = item as FileSystemFileEntry;
         await new Promise<void>((resolve) => {
           fileEntry.file((file) => {
-            // Sobrescribimos temporalmente el webkitRelativePath inyectándolo como propiedad personalizada
             Object.defineProperty(file, 'customPath', {
               value: path + file.name,
               writable: false
@@ -103,9 +101,6 @@ export class HashComponent {
         const dirEntry = item as FileSystemDirectoryEntry;
         const dirReader = dirEntry.createReader();
         const entries = await new Promise<FileSystemEntry[]>((resolve) => {
-          // Leer todas las entradas en este directorio
-          // readEntries no siempre retorna todos, pero para fines prácticos suele bastar en llamadas iniciales si no hay miles.
-          // Para ser exhaustivos se debería llamar iterativamente hasta que devuelva array vacío.
           const readAll = async () => {
             let allEntries: FileSystemEntry[] = [];
             let result: FileSystemEntry[];
@@ -124,7 +119,6 @@ export class HashComponent {
       }
     };
 
-    // Procesar los items soltados en el contenedor superior
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.kind === 'file') {
@@ -151,7 +145,6 @@ export class HashComponent {
     const algorithmsToUse = this.selectedAlgorithms();
     const filesArray = Array.from(fileList);
 
-    // Crear una fila por CADA archivo y por CADA algoritmo seleccionado
     const newFiles: FileHash[] = [];
 
     for (const file of filesArray) {
@@ -175,12 +168,9 @@ export class HashComponent {
 
     this.files.update(current => [...newFiles, ...current]);
 
-    // Procesar concurrentemente (un hash a la vez por CPU no es posible directamente sin WebWorkers en el fondo,
-    // pero el event loop sigue interrumpiéndose debido a que CryptoJS funciona bloqueante).
-    // Evitamos congelamientos extremos al no usar un simple iterador mapeando asíncronamente.
     await Promise.all(
       newFiles.map(async (row) => {
-        if (!row.fileObject) return; // Salvaguarda extra
+        if (!row.fileObject) return;
         try {
           const result = await this.hashService.hashFile(row.fileObject!, row.selectedAlgorithm);
           this.files.update(current =>
@@ -238,7 +228,6 @@ export class HashComponent {
         let tdAlgorithm: Element | null = null;
         let tdHash: Element | null = null;
 
-        // Soporte para reporte antiguo (6 columnas) y el nuevo (7 columnas)
         if (row.children.length === 6) {
           tdAlgorithm = row.children[2];
           tdHash = row.children[5];
@@ -256,11 +245,7 @@ export class HashComponent {
             verificationMap.set(name, hash);
             parsedCount++;
 
-            importedFiles.push({
-              name,
-              algorithm: algorithmRaw,
-              hash
-            });
+            importedFiles.push({ name, algorithm: algorithmRaw, hash });
           }
         }
       });
@@ -328,9 +313,7 @@ Hash: ${item.selectedHash}`;
             if (err?.error instanceof Blob) {
               const text = await err.error.text();
               const parsed = JSON.parse(text);
-              if (parsed?.error) {
-                message = parsed.error;
-              }
+              if (parsed?.error) message = parsed.error;
             } else if (err?.error?.error) {
               message = err.error.error;
             }
@@ -352,7 +335,6 @@ Hash: ${item.selectedHash}`;
     const now = new Date().toLocaleString('es-AR');
     let rows = '';
     items.forEach((item, i) => {
-      // Limpiar tiempo si tiene duplicado ms
       const timeFmt = this.formatTime(item.time).replace(' ms ms', ' ms');
       rows += `
 <tr>

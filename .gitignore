@@ -30,3 +30,11 @@ backend/.env
 backend/staticfiles/
 backend/db.sqlite3
 db.sqlite3
+
+# Logs y archivos temporales de build
+*.log
+build_err.txt
+build_output.log
+
+# Scripts de debug temporales (no deben comitearse)
+check_*.py
