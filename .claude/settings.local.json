@@ -5,7 +5,15 @@
       "Bash(find:*)",
       "Bash(tail:*)",
       "Bash(/c/Users/jonat/AppData/Local/Programs/Python/Python311/python.exe:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(netstat:*)",
+      "Bash(tasklist:*)",
+      "Bash(ls:*)",
+      "Bash(npm run:*)",
+      "Bash(../.venv/Scripts/python.exe:*)",
+      "Bash(.venv/Scripts/python.exe:*)",
+      "Bash(.venv/Scripts/pip.exe install:*)",
+      "mcp__markitdown__convert_to_markdown"
     ]
   }
 }

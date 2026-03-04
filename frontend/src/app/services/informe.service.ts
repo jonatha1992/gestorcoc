@@ -4,19 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export type VideoReportHashAlgorithm = 'sha1' | 'sha3' | 'sha256' | 'sha512' | 'otro';
-export type VideoReportExportFormat =
-    | 'mp4'
-    | 'avi'
-    | 'mkv'
-    | 'mov'
-    | 'asf'
-    | 'dav'
-    | 'ave'
-    | 'xprotect'
-    | 'jpg'
-    | 'png'
-    | 'zip'
-    | 'otro';
+// Removed VideoReportExportFormat
 export type VideoReportVmsAuthenticityMode =
     | 'vms_propio'
     | 'hash_preventivo'
@@ -38,8 +26,8 @@ export interface MaterialSpeechContext {
     empresa_aerea?: string;
     destino?: string;
     unidad?: string;
-    export_file_format?: VideoReportExportFormat | '';
-    export_file_format_other?: string;
+    vms_native_hash_algorithms?: VideoReportHashAlgorithm[];
+    vms_native_hash_algorithm_other?: string;
     hash_algorithms?: VideoReportHashAlgorithm[];
     hash_algorithm_other?: string;
     hash_program?: string;
@@ -63,8 +51,8 @@ export interface VideoReportFormData {
     franja_horaria_analizada: string;
     tiempo_total_analisis: string;
     sintesis_conclusion: string;
-    export_file_format: VideoReportExportFormat | '';
-    export_file_format_other: string;
+    vms_native_hash_algorithms: VideoReportHashAlgorithm[];
+    vms_native_hash_algorithm_other: string;
     hash_algorithms: VideoReportHashAlgorithm[];
     hash_algorithm_other: string;
     hash_program: string;

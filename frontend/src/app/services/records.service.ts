@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ApiService } from './api.service';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
@@ -33,15 +34,12 @@ export class RecordsService {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('algorithm', algorithm);
-
-        return this.http.post('http://localhost:8000/api/integrity-check/', formData, {
-            responseType: 'blob'
-        });
+        const base = environment.apiUrl;
+        return this.http.post(`${base}/api/integrity-check/`, formData, { responseType: 'blob' });
     }
 
     generateIntegritySummaryReport(entries: any[]): Observable<Blob> {
-        return this.http.post('http://localhost:8000/api/integrity-summary-report/', { entries }, {
-            responseType: 'blob'
-        });
+        const base = environment.apiUrl;
+        return this.http.post(`${base}/api/integrity-summary-report/`, { entries }, { responseType: 'blob' });
     }
 }

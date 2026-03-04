@@ -1,6 +1,5 @@
 <div class="space-y-6 informes-view">
-    <form (ngSubmit)="generateReport()"
-        class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+    <form (ngSubmit)="generateReport()" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
         <h2 class="text-xl font-bold text-slate-800">Informe de Analisis de Video</h2>
         <p *ngIf="validationMessage"
             class="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
@@ -25,7 +24,7 @@
                         </option>
                     </select>
                 </div>
-                <div class="col-span-1 lg:col-span-2">
+                <div class="col-span-1 lg:col-span-4">
                     <div class="flex items-center gap-1 mb-1">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Jerarquia *</label>
                         <button type="button" data-help-trigger (click)="toggleHelp('grado', $event)"
@@ -40,20 +39,19 @@
                         </option>
                     </select>
                 </div>
-                <div class="col-span-1 lg:col-span-2">
+                <div class="col-span-1 lg:col-span-4">
                     <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Legajo (LUP) *</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Número de Legajo *</label>
                         <button type="button" data-help-trigger (click)="toggleHelp('lup', $event)"
                             class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
                             aria-label="Ayuda Legajo">?</button>
                     </div>
                     <input [(ngModel)]="form.lup" (ngModelChange)="onOperatorLupChange($event)"
-                        (blur)="saveOperatorData()" name="lup" type="number" placeholder="506896"
-                        min="100000" max="999999"
-                        [attr.data-invalid]="isFieldInvalid('lup') ? 'true' : null"
+                        (blur)="saveOperatorData()" name="lup" type="number" placeholder="506896" min="100000"
+                        max="999999" [attr.data-invalid]="isFieldInvalid('lup') ? 'true' : null"
                         class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
-                <div class="col-span-1 lg:col-span-2">
+                <div class="col-span-1 lg:col-span-4">
                     <div class="flex items-center gap-1 mb-1">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Fecha del Informe *</label>
                         <button type="button" data-help-trigger (click)="toggleHelp('report_date', $event)"
@@ -64,7 +62,7 @@
                         type="date" [attr.data-invalid]="isFieldInvalid('report_date') ? 'true' : null"
                         class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
-                <div class="col-span-1 lg:col-span-2">
+                <div class="col-span-1 lg:col-span-4">
                     <div class="flex items-center gap-1 mb-1">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Numero de Informe *</label>
                         <button type="button" data-help-trigger (click)="toggleHelp('numero_informe', $event)"
@@ -76,7 +74,7 @@
                         [attr.data-invalid]="isFieldInvalid('numero_informe') ? 'true' : null"
                         class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
-                <div class="col-span-2 lg:col-span-6">
+                <div class="col-span-2 lg:col-span-12">
                     <div class="flex items-center gap-1 mb-1">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Destinatarios *</label>
                         <button type="button" data-help-trigger (click)="toggleHelp('destinatarios', $event)"
@@ -88,7 +86,7 @@
                         [attr.data-invalid]="isFieldInvalid('destinatarios') ? 'true' : null"
                         class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
-                <div class="col-span-2 lg:col-span-6">
+                <div class="col-span-2 lg:col-span-4">
                     <div class="flex items-center gap-1 mb-1">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Unidad *</label>
                         <button type="button" data-help-trigger (click)="toggleHelp('unidad', $event)"
@@ -162,18 +160,32 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3">
                 <div class="lg:col-span-3">
                     <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Sistema *</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('sistema', $event)"
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Fiscalía / Juzgado
+                            (opcional)</label>
+                        <button type="button" data-help-trigger (click)="toggleHelp('fiscalia', $event)"
                             class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Sistema">?</button>
+                            aria-label="Ayuda Fiscalia">?</button>
                     </div>
-                    <input [(ngModel)]="form.sistema" (ngModelChange)="markDirty('sistema')" name="sistema" type="text"
-                        placeholder="Ej: MILESTONE" [attr.data-invalid]="isFieldInvalid('sistema') ? 'true' : null"
+                    <input [(ngModel)]="form.fiscalia" (ngModelChange)="markDirty('fiscalia')" name="fiscalia"
+                        type="text" placeholder="Ej: Fiscalía Nro. 02"
                         class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
                 <div class="lg:col-span-3">
                     <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Prevencion Sumaria *</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Fiscal / Juez / Secretario
+                            (opcional)</label>
+                        <button type="button" data-help-trigger (click)="toggleHelp('fiscal', $event)"
+                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                            aria-label="Ayuda Autoridad Interviniente">?</button>
+                    </div>
+                    <input [(ngModel)]="form.fiscal" (ngModelChange)="markDirty('fiscal')" name="fiscal" type="text"
+                        placeholder="Ej: Dr. INTI Isla"
+                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                </div>
+                <div class="lg:col-span-3">
+                    <div class="flex items-center gap-1 mb-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Prevención Sumaria *</label>
+                        <span class="block text-[10px] text-slate-400 mb-0">Número de actuación policial inicial</span>
                         <button type="button" data-help-trigger (click)="toggleHelp('prevencion_sumaria', $event)"
                             class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
                             aria-label="Ayuda Prevencion Sumaria">?</button>
@@ -181,6 +193,19 @@
                     <input [(ngModel)]="form.prevencion_sumaria" (ngModelChange)="markDirty('prevencion_sumaria')"
                         name="prevencion_sumaria" type="text" placeholder="Ej: 003BAR/2026"
                         [attr.data-invalid]="isFieldInvalid('prevencion_sumaria') ? 'true' : null"
+                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                </div>
+                <div class="lg:col-span-3">
+                    <div class="flex items-center gap-1 mb-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Carátula *</label>
+                        <span class="block text-[10px] text-slate-400 mb-0">Tipo de causa según el expediente</span>
+                        <button type="button" data-help-trigger (click)="toggleHelp('caratula', $event)"
+                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                            aria-label="Ayuda Caratula">?</button>
+                    </div>
+                    <input [(ngModel)]="form.caratula" (ngModelChange)="markDirty('caratula')" name="caratula"
+                        type="text" placeholder="Ej: DENUNCIA S/ PRESUNTO HURTO"
+                        [attr.data-invalid]="isFieldInvalid('caratula') ? 'true' : null"
                         class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
                 <div class="lg:col-span-3">
@@ -195,32 +220,9 @@
                         [attr.data-invalid]="isFieldInvalid('denunciante') ? 'true' : null"
                         class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
-                <div class="lg:col-span-3">
+                <div class="lg:col-span-9">
                     <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Fecha del Hecho</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('fecha_hecho', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Fecha del Hecho">?</button>
-                    </div>
-                    <input [(ngModel)]="form.fecha_hecho" (ngModelChange)="markDirty('fecha_hecho')"
-                        name="fecha_hecho_main" type="date" lang="es-AR"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                </div>
-                <div class="lg:col-span-12">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Caratula *</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('caratula', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Caratula">?</button>
-                    </div>
-                    <input [(ngModel)]="form.caratula" (ngModelChange)="markDirty('caratula')" name="caratula"
-                        type="text" placeholder="Ej: DENUNCIA S/ PRESUNTO HURTO"
-                        [attr.data-invalid]="isFieldInvalid('caratula') ? 'true' : null"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                </div>
-                <div class="lg:col-span-6">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Objeto Denunciado / Marca *</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Descripción del objeto o persona involucrada *</label>
                         <button type="button" data-help-trigger (click)="toggleHelp('objeto_denunciado', $event)"
                             class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
                             aria-label="Ayuda Objeto Denunciado">?</button>
@@ -232,64 +234,9 @@
                 </div>
             </div>
 
-            <div class="shadow-sm p-4 rounded-xl bg-indigo-50/50 border border-indigo-100 space-y-3">
-                <h4 class="text-sm font-bold text-indigo-900">Datos del Lugar</h4>
-                <p class="text-xs text-slate-600">
-                    Completa el lugar de origen de la informacion (aeropuerto u otro), aunque no coincida con la unidad
-                    del informe.
-                </p>
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                    <div class="lg:col-span-12">
-                        <div class="flex items-center gap-1 mb-1">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Lugar de Origen de la
-                                Información *</label>
-                            <button type="button" data-help-trigger (click)="toggleHelp('aeropuerto', $event)"
-                                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                                aria-label="Ayuda Aeropuerto">?</button>
-                        </div>
-                        <input [(ngModel)]="form.aeropuerto" (ngModelChange)="onAirportSelect($event)" name="aeropuerto"
-                            list="airport-options-list"
-                            placeholder="Ej: Aeropuerto Internacional Mtro. Pistarini / Plataforma Norte"
-                            [attr.data-invalid]="isFieldInvalid('aeropuerto') ? 'true' : null"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                        <datalist id="airport-options-list">
-                            <option *ngFor="let airportOption of airportOptions" [value]="airportOption">
-                            </option>
-                        </datalist>
-                    </div>
-                </div>
-            </div>
 
 
 
-            <div class="shadow-sm p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                <h4 class="text-sm font-bold text-slate-800">Fiscalia / Juzgado y Autoridad (opcional)</h4>
-                <p class="text-xs text-slate-500">Estos datos pueden quedar vacios segun la situacion.</p>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3">
-                    <div class="lg:col-span-4">
-                        <div class="flex items-center gap-1 mb-1">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Fiscalia / Juzgado (opcional)</label>
-                            <button type="button" data-help-trigger (click)="toggleHelp('fiscalia', $event)"
-                                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                                aria-label="Ayuda Fiscalia">?</button>
-                        </div>
-                        <input [(ngModel)]="form.fiscalia" (ngModelChange)="markDirty('fiscalia')" name="fiscalia"
-                            type="text" placeholder="Ej: Fiscalia Nro. 02"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
-                    <div class="lg:col-span-4">
-                        <div class="flex items-center gap-1 mb-1">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Fiscal / Juez / Secretario (opcional)</label>
-                            <button type="button" data-help-trigger (click)="toggleHelp('fiscal', $event)"
-                                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                                aria-label="Ayuda Autoridad Interviniente">?</button>
-                        </div>
-                        <input [(ngModel)]="form.fiscal" (ngModelChange)="markDirty('fiscal')" name="fiscal" type="text"
-                            placeholder="Ej: INTI ISLA / MARIA GOMEZ / JUAN PEREZ"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
-                </div>
-            </div>
 
             <div class="shadow-sm p-4 rounded-xl bg-amber-50/50 border border-amber-100 space-y-3">
                 <div class="flex items-center justify-between gap-3">
@@ -362,14 +309,47 @@
             <div class="shadow-sm p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 space-y-4">
                 <h4 class="text-sm font-bold text-emerald-900">Integridad y Autenticidad del Material</h4>
                 <p class="text-xs text-slate-600">
-                    Indicá primero el método de autenticidad, luego el formato del archivo exportado, y si se utilizó programa de hash.
+                    Indicá el método de autenticidad del material exportado.
                 </p>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                    <!-- Lugar de Origen -->
+                    <div class="md:col-span-12">
+                        <div class="flex items-center gap-1 mb-1">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Lugar de Origen de
+                                la Información *</label>
+                            <button type="button" data-help-trigger (click)="toggleHelp('aeropuerto', $event)"
+                                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                                aria-label="Ayuda Aeropuerto">?</button>
+                        </div>
+                        <input [(ngModel)]="form.aeropuerto" (ngModelChange)="onAirportSelect($event)" name="aeropuerto"
+                            list="airport-options-list"
+                            placeholder="Ej: Aeropuerto Internacional Mtro. Pistarini / Plataforma Norte"
+                            [attr.data-invalid]="isFieldInvalid('aeropuerto') ? 'true' : null"
+                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                        <datalist id="airport-options-list">
+                            <option *ngFor="let airportOption of airportOptions" [value]="airportOption">
+                            </option>
+                        </datalist>
+                    </div>
+
+                    <!-- Sistema -->
+                    <div class="md:col-span-12">
+                        <div class="flex items-center gap-1 mb-1">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">VMS / Sistema de cámaras *</label>
+                            <button type="button" data-help-trigger (click)="toggleHelp('sistema', $event)"
+                                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                                aria-label="Ayuda Sistema">?</button>
+                        </div>
+                        <input [(ngModel)]="form.sistema" (ngModelChange)="markDirty('sistema')" name="sistema"
+                            type="text" placeholder="Ej: MILESTONE"
+                            [attr.data-invalid]="isFieldInvalid('sistema') ? 'true' : null"
+                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                    </div>
+
                     <!-- 1. Autenticidad del material (va primero) -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Autenticidad del Material
-                            Exportado *</label>
+                    <div class="md:col-span-6">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Método de verificación de integridad *</label>
                         <select [(ngModel)]="form.vms_authenticity_mode"
                             (ngModelChange)="onVmsAuthenticityModeChange($event)" name="vms_authenticity_mode"
                             [attr.data-invalid]="isFieldInvalid('vms_authenticity_mode') ? 'true' : null"
@@ -380,7 +360,7 @@
                             </option>
                         </select>
                     </div>
-                    <div *ngIf="form.vms_authenticity_mode === 'otro'">
+                    <div *ngIf="form.vms_authenticity_mode === 'otro'" class="md:col-span-6">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Detalle de Autenticidad
                             *</label>
                         <input [(ngModel)]="form.vms_authenticity_detail"
@@ -390,49 +370,98 @@
                             class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     </div>
 
-                    <!-- 2. Formato del archivo exportado (va segundo) -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Formato de Archivo
-                            Exportado *</label>
-                        <select [(ngModel)]="form.export_file_format" (ngModelChange)="onExportFormatChange($event)"
-                            name="export_file_format"
-                            [attr.data-invalid]="isFieldInvalid('export_file_format') ? 'true' : null"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                            <option value="">Seleccione formato...</option>
-                            <option *ngFor="let option of exportFormatOptions" [ngValue]="option.value">
-                                {{ option.label }}
-                            </option>
-                        </select>
-                    </div>
-                    <div *ngIf="form.export_file_format === 'otro'">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Otro Formato *</label>
-                        <input [(ngModel)]="form.export_file_format_other"
-                            (ngModelChange)="markDirty('export_file_format_other')" name="export_file_format_other"
-                            type="text" placeholder="Ej: Formato propietario"
-                            [attr.data-invalid]="isFieldInvalid('export_file_format_other') ? 'true' : null"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                    <!-- 2. Hashes Nativos del VMS (sólo si es propio VMS) -->
+                    <div *ngIf="form.vms_authenticity_mode === 'vms_propio'"
+                        class="md:col-span-12 mt-2 border-t border-emerald-200 pt-3">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Algoritmos Hash Nativos
+                            del
+                            VMS
+                            (opcional)</label>
+                        <div class="flex flex-wrap gap-3">
+                            <label *ngFor="let algo of hashAlgorithmOptions"
+                                class="inline-flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                                <input type="checkbox" [checked]="hasNativeHashAlgorithm(algo.value)"
+                                    (change)="toggleNativeHashAlgorithm(algo.value)"
+                                    class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                <span>{{ algo.label }}</span>
+                            </label>
+                        </div>
+                        <div *ngIf="hasNativeHashAlgorithm('otro')" class="mt-2">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nombres de otros
+                                algoritmos o firmas nativas *</label>
+                            <input [(ngModel)]="form.vms_native_hash_algorithm_other"
+                                (ngModelChange)="markDirty('vms_native_hash_algorithm_other')"
+                                name="vms_native_hash_algorithm_other" type="text"
+                                placeholder="Ej: Watermark propietaria o firma RSA"
+                                [attr.data-invalid]="isFieldInvalid('vms_native_hash_algorithm_other') ? 'true' : null"
+                                class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                        </div>
                     </div>
                 </div>
 
-                <!-- 3. Checkbox: ¿Se utilizó programa de hash? -->
-                <div class="border-t border-emerald-200 pt-3 space-y-3">
-                    <label class="inline-flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" [checked]="utilizoHash" (change)="onUtilizaHashChange($any($event.target).checked)"
-                            class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                        <span class="text-sm font-semibold text-slate-700">¿Se utilizó programa de hash?</span>
-                    </label>
+                <!-- 3. Sección de hash — condicional según modo de autenticidad -->
 
-                    <ng-container *ngIf="utilizoHash">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pl-1">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Programa de Hash
-                                    *</label>
+                <!-- vms_propio: checkbox opcional de hash externo adicional -->
+                <ng-container *ngIf="form.vms_authenticity_mode === 'vms_propio'">
+                    <div class="border-t border-emerald-200 pt-3 space-y-3">
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" [checked]="utilizoHash"
+                                (change)="onUtilizaHashChange($any($event.target).checked)"
+                                class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            <span class="text-sm font-semibold text-slate-700">¿Se realizó también un hash externo preventivo?</span>
+                        </label>
+
+                        <ng-container *ngIf="utilizoHash">
+                            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 pl-1">
+                                <div class="md:col-span-6">
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Programa de
+                                        Hash *</label>
+                                    <input [(ngModel)]="form.hash_program" (ngModelChange)="markDirty('hash_program')"
+                                        name="hash_program" type="text" placeholder="HashMyFiles"
+                                        [attr.data-invalid]="isFieldInvalid('hash_program') ? 'true' : null"
+                                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                                </div>
+                                <div class="md:col-span-6">
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Algoritmos
+                                        utilizados *</label>
+                                    <div class="flex flex-wrap gap-3">
+                                        <label *ngFor="let algo of hashAlgorithmOptions"
+                                            class="inline-flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                                            <input type="checkbox" [checked]="hasHashAlgorithm(algo.value)"
+                                                (change)="toggleHashAlgorithm(algo.value)"
+                                                [class.border-rose-400]="isFieldInvalid('hash_algorithms')"
+                                                class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                            <span>{{ algo.label }}</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div *ngIf="hasHashAlgorithm('otro')" class="md:col-span-12">
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Especificar
+                                        algoritmo *</label>
+                                    <input [(ngModel)]="form.hash_algorithm_other"
+                                        (ngModelChange)="markDirty('hash_algorithm_other')"
+                                        name="hash_algorithm_other" type="text" placeholder="Ej: BLAKE3"
+                                        [attr.data-invalid]="isFieldInvalid('hash_algorithm_other') ? 'true' : null"
+                                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                                </div>
+                            </div>
+                        </ng-container>
+                    </div>
+                </ng-container>
+
+                <!-- hash_preventivo: mostrar campos directamente sin checkbox -->
+                <ng-container *ngIf="form.vms_authenticity_mode === 'hash_preventivo'">
+                    <div class="border-t border-emerald-200 pt-3 space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 pl-1">
+                            <div class="md:col-span-6">
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Programa de
+                                    Hash *</label>
                                 <input [(ngModel)]="form.hash_program" (ngModelChange)="markDirty('hash_program')"
                                     name="hash_program" type="text" placeholder="HashMyFiles"
                                     [attr.data-invalid]="isFieldInvalid('hash_program') ? 'true' : null"
                                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                             </div>
-                            <div>
+                            <div class="md:col-span-6">
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Algoritmos
                                     utilizados *</label>
                                 <div class="flex flex-wrap gap-3">
@@ -446,19 +475,22 @@
                                     </label>
                                 </div>
                             </div>
-                            <div *ngIf="hasHashAlgorithm('otro')" class="md:col-span-2">
+                            <div *ngIf="hasHashAlgorithm('otro')" class="md:col-span-12">
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Especificar
                                     algoritmo *</label>
                                 <input [(ngModel)]="form.hash_algorithm_other"
-                                    (ngModelChange)="markDirty('hash_algorithm_other')" name="hash_algorithm_other"
-                                    type="text" placeholder="Ej: BLAKE3"
+                                    (ngModelChange)="markDirty('hash_algorithm_other')"
+                                    name="hash_algorithm_other" type="text" placeholder="Ej: BLAKE3"
                                     [attr.data-invalid]="isFieldInvalid('hash_algorithm_other') ? 'true' : null"
                                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                             </div>
                         </div>
-                    </ng-container>
+                    </div>
+                </ng-container>
 
-                    <div *ngIf="!utilizoHash" class="mt-2">
+                <!-- sin_autenticacion: solo campo de motivo -->
+                <ng-container *ngIf="form.vms_authenticity_mode === 'sin_autenticacion'">
+                    <div class="border-t border-emerald-200 pt-3">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">¿Por qué no se efectuó
                             hash? (opcional)</label>
                         <input [(ngModel)]="form.motivo_sin_hash" (ngModelChange)="markDirty('motivo_sin_hash')"
@@ -471,7 +503,7 @@
                         <p class="text-xs text-slate-400 mt-1">Esta razón quedará registrada en el informe generado.
                         </p>
                     </div>
-                </div>
+                </ng-container>
             </div>
             <div>
                 <div class="flex items-center gap-1 mb-1">
@@ -492,7 +524,7 @@
                         class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold">
                         <span *ngIf="isImprovingMaterialFilmico"
                             class="w-3.5 h-3.5 rounded-full border border-indigo-200 border-t-white animate-spin"></span>
-                        {{ isImprovingMaterialFilmico ? 'Procesando con IA...' : 'Mejorar texto con IA' }}
+                        {{ isImprovingMaterialFilmico ? 'Procesando con IA...' : 'Completar con IA — Material Fílmico' }}
                     </button>
                 </div>
                 <div *ngIf="isImprovingMaterialFilmico"
@@ -516,11 +548,12 @@
         </div>
 
         <div class="space-y-4">
-            <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1">Desarrollo y fotogramas</h3>
+            <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1">Desarrollo y fotogramas
+            </h3>
             <div class="shadow-sm p-4 rounded-xl bg-sky-50/60 border border-sky-100 space-y-3">
-                <h4 class="text-sm font-bold text-sky-900">Datos rápidos para completar Desarrollo y Conclusión</h4>
+                <h4 class="text-sm font-bold text-sky-900">Contexto para la IA</h4>
                 <p class="text-xs text-slate-600">
-                    Completa datos cortos y precisos. Con esto la IA arma mejor el speech narrativo.
+                    Completá estos datos para que la IA genere texto de mayor calidad. Si redactás el desarrollo y conclusión manualmente, podés omitirlos.
                 </p>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
@@ -540,13 +573,15 @@
                             class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Cantidad observada</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Cantidad
+                            observada</label>
                         <input [(ngModel)]="form.cantidad_observada" (ngModelChange)="markDirty('cantidad_observada')"
                             name="cantidad_observada" type="text" placeholder="Ej: 2 personas / 1 bulto"
                             class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Sectores analizados</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Sectores
+                            analizados</label>
                         <input [(ngModel)]="form.sectores_analizados" (ngModelChange)="markDirty('sectores_analizados')"
                             name="sectores_analizados" type="text"
                             placeholder="Ej: Hall de arribos, cinta 3, plataforma norte"
@@ -595,7 +630,7 @@
                     class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold shrink-0">
                     <span *ngIf="isImprovingNarrative"
                         class="w-4 h-4 rounded-full border border-indigo-200 border-t-white animate-spin"></span>
-                    {{ isImprovingNarrative ? 'Procesando con IA...' : 'Mejorar desarrollo y conclusion con IA' }}
+                    {{ isImprovingNarrative ? 'Procesando con IA...' : 'Completar con IA — Desarrollo y Conclusión' }}
                 </button>
             </div>
             <div *ngIf="isImprovingNarrative"
@@ -650,7 +685,8 @@
                         <img [src]="frame.preview_url" alt="Fotograma"
                             class="w-28 h-20 object-cover rounded border border-slate-200 bg-slate-50">
                         <div class="flex-1 min-w-0">
-                            <div class="text-sm font-semibold text-slate-800 truncate">{{ i + 1 }}. {{ frame.file_name
+                            <div class="text-sm font-semibold text-slate-800 truncate">{{ i + 1 }}. {{
+                                frame.file_name
                                 }}</div>
                             <div class="text-xs text-slate-500">{{ frame.mime_type }} - {{
                                 readableBytes(frame.size_bytes || 0) }}</div>

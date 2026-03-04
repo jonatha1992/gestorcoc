@@ -1,13 +1,31 @@
+# Entornos Virtuales
+backend/.venv/
 backend/src/.venv/
 backend/src/venv/
+backend/venv/
+venv/
+.venv/
+
+# Node y Angular
 frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Python
 __pycache__/
 *.pyc
-frontend/.angular/
-backend/.venv/
-frontend/.angular/
-frontend/dist
-.github/copilot-instructions.md
-frontend/.angular/cache/21.1.2/gestor-coc/.tsbuildinfo
-frontend/.angular/cache/21.1.2/gestor-coc/.tsbuildinfo
+*.pyo
+*.pyd
+
+# Variables de entorno y secretos
 backend/.env
+.env
+
+# Misceláneos
+.github/copilot-instructions.md
+.DS_Store
+
+# Archivos autogenerados de Django y Base de Datos Local
+backend/staticfiles/
+backend/db.sqlite3
+db.sqlite3

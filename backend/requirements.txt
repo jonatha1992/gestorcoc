@@ -12,3 +12,6 @@ drf-spectacular
 reportlab
 python-docx
 Pillow
+gunicorn
+whitenoise
+dj-database-url
