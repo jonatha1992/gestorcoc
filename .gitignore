@@ -24,6 +24,7 @@ backend/.env
 # Misceláneos
 .github/copilot-instructions.md
 .DS_Store
+.e2e-runs/
 
 # Archivos autogenerados de Django y Base de Datos Local
 backend/staticfiles/
