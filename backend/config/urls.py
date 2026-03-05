@@ -5,7 +5,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.contrib import admin
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.urls import include, path, re_path
 
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
@@ -19,7 +19,13 @@ def spa_index(request):
     return HttpResponse(index.read_bytes(), content_type='text/html; charset=utf-8')
 
 
+def health_check(request):
+    """Endpoint minimalista para el health check de Railway."""
+    return JsonResponse({'status': 'ok'})
+
+
 urlpatterns = [
+    path('api/health/', health_check, name='health-check'),
     path('admin/', admin.site.urls),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

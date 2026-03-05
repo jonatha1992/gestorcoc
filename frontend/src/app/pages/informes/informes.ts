@@ -81,7 +81,7 @@ export class InformesComponent implements OnInit, OnDestroy {
   incluirDatosVuelo = false;
   airportManualOverride = false;
   api_key = '';
-  selectedAiProvider = 'ollama';
+  selectedAiProvider = 'gemini';
   hora_inicio = '';
   hora_fin = '';
   private lastPos = { x: 0, y: 0 };

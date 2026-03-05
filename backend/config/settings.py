@@ -211,7 +211,7 @@ VIDEO_REPORT_MAX_FRAME_SIZE_BYTES = 8 * 1024 * 1024
 VIDEO_REPORT_MAX_TOTAL_BYTES = 80 * 1024 * 1024
 
 # AI text improvement for report narrative fields
-AI_TEXT_PROVIDER_ORDER = os.getenv('AI_TEXT_PROVIDER_ORDER', 'ollama,gemini,openrouter,groq')
+AI_TEXT_PROVIDER_ORDER = os.getenv('AI_TEXT_PROVIDER_ORDER', 'gemini,openrouter,groq,ollama')
 AI_TEXT_PROVIDER_SELECTION = os.getenv('AI_TEXT_PROVIDER_SELECTION', 'ordered')
 AI_TEXT_FALLBACK_MODE = os.getenv('AI_TEXT_FALLBACK_MODE', 'quota_only')
 AI_TEXT_TIMEOUT_SECONDS = int(os.getenv('AI_TEXT_TIMEOUT_SECONDS', '45'))
