@@ -45,7 +45,8 @@
     </div>
 
     <!-- Global KPI strip -->
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div class="grid grid-cols-2 gap-3"
+        [ngClass]="selectedModule() === 'novedades' ? 'md:grid-cols-5' : 'md:grid-cols-3'">
         <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
             <div class="p-2 bg-indigo-50 rounded-lg text-indigo-600 shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -59,6 +60,7 @@
             </div>
         </div>
 
+        @if (selectedModule() === 'novedades') {
         <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
             <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600 shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -71,7 +73,9 @@
                 <p class="text-lg font-bold text-slate-800">{{ camerasOnline() }}<span class="text-slate-400 text-sm font-normal">/{{ cameras().length }}</span></p>
             </div>
         </div>
+        }
 
+        @if (selectedModule() === 'novedades') {
         <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
             <div class="p-2 rounded-lg shrink-0" [class]="camerasOffline() > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-400'">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -84,6 +88,7 @@
                 <p class="text-lg font-bold" [class]="camerasOffline() > 0 ? 'text-rose-600' : 'text-slate-800'">{{ camerasOffline() }}</p>
             </div>
         </div>
+        }
 
         <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
             <div class="p-2 rounded-lg shrink-0" [class]="openNovedades() > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400'">
@@ -138,40 +143,44 @@
                 </div>
             </div>
 
-            <!-- Recent open novedades -->
+            <!-- Module analytics -->
             <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                    <h3 class="text-sm font-bold text-slate-700">Novedades Abiertas Recientes</h3>
-                    <a routerLink="/novedades" class="text-xs text-indigo-600 hover:underline font-medium">Ver todas →</a>
+                <div class="px-4 py-3 border-b border-slate-100">
+                    <h3 class="text-sm font-bold text-slate-700">Analítica de Novedades</h3>
                 </div>
-                @if (recentOpenNovedades().length === 0) {
-                <div class="py-10 text-center text-slate-400 text-sm">
-                    <p class="font-medium text-emerald-600">Sin novedades abiertas</p>
-                    <p class="text-xs mt-1 text-slate-400">Todo está bajo control</p>
-                </div>
-                } @else {
-                <div class="divide-y divide-slate-50">
-                    @for (n of recentOpenNovedades(); track n.id) {
-                    <div class="px-4 py-3 flex items-start gap-3 hover:bg-slate-50/50 transition-colors">
-                        <span class="mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0"
-                            [ngClass]="{
-                                'bg-rose-100 text-rose-700': n.severity === 'CRITICAL' || n.severity === 'HIGH',
-                                'bg-amber-100 text-amber-700': n.severity === 'MEDIUM',
-                                'bg-indigo-100 text-indigo-700': n.severity === 'LOW'
-                            }">
-                            {{ getSeverityLabel(n.severity) }}
-                        </span>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm text-slate-700 font-medium truncate">
-                                {{ n.camera_name || n.server_name || n.system_name || n.cameraman_gear_name || 'Activo desconocido' }}
-                            </p>
-                            <p class="text-xs text-slate-400 truncate">{{ n.description }}</p>
+                <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="rounded-lg border border-slate-100 p-3">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tendencia (6 meses)</p>
+                        <svg class="w-full h-24 mt-2" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <polyline [attr.points]="getTrendPolyline(novedadesTrend())"
+                                fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                        </svg>
+                        <div class="mt-2 grid grid-cols-6 gap-1 text-[10px] text-slate-400">
+                            @for (point of novedadesTrend(); track point.label) {
+                            <span class="text-center">{{ point.label }}</span>
+                            }
                         </div>
-                        <span class="text-[10px] text-slate-400 shrink-0 mt-0.5">{{ n.created_at | date:'dd/MM HH:mm' }}</span>
                     </div>
-                    }
+                    <div class="rounded-lg border border-slate-100 p-3">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Torta por estado</p>
+                        <div class="mt-2 flex items-center gap-4">
+                            <div class="w-24 h-24 rounded-full border border-slate-100 shrink-0"
+                                [style.background]="getPieStyle(novedadesStatusChart(), ['#3b82f6','#f59e0b','#10b981'])"></div>
+                            <div class="space-y-1 text-xs w-full">
+                                @for (item of novedadesStatusChart(); track item.label) {
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="inline-flex items-center gap-1.5 text-slate-600">
+                                        <span class="w-2 h-2 rounded-full"
+                                            [style.background]="getPaletteColor($index, ['#3b82f6','#f59e0b','#10b981'])"></span>
+                                        {{ item.label }}
+                                    </span>
+                                    <span class="font-semibold text-slate-700">{{ item.value }}</span>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                }
             </div>
         </div>
 
@@ -281,46 +290,44 @@
                 </div>
             </div>
 
-            <!-- Recent hechos -->
+            <!-- Module analytics -->
             <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                    <h3 class="text-sm font-bold text-slate-700">Hechos Recientes</h3>
-                    <a routerLink="/hechos" class="text-xs text-indigo-600 hover:underline font-medium">Ver bitácora →</a>
+                <div class="px-4 py-3 border-b border-slate-100">
+                    <h3 class="text-sm font-bold text-slate-700">Analítica de Hechos</h3>
                 </div>
-                @if (recentHechos().length === 0) {
-                <div class="py-10 text-center text-slate-400 text-sm">
-                    <p class="font-medium">Sin hechos registrados</p>
-                    <p class="text-xs mt-1">Registrá el primer hecho del turno</p>
-                </div>
-                } @else {
-                <div class="divide-y divide-slate-50">
-                    @for (h of recentHechos(); track h.id) {
-                    <div class="px-4 py-3 flex items-start gap-3 hover:bg-slate-50/50 transition-colors">
-                        <span class="mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0"
-                            [ngClass]="{
-                                'bg-rose-100 text-rose-700': h.category === 'POLICIAL',
-                                'bg-indigo-100 text-indigo-700': h.category === 'OPERATIVO',
-                                'bg-sky-100 text-sky-700': h.category === 'INFORMATIVO',
-                                'bg-slate-100 text-slate-600': h.category === 'RELEVAMIENTO'
-                            }">
-                            {{ getCategoryLabel(h.category) }}
-                        </span>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm text-slate-700 truncate">{{ h.description }}</p>
-                            @if (h.sector) {
-                            <p class="text-xs text-slate-400">Sector: {{ h.sector }}</p>
-                            }
-                        </div>
-                        <div class="text-right shrink-0">
-                            <p class="text-[10px] text-slate-400">{{ h.timestamp | date:'dd/MM HH:mm' }}</p>
-                            @if (h.is_solved) {
-                            <span class="text-[10px] text-emerald-600 font-bold">Resuelto</span>
+                <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="rounded-lg border border-slate-100 p-3">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tendencia (6 meses)</p>
+                        <svg class="w-full h-24 mt-2" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <polyline [attr.points]="getTrendPolyline(hechosTrend())"
+                                fill="none" stroke="#6366f1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                        </svg>
+                        <div class="mt-2 grid grid-cols-6 gap-1 text-[10px] text-slate-400">
+                            @for (point of hechosTrend(); track point.label) {
+                            <span class="text-center">{{ point.label }}</span>
                             }
                         </div>
                     </div>
-                    }
+                    <div class="rounded-lg border border-slate-100 p-3">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Torta por resolución</p>
+                        <div class="mt-2 flex items-center gap-4">
+                            <div class="w-24 h-24 rounded-full border border-slate-100 shrink-0"
+                                [style.background]="getPieStyle(hechosResolutionChart(), ['#10b981','#f59e0b'])"></div>
+                            <div class="space-y-1 text-xs w-full">
+                                @for (item of hechosResolutionChart(); track item.label) {
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="inline-flex items-center gap-1.5 text-slate-600">
+                                        <span class="w-2 h-2 rounded-full"
+                                            [style.background]="getPaletteColor($index, ['#10b981','#f59e0b'])"></span>
+                                        {{ item.label }}
+                                    </span>
+                                    <span class="font-semibold text-slate-700">{{ item.value }}</span>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                }
             </div>
         </div>
 
@@ -370,26 +377,6 @@
                 </div>
             </div>
 
-            <!-- Camera mini status -->
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100">
-                    <h3 class="text-sm font-bold text-slate-700">Estado de Cámaras</h3>
-                </div>
-                <div class="p-4 space-y-3">
-                    @for (sys of systems(); track sys.id) {
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="font-medium text-slate-600 truncate max-w-[70%]">{{ sys.name }}</span>
-                            <span class="text-slate-400">{{ getSystemOnlineCount(sys.id) }}/{{ getSystemTotalCount(sys.id) }}</span>
-                        </div>
-                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                            <div class="bg-emerald-500 h-1.5 rounded-full transition-all"
-                                [style.width.%]="getSystemOnlinePercentage(sys.id)"></div>
-                        </div>
-                    </div>
-                    }
-                </div>
-            </div>
         </div>
     </div>
     }
@@ -419,42 +406,44 @@
                 </div>
             </div>
 
-            <!-- Recent records -->
+            <!-- Module analytics -->
             <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                    <h3 class="text-sm font-bold text-slate-700">Registros Fílmicos Recientes</h3>
-                    <a routerLink="/records" class="text-xs text-indigo-600 hover:underline font-medium">Ver todos →</a>
+                <div class="px-4 py-3 border-b border-slate-100">
+                    <h3 class="text-sm font-bold text-slate-700">Analítica de Registros</h3>
                 </div>
-                @if (recentRecords().length === 0) {
-                <div class="py-10 text-center text-slate-400 text-sm">
-                    <p class="font-medium">Sin registros cargados</p>
-                    <p class="text-xs mt-1">Registrá el primer material fílmico del turno</p>
-                </div>
-                } @else {
-                <div class="divide-y divide-slate-50">
-                    @for (r of recentRecords(); track r.id) {
-                    <div class="px-4 py-3 flex items-center gap-3 hover:bg-slate-50/50 transition-colors">
-                        <div class="w-8 h-8 bg-violet-50 rounded-lg flex items-center justify-center text-violet-500 shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm font-medium text-slate-700 truncate">
-                                {{ r.judicial_case_number || r.camera_name || 'Sin número de caso' }}
-                            </p>
-                            <p class="text-xs text-slate-400 truncate">{{ r.description || r.request_type || '—' }}</p>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <p class="text-[10px] text-slate-400">{{ r.created_at | date:'dd/MM HH:mm' }}</p>
-                            @if (r.operator_full_name || r.operator_name) {
-                            <p class="text-[10px] text-slate-500">{{ r.operator_full_name || r.operator_name }}</p>
+                <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="rounded-lg border border-slate-100 p-3">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tendencia (6 meses)</p>
+                        <svg class="w-full h-24 mt-2" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <polyline [attr.points]="getTrendPolyline(recordsTrend())"
+                                fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                        </svg>
+                        <div class="mt-2 grid grid-cols-6 gap-1 text-[10px] text-slate-400">
+                            @for (point of recordsTrend(); track point.label) {
+                            <span class="text-center">{{ point.label }}</span>
                             }
                         </div>
                     </div>
-                    }
+                    <div class="rounded-lg border border-slate-100 p-3">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Torta por integridad</p>
+                        <div class="mt-2 flex items-center gap-4">
+                            <div class="w-24 h-24 rounded-full border border-slate-100 shrink-0"
+                                [style.background]="getPieStyle(recordsIntegrityChart(), ['#10b981','#64748b'])"></div>
+                            <div class="space-y-1 text-xs w-full">
+                                @for (item of recordsIntegrityChart(); track item.label) {
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="inline-flex items-center gap-1.5 text-slate-600">
+                                        <span class="w-2 h-2 rounded-full"
+                                            [style.background]="getPaletteColor($index, ['#10b981','#64748b'])"></span>
+                                        {{ item.label }}
+                                    </span>
+                                    <span class="font-semibold text-slate-700">{{ item.value }}</span>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                }
             </div>
         </div>
 
@@ -504,26 +493,6 @@
                 </div>
             </div>
 
-            <!-- Camera mini status -->
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100">
-                    <h3 class="text-sm font-bold text-slate-700">Estado de Cámaras</h3>
-                </div>
-                <div class="p-4 space-y-3">
-                    @for (sys of systems(); track sys.id) {
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="font-medium text-slate-600 truncate max-w-[70%]">{{ sys.name }}</span>
-                            <span class="text-slate-400">{{ getSystemOnlineCount(sys.id) }}/{{ getSystemTotalCount(sys.id) }}</span>
-                        </div>
-                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                            <div class="bg-emerald-500 h-1.5 rounded-full transition-all"
-                                [style.width.%]="getSystemOnlinePercentage(sys.id)"></div>
-                        </div>
-                    </div>
-                    }
-                </div>
-            </div>
         </div>
     </div>
     }
@@ -553,41 +522,44 @@
                 </div>
             </div>
 
-            <!-- Active personnel list -->
+            <!-- Module analytics -->
             <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                    <h3 class="text-sm font-bold text-slate-700">Personal Activo</h3>
-                    <a routerLink="/personnel" class="text-xs text-indigo-600 hover:underline font-medium">Gestionar →</a>
+                <div class="px-4 py-3 border-b border-slate-100">
+                    <h3 class="text-sm font-bold text-slate-700">Analítica de Personal</h3>
                 </div>
-                @if (recentActivePeople().length === 0) {
-                <div class="py-10 text-center text-slate-400 text-sm">
-                    <p class="font-medium">Sin personal activo registrado</p>
-                    <p class="text-xs mt-1">No hay datos para graficar en esta sección</p>
-                </div>
-                } @else {
-                <div class="grid grid-cols-2 gap-px bg-slate-100">
-                    @for (p of recentActivePeople(); track p.id) {
-                    <div class="bg-white px-4 py-3 flex items-center gap-3 hover:bg-slate-50/50 transition-colors">
-                        <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm shrink-0">
-                            {{ (p.first_name?.[0] || '') }}{{ (p.last_name?.[0] || '') }}
-                        </div>
-                        <div class="min-w-0">
-                            <p class="text-sm font-medium text-slate-700 truncate">{{ p.last_name }}, {{ p.first_name }}</p>
-                            @if (p.rank || p.badge_number) {
-                            <p class="text-[11px] text-slate-400 truncate">{{ p.rank || '' }} {{ p.badge_number ? '· ' + p.badge_number : '' }}</p>
+                <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="rounded-lg border border-slate-100 p-3">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tendencia (6 meses)</p>
+                        <svg class="w-full h-24 mt-2" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <polyline [attr.points]="getTrendPolyline(personnelTrend())"
+                                fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                        </svg>
+                        <div class="mt-2 grid grid-cols-6 gap-1 text-[10px] text-slate-400">
+                            @for (point of personnelTrend(); track point.label) {
+                            <span class="text-center">{{ point.label }}</span>
                             }
                         </div>
                     </div>
-                    }
+                    <div class="rounded-lg border border-slate-100 p-3">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Torta por estado</p>
+                        <div class="mt-2 flex items-center gap-4">
+                            <div class="w-24 h-24 rounded-full border border-slate-100 shrink-0"
+                                [style.background]="getPieStyle(personnelStatusChart(), ['#10b981','#64748b'])"></div>
+                            <div class="space-y-1 text-xs w-full">
+                                @for (item of personnelStatusChart(); track item.label) {
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="inline-flex items-center gap-1.5 text-slate-600">
+                                        <span class="w-2 h-2 rounded-full"
+                                            [style.background]="getPaletteColor($index, ['#10b981','#64748b'])"></span>
+                                        {{ item.label }}
+                                    </span>
+                                    <span class="font-semibold text-slate-700">{{ item.value }}</span>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                @if (people().length > 8) {
-                <div class="px-4 py-2.5 border-t border-slate-100 text-center">
-                    <a routerLink="/personnel" class="text-xs text-indigo-500 hover:underline">
-                        Ver {{ people().length - 8 }} más →
-                    </a>
-                </div>
-                }
-                }
             </div>
         </div>
 
@@ -637,26 +609,6 @@
                 </div>
             </div>
 
-            <!-- Camera mini status -->
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100">
-                    <h3 class="text-sm font-bold text-slate-700">Estado de Cámaras</h3>
-                </div>
-                <div class="p-4 space-y-3">
-                    @for (sys of systems(); track sys.id) {
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="font-medium text-slate-600 truncate max-w-[70%]">{{ sys.name }}</span>
-                            <span class="text-slate-400">{{ getSystemOnlineCount(sys.id) }}/{{ getSystemTotalCount(sys.id) }}</span>
-                        </div>
-                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                            <div class="bg-emerald-500 h-1.5 rounded-full transition-all"
-                                [style.width.%]="getSystemOnlinePercentage(sys.id)"></div>
-                        </div>
-                    </div>
-                    }
-                </div>
-            </div>
         </div>
     </div>
     }

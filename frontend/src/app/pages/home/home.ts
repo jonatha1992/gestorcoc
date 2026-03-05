@@ -18,6 +18,11 @@ interface DashboardChartItem {
   badgeClass: string;
 }
 
+interface DashboardTrendPoint {
+  label: string;
+  value: number;
+}
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -67,7 +72,9 @@ export class HomeComponent implements OnInit {
       ).length,
   );
   novedadesClosed = computed(() => this.novedades().filter((n) => n.status === 'CLOSED').length);
-  recentOpenNovedades = computed(() => this.novedades().filter((n) => n.status === 'OPEN').slice(0, 6));
+  novedadesTrend = computed<DashboardTrendPoint[]>(() =>
+    this.buildMonthlyTrend(this.novedades(), 'created_at'),
+  );
   novedadesSeverityChart = computed<DashboardChartItem[]>(() => [
     {
       label: 'Crítica',
@@ -121,7 +128,9 @@ export class HomeComponent implements OnInit {
     return this.hechos().filter((h) => h.timestamp?.slice(0, 10) === today).length;
   });
   hechosUnsolved = computed(() => this.hechos().filter((h) => !h.is_solved).length);
-  recentHechos = computed(() => [...this.hechos()].reverse().slice(0, 6));
+  hechosTrend = computed<DashboardTrendPoint[]>(() =>
+    this.buildMonthlyTrend(this.hechos(), 'timestamp'),
+  );
   hechosCategoryChart = computed<DashboardChartItem[]>(() => [
     {
       label: 'Operativo',
@@ -172,7 +181,9 @@ export class HomeComponent implements OnInit {
     const month = new Date().toISOString().slice(0, 7);
     return this.records().filter((r) => r.created_at?.slice(0, 7) === month).length;
   });
-  recentRecords = computed(() => [...this.records()].reverse().slice(0, 6));
+  recordsTrend = computed<DashboardTrendPoint[]>(() =>
+    this.buildMonthlyTrend(this.records(), 'created_at'),
+  );
   recordsDeliveryChart = computed<DashboardChartItem[]>(() => [
     {
       label: 'Pendiente',
@@ -222,7 +233,9 @@ export class HomeComponent implements OnInit {
 
   // ——— Personal module ———
   personnelInactive = computed(() => this.people().filter((p) => !p.is_active).length);
-  recentActivePeople = computed(() => this.people().filter((p) => p.is_active).slice(0, 8));
+  personnelTrend = computed<DashboardTrendPoint[]>(() =>
+    this.buildMonthlyTrend(this.people(), 'created_at'),
+  );
   personnelRoleChart = computed<DashboardChartItem[]>(() => [
     {
       label: 'Operador',
@@ -279,6 +292,69 @@ export class HomeComponent implements OnInit {
   getChartWidth(value: number, max: number): number {
     if (!max || value <= 0) return 0;
     return (value / max) * 100;
+  }
+
+  getPaletteColor(index: number, palette: string[]): string {
+    if (!palette.length) return '#94a3b8';
+    return palette[index % palette.length];
+  }
+
+  getPieStyle(items: DashboardChartItem[], palette: string[]): string {
+    const total = items.reduce((sum, item) => sum + item.value, 0);
+    if (total <= 0) return 'conic-gradient(#e2e8f0 0 100%)';
+
+    let accumulated = 0;
+    const stops = items.map((item, index) => {
+      const start = (accumulated / total) * 100;
+      accumulated += item.value;
+      const end = (accumulated / total) * 100;
+      return `${this.getPaletteColor(index, palette)} ${start}% ${end}%`;
+    });
+
+    return `conic-gradient(${stops.join(',')})`;
+  }
+
+  getTrendPolyline(points: DashboardTrendPoint[]): string {
+    if (!points.length) return '';
+    const max = Math.max(...points.map((point) => point.value), 1);
+    const step = points.length > 1 ? 100 / (points.length - 1) : 100;
+
+    return points
+      .map((point, index) => {
+        const x = step * index;
+        const y = 100 - (point.value / max) * 100;
+        return `${x.toFixed(2)},${y.toFixed(2)}`;
+      })
+      .join(' ');
+  }
+
+  private buildMonthlyTrend(rows: any[], dateField: string): DashboardTrendPoint[] {
+    const now = new Date();
+    const months: { key: string; label: string }[] = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const label = date
+        .toLocaleString('es-AR', { month: 'short' })
+        .replace('.', '')
+        .toUpperCase();
+      months.push({ key, label });
+    }
+
+    const counts = new Map(months.map((m) => [m.key, 0]));
+    for (const row of rows) {
+      const raw = row?.[dateField];
+      if (!raw) continue;
+      const date = new Date(raw);
+      if (Number.isNaN(date.getTime())) continue;
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (counts.has(key)) {
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+    }
+
+    return months.map((m) => ({ label: m.label, value: counts.get(m.key) || 0 }));
   }
 
   ngOnInit() {
