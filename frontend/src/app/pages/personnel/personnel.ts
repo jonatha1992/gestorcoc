@@ -95,6 +95,14 @@ export class PersonnelComponent implements OnInit {
     this.loadPeople();
   }
 
+  clearFilters() {
+    this.filterUnit = '';
+    this.filterGuardGroup = '';
+    this.filterRole = '';
+    this.filterActive = '';
+    this.onFilterChange();
+  }
+
   goToPage(page: number) {
     if (page < 1 || page > this.totalPages) return;
     this.currentPage = page;

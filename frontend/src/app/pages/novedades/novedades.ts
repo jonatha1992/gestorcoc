@@ -9,6 +9,7 @@ import { environment } from '../../../environments/environment';
 type NovedadSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 type NovedadStatus = 'OPEN' | 'IN_PROGRESS' | 'CLOSED';
 type NovedadAssetType = 'CAMERA' | 'SERVER' | 'SYSTEM' | 'GEAR' | 'UNKNOWN';
+type TargetType = 'SYSTEM' | 'SERVER' | 'CAMERA' | 'GEAR';
 
 interface NovedadViewModel {
   id: number;
@@ -87,16 +88,17 @@ export class NovedadesComponent implements OnInit {
     firma: '',
   };
 
-  showActaPrompt = false;
-  pendingActaNovedades: any[] = [];
   actaTargetNovedades: any[] | null = null;
 
   private sigDrawing = false;
   private sigCtx: CanvasRenderingContext2D | null = null;
 
-  targetType: 'SYSTEM' | 'SERVER' | 'CAMERA' | 'GEAR' = 'CAMERA';
+  targetType: TargetType = 'CAMERA';
+  previousTargetType: TargetType = 'CAMERA';
   selectedAssets: any[] = [];
+  selectedAssetsByType: Record<TargetType, any[]> = this.getEmptySelectedAssetsByType();
   showDropdown = false;
+  generateActaAfterSave = false;
 
   newNovedad: any = this.getEmptyNovedad();
 
@@ -195,9 +197,12 @@ export class NovedadesComponent implements OnInit {
     this.isEditing = false;
     this.newNovedad = this.getEmptyNovedad();
     this.targetType = 'CAMERA';
+    this.previousTargetType = this.targetType;
+    this.selectedAssetsByType = this.getEmptySelectedAssetsByType();
     this.selectedAssets = [];
     this.assetSearchText = '';
     this.showDropdown = false;
+    this.generateActaAfterSave = false;
     this.filterAssets();
   }
 
@@ -205,6 +210,8 @@ export class NovedadesComponent implements OnInit {
     this.isEditing = true;
     this.newNovedad = { ...novedad };
     this.showForm = true;
+    this.generateActaAfterSave = false;
+    this.selectedAssetsByType = this.getEmptySelectedAssetsByType();
     this.selectedAssets = [];
 
     if (novedad.camera) {
@@ -238,6 +245,9 @@ export class NovedadesComponent implements OnInit {
       this.assetSearchText = novedad.cameraman_gear_name || '';
     }
 
+    this.previousTargetType = this.targetType;
+    this.selectedAssetsByType[this.targetType] = [...this.selectedAssets];
+
     this.filterAssets();
   }
 
@@ -245,10 +255,13 @@ export class NovedadesComponent implements OnInit {
     this.showForm = false;
     this.assetSearchText = '';
     this.selectedAssets = [];
+    this.selectedAssetsByType = this.getEmptySelectedAssetsByType();
     this.showDropdown = false;
     this.isEditing = false;
+    this.generateActaAfterSave = false;
     this.newNovedad = this.getEmptyNovedad();
     this.targetType = 'CAMERA';
+    this.previousTargetType = this.targetType;
     this.filteredAssets = [];
   }
 
@@ -266,13 +279,22 @@ export class NovedadesComponent implements OnInit {
     };
   }
 
+  getEmptySelectedAssetsByType(): Record<TargetType, any[]> {
+    return {
+      SYSTEM: [],
+      SERVER: [],
+      CAMERA: [],
+      GEAR: [],
+    };
+  }
+
   onTargetTypeChange() {
-    setTimeout(() => {
-      this.selectedAssets = [];
-      this.assetSearchText = '';
-      this.showDropdown = false;
-      this.filterAssets();
-    });
+    this.selectedAssetsByType[this.previousTargetType] = [...this.selectedAssets];
+    this.selectedAssets = [...this.selectedAssetsByType[this.targetType]];
+    this.previousTargetType = this.targetType;
+    this.assetSearchText = '';
+    this.showDropdown = false;
+    this.filterAssets();
   }
 
   filterAssets() {
@@ -300,6 +322,7 @@ export class NovedadesComponent implements OnInit {
   addAsset(asset: any) {
     if (!this.isAssetSelected(asset.id)) {
       this.selectedAssets.push(asset);
+      this.selectedAssetsByType[this.targetType] = [...this.selectedAssets];
       this.assetSearchText = '';
       this.showDropdown = false;
       this.filterAssets();
@@ -308,10 +331,26 @@ export class NovedadesComponent implements OnInit {
 
   removeAsset(assetId: number) {
     this.selectedAssets = this.selectedAssets.filter((a) => a.id !== assetId);
+    this.selectedAssetsByType[this.targetType] = [...this.selectedAssets];
   }
 
   isAssetSelected(assetId: number): boolean {
     return this.selectedAssets.some((a) => a.id === assetId);
+  }
+
+  setGenerateActaAfterSave(value: boolean) {
+    this.generateActaAfterSave = value;
+  }
+
+  clearFilters() {
+    this.filterDateFrom = '';
+    this.filterDateTo = '';
+    this.filterAssetType = '';
+    this.filterSeverity = '';
+    this.filterIncidentType = '';
+    this.filterReportedBy = '';
+    this.filterStatus = '';
+    this.onFilterChange();
   }
 
   onSearchBlur() {
@@ -355,6 +394,7 @@ export class NovedadesComponent implements OnInit {
         },
       });
     } else {
+      const shouldGenerateActa = this.generateActaAfterSave;
       let createCount = 0;
       const totalAssets = this.selectedAssets.length;
       const createdNovedades: any[] = [];
@@ -378,8 +418,9 @@ export class NovedadesComponent implements OnInit {
               );
               this.closeForm();
               this.loadData();
-              this.pendingActaNovedades = [...createdNovedades];
-              this.showActaPrompt = true;
+              if (shouldGenerateActa) {
+                this.openActaModal([...createdNovedades]);
+              }
             }
           },
           error: (err) => {
@@ -405,17 +446,6 @@ export class NovedadesComponent implements OnInit {
     this.actaForm.numero = '';
     this.showActaModal = true;
     setTimeout(() => this.initSignaturePad(), 50);
-  }
-
-  dismissActaPrompt() {
-    this.showActaPrompt = false;
-    this.pendingActaNovedades = [];
-  }
-
-  openActaFromPrompt() {
-    this.showActaPrompt = false;
-    this.openActaModal([...this.pendingActaNovedades]);
-    this.pendingActaNovedades = [];
   }
 
   closeActaModal() {

@@ -1,52 +1,96 @@
 <div class="space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-        <div class="relative w-72">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input type="text" [(ngModel)]="searchText" (ngModelChange)="onSearchChange()"
-                class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
-                placeholder="Buscar novedad...">
-        </div>
-        <div class="flex items-center gap-2">
-            <button (click)="openActaModal()"
-                class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Generar Acta
-            </button>
-            <button (click)="openForm()"
-                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="relative w-full lg:w-80">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                    class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                Nueva Novedad
-            </button>
+                <input type="text" [(ngModel)]="searchText" (ngModelChange)="onSearchChange()"
+                    class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
+                    placeholder="Buscar novedad...">
+            </div>
+            <div class="flex items-center justify-end">
+                <button (click)="openForm()"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Nueva Novedad
+                </button>
+            </div>
         </div>
-    </div>
 
-    <!-- Post-create prompt -->
-    @if (showActaPrompt) {
-    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
-            <span class="text-sm font-medium text-emerald-800">Novedad registrada. ¿Desea generar el Acta Dejando Constancia?</span>
-        </div>
-        <div class="flex gap-2 shrink-0 ml-4">
-            <button (click)="dismissActaPrompt()" class="text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors">No</button>
-            <button (click)="openActaFromPrompt()" class="text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg transition-colors">Generar Acta</button>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-2">
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fecha desde</label>
+                <input type="date" [(ngModel)]="filterDateFrom" (ngModelChange)="onFilterChange()"
+                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
+                    title="Fecha desde">
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fecha hasta</label>
+                <input type="date" [(ngModel)]="filterDateTo" (ngModelChange)="onFilterChange()"
+                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
+                    title="Fecha hasta">
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tipo activo</label>
+                <select [(ngModel)]="filterAssetType" (ngModelChange)="onFilterChange()"
+                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
+                    <option value="">Todos</option>
+                    <option value="CAMERA">Cámara</option>
+                    <option value="SERVER">Servidor</option>
+                    <option value="SYSTEM">Sistema</option>
+                    <option value="GEAR">Equipamiento</option>
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Severidad</label>
+                <select [(ngModel)]="filterSeverity" (ngModelChange)="onFilterChange()"
+                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
+                    <option value="">Todas</option>
+                    <option value="LOW">Baja</option>
+                    <option value="MEDIUM">Media</option>
+                    <option value="HIGH">Alta</option>
+                    <option value="CRITICAL">Crítica</option>
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tipo incidente</label>
+                <input type="text" [(ngModel)]="filterIncidentType" (ngModelChange)="onFilterChange()"
+                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
+                    placeholder="Ej: FALLA_TECNICA">
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Reportado por</label>
+                <input type="text" [(ngModel)]="filterReportedBy" (ngModelChange)="onFilterChange()"
+                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
+                    placeholder="Nombre responsable">
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Estado</label>
+                <select [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()"
+                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
+                    <option value="">Todos</option>
+                    <option value="OPEN">Abierta</option>
+                    <option value="IN_PROGRESS">En Progreso</option>
+                    <option value="CLOSED">Cerrada</option>
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Acciones</label>
+                <button type="button" (click)="clearFilters()"
+                    class="w-full text-xs font-semibold text-slate-600 hover:text-indigo-600 border border-slate-200 rounded-lg px-3 py-2 hover:bg-slate-100 transition-colors">
+                    Limpiar filtros
+                </button>
+            </div>
         </div>
     </div>
-    }
 
     <!-- Modal Form -->
     @if (showForm) {
@@ -147,10 +191,21 @@
                 <div class="pt-6 flex gap-4">
                     <button type="button" (click)="closeForm()"
                         class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3.5 px-6 rounded-xl transition-all">Cancelar</button>
-                    <button type="submit"
+                    @if (isEditing) {
+                    <button type="submit" (click)="setGenerateActaAfterSave(false)"
                         class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-indigo-100 transition-all">
-                        {{ isEditing ? 'Actualizar' : 'Guardar' }}
+                        Actualizar
                     </button>
+                    } @else {
+                    <button type="submit" (click)="setGenerateActaAfterSave(false)"
+                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-indigo-100 transition-all">
+                        Guardar
+                    </button>
+                    <button type="submit" (click)="setGenerateActaAfterSave(true)"
+                        class="flex-1 bg-slate-700 hover:bg-slate-800 text-white font-bold py-3.5 px-6 rounded-xl shadow-sm transition-all">
+                        Guardar y Generar Acta
+                    </button>
+                    }
                 </div>
             </form>
         </div>
@@ -230,52 +285,6 @@
                         <th class="px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-widest">Descripción</th>
                         <th class="px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-widest">Estado</th>
                         <th class="px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Acciones</th>
-                    </tr>
-                    <!-- Filter row -->
-                    <tr class="border-b border-slate-100 bg-slate-50">
-                        <th colspan="6" scope="colgroup" class="px-4 py-3 bg-slate-50/60 normal-case font-normal">
-                            <div class="grid grid-cols-1 md:grid-cols-8 gap-2">
-                                <input type="date" [(ngModel)]="filterDateFrom" (ngModelChange)="onFilterChange()"
-                                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-1.5 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
-                                    title="Fecha desde">
-                                <input type="date" [(ngModel)]="filterDateTo" (ngModelChange)="onFilterChange()"
-                                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-1.5 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
-                                    title="Fecha hasta">
-                                <select [(ngModel)]="filterAssetType" (ngModelChange)="onFilterChange()"
-                                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-1.5 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
-                                    <option value="">Tipo activo</option>
-                                    <option value="CAMERA">Cámara</option>
-                                    <option value="SERVER">Servidor</option>
-                                    <option value="SYSTEM">Sistema</option>
-                                    <option value="GEAR">Equipamiento</option>
-                                </select>
-                                <select [(ngModel)]="filterSeverity" (ngModelChange)="onFilterChange()"
-                                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-1.5 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
-                                    <option value="">Severidad</option>
-                                    <option value="LOW">Baja</option>
-                                    <option value="MEDIUM">Media</option>
-                                    <option value="HIGH">Alta</option>
-                                    <option value="CRITICAL">Crítica</option>
-                                </select>
-                                <input type="text" [(ngModel)]="filterIncidentType" (ngModelChange)="onFilterChange()"
-                                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-1.5 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
-                                    placeholder="Tipo incidente">
-                                <input type="text" [(ngModel)]="filterReportedBy" (ngModelChange)="onFilterChange()"
-                                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-1.5 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
-                                    placeholder="Reportado por">
-                                <select [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()"
-                                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-1.5 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
-                                    <option value="">Estado</option>
-                                    <option value="OPEN">Abierta</option>
-                                    <option value="IN_PROGRESS">En Progreso</option>
-                                    <option value="CLOSED">Cerrada</option>
-                                </select>
-                                <button type="button" (click)="filterDateFrom=''; filterDateTo=''; filterAssetType=''; filterSeverity=''; filterIncidentType=''; filterReportedBy=''; filterStatus=''; onFilterChange()"
-                                    class="w-full text-xs font-semibold text-slate-600 hover:text-indigo-600 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-100 transition-colors">
-                                    Limpiar filtros
-                                </button>
-                            </div>
-                        </th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">

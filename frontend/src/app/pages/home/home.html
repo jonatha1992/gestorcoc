@@ -178,62 +178,46 @@
         <!-- Right: Tasks + camera status -->
         <div class="space-y-4">
 
-            <!-- Tasks panel -->
+            <!-- Charts panel -->
             <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
                 <div class="px-4 py-3 border-b border-slate-100 bg-amber-50/50">
-                    <h3 class="text-sm font-bold text-amber-800">Tareas del Turno — Novedades</h3>
+                    <h3 class="text-sm font-bold text-amber-800">Gráficos del Turno — Novedades</h3>
                 </div>
-                <div class="p-4 space-y-3">
-                    @if (novedadesCritical() > 0) {
-                    <div class="flex items-start gap-2.5 p-2.5 bg-rose-50 border border-rose-100 rounded-lg">
-                        <svg class="w-4 h-4 text-rose-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <div>
-                            <p class="text-xs font-bold text-rose-700">Atender novedades críticas</p>
-                            <p class="text-[11px] text-rose-500">{{ novedadesCritical() }} novedad(es) de alta prioridad</p>
+                <div class="p-4 space-y-4">
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Severidad</p>
+                        <div class="mt-2 space-y-2">
+                            @for (item of novedadesSeverityChart(); track item.label) {
+                            <div>
+                                <div class="flex items-center justify-between text-xs mb-1">
+                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
+                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
+                                        [style.width.%]="getChartWidth(item.value, getChartMax(novedadesSeverityChart()))"></div>
+                                </div>
+                            </div>
+                            }
                         </div>
                     </div>
-                    }
-
-                    <a routerLink="/novedades"
-                        class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors group">
-                        <div class="w-7 h-7 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 group-hover:bg-amber-200 shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                            </svg>
+                    <div class="pt-2 border-t border-slate-100">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estado</p>
+                        <div class="mt-2 space-y-2">
+                            @for (item of novedadesStatusChart(); track item.label) {
+                            <div>
+                                <div class="flex items-center justify-between text-xs mb-1">
+                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
+                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
+                                        [style.width.%]="getChartWidth(item.value, getChartMax(novedadesStatusChart()))"></div>
+                                </div>
+                            </div>
+                            }
                         </div>
-                        <div>
-                            <p class="text-sm font-medium text-slate-700">Gestionar novedades</p>
-                            <p class="text-[11px] text-slate-400">Ver, editar y cerrar novedades</p>
-                        </div>
-                    </a>
-
-                    <a routerLink="/novedades"
-                        class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors group">
-                        <div class="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 group-hover:bg-indigo-200 shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-slate-700">Registrar nueva novedad</p>
-                            <p class="text-[11px] text-slate-400">Documentar una falla o incidente</p>
-                        </div>
-                    </a>
-
-                    <a routerLink="/novedades"
-                        class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors group">
-                        <div class="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600 group-hover:bg-slate-200 shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-slate-700">Generar Acta del Turno</p>
-                            <p class="text-[11px] text-slate-400">Acta Dejando Constancia (.doc)</p>
-                        </div>
-                    </a>
+                    </div>
                 </div>
             </div>
 
@@ -343,62 +327,46 @@
         <!-- Right: Tasks + camera status -->
         <div class="space-y-4">
 
-            <!-- Tasks panel -->
+            <!-- Charts panel -->
             <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
                 <div class="px-4 py-3 border-b border-slate-100 bg-indigo-50/50">
-                    <h3 class="text-sm font-bold text-indigo-800">Tareas del Turno — Hechos</h3>
+                    <h3 class="text-sm font-bold text-indigo-800">Gráficos del Turno — Hechos</h3>
                 </div>
-                <div class="p-4 space-y-3">
-                    @if (hechosUnsolved() > 0) {
-                    <div class="flex items-start gap-2.5 p-2.5 bg-amber-50 border border-amber-100 rounded-lg">
-                        <svg class="w-4 h-4 text-amber-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <div>
-                            <p class="text-xs font-bold text-amber-700">Hechos sin resolver</p>
-                            <p class="text-[11px] text-amber-500">{{ hechosUnsolved() }} hecho(s) pendientes de cierre</p>
+                <div class="p-4 space-y-4">
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Categorías</p>
+                        <div class="mt-2 space-y-2">
+                            @for (item of hechosCategoryChart(); track item.label) {
+                            <div>
+                                <div class="flex items-center justify-between text-xs mb-1">
+                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
+                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
+                                        [style.width.%]="getChartWidth(item.value, getChartMax(hechosCategoryChart()))"></div>
+                                </div>
+                            </div>
+                            }
                         </div>
                     </div>
-                    }
-
-                    <a routerLink="/hechos"
-                        class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors group">
-                        <div class="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 group-hover:bg-indigo-200 shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                            </svg>
+                    <div class="pt-2 border-t border-slate-100">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Resolución</p>
+                        <div class="mt-2 space-y-2">
+                            @for (item of hechosResolutionChart(); track item.label) {
+                            <div>
+                                <div class="flex items-center justify-between text-xs mb-1">
+                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
+                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
+                                        [style.width.%]="getChartWidth(item.value, getChartMax(hechosResolutionChart()))"></div>
+                                </div>
+                            </div>
+                            }
                         </div>
-                        <div>
-                            <p class="text-sm font-medium text-slate-700">Registrar nuevo hecho</p>
-                            <p class="text-[11px] text-slate-400">Documentar un evento operativo</p>
-                        </div>
-                    </a>
-
-                    <a routerLink="/hechos"
-                        class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors group">
-                        <div class="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600 group-hover:bg-slate-200 shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-slate-700">Ver bitácora completa</p>
-                            <p class="text-[11px] text-slate-400">Revisar y gestionar todos los hechos</p>
-                        </div>
-                    </a>
-
-                    <a routerLink="/hechos"
-                        class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors group">
-                        <div class="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 group-hover:bg-emerald-200 shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-slate-700">Cerrar hechos resueltos</p>
-                            <p class="text-[11px] text-slate-400">Marcar resolución y tiempo de cierre</p>
-                        </div>
-                    </a>
+                    </div>
                 </div>
             </div>
 
@@ -493,63 +461,46 @@
         <!-- Right: Tasks + camera status -->
         <div class="space-y-4">
 
-            <!-- Tasks panel -->
+            <!-- Charts panel -->
             <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
                 <div class="px-4 py-3 border-b border-slate-100 bg-violet-50/50">
-                    <h3 class="text-sm font-bold text-violet-800">Tareas del Turno — Registros</h3>
+                    <h3 class="text-sm font-bold text-violet-800">Gráficos del Turno — Registros</h3>
                 </div>
-                <div class="p-4 space-y-3">
-                    <a routerLink="/records"
-                        class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors group">
-                        <div class="w-7 h-7 bg-violet-100 rounded-lg flex items-center justify-center text-violet-600 group-hover:bg-violet-200 shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                            </svg>
+                <div class="p-4 space-y-4">
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estado de entrega</p>
+                        <div class="mt-2 space-y-2">
+                            @for (item of recordsDeliveryChart(); track item.label) {
+                            <div>
+                                <div class="flex items-center justify-between text-xs mb-1">
+                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
+                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
+                                        [style.width.%]="getChartWidth(item.value, getChartMax(recordsDeliveryChart()))"></div>
+                                </div>
+                            </div>
+                            }
                         </div>
-                        <div>
-                            <p class="text-sm font-medium text-slate-700">Registrar material fílmico</p>
-                            <p class="text-[11px] text-slate-400">Cargar nuevo registro de video/cámara</p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-100">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Integridad</p>
+                        <div class="mt-2 space-y-2">
+                            @for (item of recordsIntegrityChart(); track item.label) {
+                            <div>
+                                <div class="flex items-center justify-between text-xs mb-1">
+                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
+                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
+                                        [style.width.%]="getChartWidth(item.value, getChartMax(recordsIntegrityChart()))"></div>
+                                </div>
+                            </div>
+                            }
                         </div>
-                    </a>
-
-                    <a routerLink="/integrity"
-                        class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors group">
-                        <div class="w-7 h-7 bg-sky-100 rounded-lg flex items-center justify-center text-sky-600 group-hover:bg-sky-200 shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-slate-700">Verificar integridad</p>
-                            <p class="text-[11px] text-slate-400">Calcular y verificar hash del material</p>
-                        </div>
-                    </a>
-
-                    <a routerLink="/informes"
-                        class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors group">
-                        <div class="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 group-hover:bg-indigo-200 shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-slate-700">Generar informe de análisis</p>
-                            <p class="text-[11px] text-slate-400">Informe de análisis de video con IA</p>
-                        </div>
-                    </a>
-
-                    <a routerLink="/records"
-                        class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors group">
-                        <div class="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600 group-hover:bg-slate-200 shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-slate-700">Revisar registros del turno</p>
-                            <p class="text-[11px] text-slate-400">Ver y gestionar el material cargado</p>
-                        </div>
-                    </a>
+                    </div>
                 </div>
             </div>
 
@@ -611,9 +562,7 @@
                 @if (recentActivePeople().length === 0) {
                 <div class="py-10 text-center text-slate-400 text-sm">
                     <p class="font-medium">Sin personal activo registrado</p>
-                    <p class="text-xs mt-1">
-                        <a routerLink="/personnel" class="text-indigo-500 hover:underline">Agregar personal</a>
-                    </p>
+                    <p class="text-xs mt-1">No hay datos para graficar en esta sección</p>
                 </div>
                 } @else {
                 <div class="grid grid-cols-2 gap-px bg-slate-100">
@@ -645,49 +594,46 @@
         <!-- Right: Tasks + camera status -->
         <div class="space-y-4">
 
-            <!-- Tasks panel -->
+            <!-- Charts panel -->
             <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
                 <div class="px-4 py-3 border-b border-slate-100 bg-violet-50/50">
-                    <h3 class="text-sm font-bold text-violet-800">Tareas del Turno — Personal</h3>
+                    <h3 class="text-sm font-bold text-violet-800">Gráficos del Turno — Personal</h3>
                 </div>
-                <div class="p-4 space-y-3">
-                    <a routerLink="/personnel"
-                        class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors group">
-                        <div class="w-7 h-7 bg-violet-100 rounded-lg flex items-center justify-center text-violet-600 group-hover:bg-violet-200 shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-slate-700">Agregar personal</p>
-                            <p class="text-[11px] text-slate-400">Registrar un nuevo agente en el sistema</p>
-                        </div>
-                    </a>
-
-                    <a routerLink="/personnel"
-                        class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 border border-slate-100 transition-colors group">
-                        <div class="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 group-hover:bg-indigo-200 shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-slate-700">Ver todo el personal</p>
-                            <p class="text-[11px] text-slate-400">Gestionar agentes activos e inactivos</p>
-                        </div>
-                    </a>
-
-                    @if (personnelInactive() > 0) {
-                    <div class="flex items-start gap-2.5 p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
-                        <svg class="w-4 h-4 text-slate-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div>
-                            <p class="text-xs font-medium text-slate-600">{{ personnelInactive() }} agente(s) inactivos</p>
-                            <a routerLink="/personnel" class="text-[11px] text-indigo-500 hover:underline">Revisar estado →</a>
+                <div class="p-4 space-y-4">
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Roles</p>
+                        <div class="mt-2 space-y-2">
+                            @for (item of personnelRoleChart(); track item.label) {
+                            <div>
+                                <div class="flex items-center justify-between text-xs mb-1">
+                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
+                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
+                                        [style.width.%]="getChartWidth(item.value, getChartMax(personnelRoleChart()))"></div>
+                                </div>
+                            </div>
+                            }
                         </div>
                     </div>
-                    }
+                    <div class="pt-2 border-t border-slate-100">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estado del personal</p>
+                        <div class="mt-2 space-y-2">
+                            @for (item of personnelStatusChart(); track item.label) {
+                            <div>
+                                <div class="flex items-center justify-between text-xs mb-1">
+                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
+                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
+                                        [style.width.%]="getChartWidth(item.value, getChartMax(personnelStatusChart()))"></div>
+                                </div>
+                            </div>
+                            }
+                        </div>
+                    </div>
                 </div>
             </div>
 

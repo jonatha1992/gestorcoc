@@ -11,6 +11,13 @@ import { HechosService } from '../../services/hechos';
 
 type Module = 'novedades' | 'hechos' | 'records' | 'personal';
 
+interface DashboardChartItem {
+  label: string;
+  value: number;
+  barClass: string;
+  badgeClass: string;
+}
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -61,6 +68,52 @@ export class HomeComponent implements OnInit {
   );
   novedadesClosed = computed(() => this.novedades().filter((n) => n.status === 'CLOSED').length);
   recentOpenNovedades = computed(() => this.novedades().filter((n) => n.status === 'OPEN').slice(0, 6));
+  novedadesSeverityChart = computed<DashboardChartItem[]>(() => [
+    {
+      label: 'Crítica',
+      value: this.novedades().filter((n) => n.severity === 'CRITICAL').length,
+      barClass: 'bg-rose-500',
+      badgeClass: 'bg-rose-100 text-rose-700',
+    },
+    {
+      label: 'Alta',
+      value: this.novedades().filter((n) => n.severity === 'HIGH').length,
+      barClass: 'bg-red-400',
+      badgeClass: 'bg-red-100 text-red-700',
+    },
+    {
+      label: 'Media',
+      value: this.novedades().filter((n) => n.severity === 'MEDIUM').length,
+      barClass: 'bg-amber-500',
+      badgeClass: 'bg-amber-100 text-amber-700',
+    },
+    {
+      label: 'Baja',
+      value: this.novedades().filter((n) => n.severity === 'LOW').length,
+      barClass: 'bg-indigo-500',
+      badgeClass: 'bg-indigo-100 text-indigo-700',
+    },
+  ]);
+  novedadesStatusChart = computed<DashboardChartItem[]>(() => [
+    {
+      label: 'Abiertas',
+      value: this.novedades().filter((n) => n.status === 'OPEN').length,
+      barClass: 'bg-blue-500',
+      badgeClass: 'bg-blue-100 text-blue-700',
+    },
+    {
+      label: 'En progreso',
+      value: this.novedades().filter((n) => n.status === 'IN_PROGRESS').length,
+      barClass: 'bg-amber-500',
+      badgeClass: 'bg-amber-100 text-amber-700',
+    },
+    {
+      label: 'Cerradas',
+      value: this.novedades().filter((n) => n.status === 'CLOSED').length,
+      barClass: 'bg-emerald-500',
+      badgeClass: 'bg-emerald-100 text-emerald-700',
+    },
+  ]);
 
   // ——— Hechos module ———
   hechosToday = computed(() => {
@@ -69,6 +122,46 @@ export class HomeComponent implements OnInit {
   });
   hechosUnsolved = computed(() => this.hechos().filter((h) => !h.is_solved).length);
   recentHechos = computed(() => [...this.hechos()].reverse().slice(0, 6));
+  hechosCategoryChart = computed<DashboardChartItem[]>(() => [
+    {
+      label: 'Operativo',
+      value: this.hechos().filter((h) => h.category === 'OPERATIVO').length,
+      barClass: 'bg-emerald-500',
+      badgeClass: 'bg-emerald-100 text-emerald-700',
+    },
+    {
+      label: 'Policial',
+      value: this.hechos().filter((h) => h.category === 'POLICIAL').length,
+      barClass: 'bg-blue-500',
+      badgeClass: 'bg-blue-100 text-blue-700',
+    },
+    {
+      label: 'Informativo',
+      value: this.hechos().filter((h) => h.category === 'INFORMATIVO').length,
+      barClass: 'bg-slate-500',
+      badgeClass: 'bg-slate-100 text-slate-700',
+    },
+    {
+      label: 'Relevamiento',
+      value: this.hechos().filter((h) => h.category === 'RELEVAMIENTO').length,
+      barClass: 'bg-violet-500',
+      badgeClass: 'bg-violet-100 text-violet-700',
+    },
+  ]);
+  hechosResolutionChart = computed<DashboardChartItem[]>(() => [
+    {
+      label: 'Resueltos',
+      value: this.hechos().filter((h) => !!h.is_solved).length,
+      barClass: 'bg-emerald-500',
+      badgeClass: 'bg-emerald-100 text-emerald-700',
+    },
+    {
+      label: 'Pendientes',
+      value: this.hechos().filter((h) => !h.is_solved).length,
+      barClass: 'bg-amber-500',
+      badgeClass: 'bg-amber-100 text-amber-700',
+    },
+  ]);
 
   // ——— Records module ———
   recordsToday = computed(() => {
@@ -80,10 +173,90 @@ export class HomeComponent implements OnInit {
     return this.records().filter((r) => r.created_at?.slice(0, 7) === month).length;
   });
   recentRecords = computed(() => [...this.records()].reverse().slice(0, 6));
+  recordsDeliveryChart = computed<DashboardChartItem[]>(() => [
+    {
+      label: 'Pendiente',
+      value: this.records().filter((r) => (r.delivery_status || 'PENDIENTE') === 'PENDIENTE').length,
+      barClass: 'bg-amber-500',
+      badgeClass: 'bg-amber-100 text-amber-700',
+    },
+    {
+      label: 'Entregado',
+      value: this.records().filter((r) => r.delivery_status === 'ENTREGADO').length,
+      barClass: 'bg-emerald-500',
+      badgeClass: 'bg-emerald-100 text-emerald-700',
+    },
+    {
+      label: 'Derivado',
+      value: this.records().filter((r) => r.delivery_status === 'DERIVADO').length,
+      barClass: 'bg-sky-500',
+      badgeClass: 'bg-sky-100 text-sky-700',
+    },
+    {
+      label: 'Finalizado',
+      value: this.records().filter((r) => r.delivery_status === 'FINALIZADO').length,
+      barClass: 'bg-indigo-500',
+      badgeClass: 'bg-indigo-100 text-indigo-700',
+    },
+    {
+      label: 'Anulado',
+      value: this.records().filter((r) => r.delivery_status === 'ANULADO').length,
+      barClass: 'bg-rose-500',
+      badgeClass: 'bg-rose-100 text-rose-700',
+    },
+  ]);
+  recordsIntegrityChart = computed<DashboardChartItem[]>(() => [
+    {
+      label: 'Verificado',
+      value: this.records().filter((r) => this.isRecordIntegrityVerified(r)).length,
+      barClass: 'bg-emerald-500',
+      badgeClass: 'bg-emerald-100 text-emerald-700',
+    },
+    {
+      label: 'Pendiente',
+      value: this.records().filter((r) => !this.isRecordIntegrityVerified(r)).length,
+      barClass: 'bg-slate-500',
+      badgeClass: 'bg-slate-100 text-slate-700',
+    },
+  ]);
 
   // ——— Personal module ———
   personnelInactive = computed(() => this.people().filter((p) => !p.is_active).length);
   recentActivePeople = computed(() => this.people().filter((p) => p.is_active).slice(0, 8));
+  personnelRoleChart = computed<DashboardChartItem[]>(() => [
+    {
+      label: 'Operador',
+      value: this.people().filter((p) => p.role === 'OPERATOR').length,
+      barClass: 'bg-indigo-500',
+      badgeClass: 'bg-indigo-100 text-indigo-700',
+    },
+    {
+      label: 'Fiscalizador',
+      value: this.people().filter((p) => p.role === 'SUPERVISOR').length,
+      barClass: 'bg-violet-500',
+      badgeClass: 'bg-violet-100 text-violet-700',
+    },
+    {
+      label: 'Admin',
+      value: this.people().filter((p) => p.role === 'ADMIN').length,
+      barClass: 'bg-sky-500',
+      badgeClass: 'bg-sky-100 text-sky-700',
+    },
+  ]);
+  personnelStatusChart = computed<DashboardChartItem[]>(() => [
+    {
+      label: 'Activos',
+      value: this.people().filter((p) => !!p.is_active).length,
+      barClass: 'bg-emerald-500',
+      badgeClass: 'bg-emerald-100 text-emerald-700',
+    },
+    {
+      label: 'Inactivos',
+      value: this.people().filter((p) => !p.is_active).length,
+      barClass: 'bg-slate-500',
+      badgeClass: 'bg-slate-100 text-slate-700',
+    },
+  ]);
 
   // Camera status per system
   getSystemOnlineCount(systemId: number): number {
@@ -96,6 +269,16 @@ export class HomeComponent implements OnInit {
     const total = this.getSystemTotalCount(systemId);
     if (total === 0) return 0;
     return (this.getSystemOnlineCount(systemId) / total) * 100;
+  }
+
+  getChartMax(items: DashboardChartItem[]): number {
+    const max = Math.max(...items.map((item) => item.value), 0);
+    return max > 0 ? max : 1;
+  }
+
+  getChartWidth(value: number, max: number): number {
+    if (!max || value <= 0) return 0;
+    return (value / max) * 100;
   }
 
   ngOnInit() {
@@ -145,6 +328,15 @@ export class HomeComponent implements OnInit {
       RELEVAMIENTO: 'Relevamiento',
     };
     return map[cat] || cat;
+  }
+
+  private isRecordIntegrityVerified(record: any): boolean {
+    return !!(
+      record?.is_integrity_verified ||
+      record?.is_verified ||
+      record?.verified_by_crev ||
+      record?.verification_date
+    );
   }
 
   exportToExcel() {

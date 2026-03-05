@@ -98,6 +98,17 @@ export class RecordsComponent implements OnInit {
     this.loadData();
   }
 
+  clearFilters() {
+    this.filterDateFrom = '';
+    this.filterDateTo = '';
+    this.filterCamera = '';
+    this.filterOperator = '';
+    this.filterVerified = '';
+    this.filterHasBackup = '';
+    this.filterDeliveryStatus = '';
+    this.onFilterChange();
+  }
+
   goToPage(page: number) {
     if (page < 1 || page > this.totalPages) return;
     this.currentPage = page;

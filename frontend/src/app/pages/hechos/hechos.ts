@@ -82,6 +82,17 @@ export class HechosComponent implements OnInit {
     this.loadHechos();
   }
 
+  clearFilters() {
+    this.filterDateFrom = '';
+    this.filterDateTo = '';
+    this.filterCategory = '';
+    this.filterCamera = '';
+    this.filterCocIntervention = '';
+    this.filterGeneratedCause = '';
+    this.filterSolved = '';
+    this.onFilterChange();
+  }
+
   goToPage(page: number) {
     if (page < 1 || page > this.totalPages) return;
     this.currentPage = page;
