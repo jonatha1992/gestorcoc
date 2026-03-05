@@ -36,39 +36,86 @@ export class AssetsComponent implements OnInit {
   expandedServerIds = new Set<number>();
 
   searchText = '';
+  cctvFilterUnit = '';
+  cctvFilterSystemType = '';
+  cctvFilterIsActive = '';
+  cctvFilterCameraStatus = '';
+  gearFilterCondition = '';
+  gearFilterIsActive = '';
+  gearFilterAssignment = '';
 
   get filteredGear() {
-    const search = this.searchText.toLowerCase();
-    if (!search) return this.gear;
-    return this.gear.filter(g =>
-      g.name?.toLowerCase().includes(search) ||
-      g.serial_number?.toLowerCase().includes(search) ||
-      g.assigned_to?.toLowerCase().includes(search)
-    );
+    const search = this.searchText.toLowerCase().trim();
+    return this.gear.filter(g => {
+      const matchesSearch = !search ||
+        g.name?.toLowerCase().includes(search) ||
+        g.serial_number?.toLowerCase().includes(search) ||
+        g.assigned_to?.toLowerCase().includes(search);
+
+      const isAssigned = !!(g.assigned_to && String(g.assigned_to).trim());
+      const matchesAssignment =
+        this.gearFilterAssignment === 'assigned'
+          ? isAssigned
+          : this.gearFilterAssignment === 'unassigned'
+            ? !isAssigned
+            : true;
+
+      return matchesSearch && matchesAssignment;
+    });
   }
 
   get filteredGroupedSystems() {
-    const search = this.searchText.toLowerCase();
-    if (!search) return this.groupedSystems;
+    const search = this.searchText.toLowerCase().trim();
 
     return this.groupedSystems.map(group => {
-      const isGroupMatch = group.unitName?.toLowerCase().includes(search) || group.unitCode?.toLowerCase().includes(search);
+      const isGroupMatch =
+        !search ||
+        group.unitName?.toLowerCase().includes(search) ||
+        group.unitCode?.toLowerCase().includes(search);
 
-      const matchingSystems = group.systems.filter(s =>
-        isGroupMatch ||
-        s.name?.toLowerCase().includes(search) ||
-        s.servers?.some((srv: any) =>
-          srv.name?.toLowerCase().includes(search) ||
-          srv.ip_address?.toLowerCase().includes(search) ||
-          srv.cameras?.some((cam: any) => cam.name?.toLowerCase().includes(search) || cam.ip_address?.toLowerCase().includes(search))
-        )
+      const systems = (group.systems || []).map((system: any) => {
+        const servers = (system.servers || []).map((server: any) => {
+          const cameras = (server.cameras || []).filter((cam: any) =>
+            this.cctvFilterCameraStatus ? cam.status === this.cctvFilterCameraStatus : true
+          );
+          return { ...server, cameras };
+        }).filter((server: any) =>
+          this.cctvFilterCameraStatus ? server.cameras.length > 0 : true
+        );
+
+        return {
+          ...system,
+          servers,
+          camera_count: servers.reduce((acc: number, server: any) => acc + (server.cameras?.length || 0), 0),
+        };
+      }).filter((system: any) =>
+        this.cctvFilterCameraStatus ? (system.servers?.length || 0) > 0 : true
       );
+
+      const matchingSystems = systems.filter((s: any) => {
+        const matchesSearch = !search ||
+          isGroupMatch ||
+          s.name?.toLowerCase().includes(search) ||
+          s.servers?.some((srv: any) =>
+            srv.name?.toLowerCase().includes(search) ||
+            srv.ip_address?.toLowerCase().includes(search) ||
+            srv.cameras?.some((cam: any) =>
+              cam.name?.toLowerCase().includes(search) || cam.ip_address?.toLowerCase().includes(search)
+            )
+          );
+        return matchesSearch;
+      });
 
       return {
         ...group,
         systems: matchingSystems
       };
-    }).filter(group => group.systems.length > 0 || group.unitName?.toLowerCase().includes(search) || group.unitCode?.toLowerCase().includes(search));
+    }).filter(group =>
+      group.systems.length > 0 ||
+      (!search && group.systems.length === 0 && this.cctvFilterCameraStatus === '') ||
+      group.unitName?.toLowerCase().includes(search) ||
+      group.unitCode?.toLowerCase().includes(search)
+    );
   }
 
   ngOnInit() {
@@ -84,9 +131,16 @@ export class AssetsComponent implements OnInit {
     this.error = null;
 
     forkJoin({
-      systems: this.assetService.getSystems(),
+      systems: this.assetService.getSystems({
+        unit: this.cctvFilterUnit || undefined,
+        system_type: this.cctvFilterSystemType || undefined,
+        is_active: this.cctvFilterIsActive || undefined,
+      }),
       units: this.apiService.get<any[]>('api/units/'),
-      gear: this.assetService.getCameramanGear()
+      gear: this.assetService.getCameramanGear({
+        condition: this.gearFilterCondition || undefined,
+        is_active: this.gearFilterIsActive || undefined,
+      })
     }).pipe(
       timeout(30000)
     ).subscribe({
@@ -129,11 +183,31 @@ export class AssetsComponent implements OnInit {
     });
   }
 
+  onCctvFilterChange() {
+    this.refreshData();
+  }
+
+  onGearFilterChange() {
+    this.refreshData();
+  }
+
+  clearCctvFilters() {
+    this.cctvFilterUnit = '';
+    this.cctvFilterSystemType = '';
+    this.cctvFilterIsActive = '';
+    this.cctvFilterCameraStatus = '';
+    this.refreshData();
+  }
+
+  clearGearFilters() {
+    this.gearFilterCondition = '';
+    this.gearFilterIsActive = '';
+    this.gearFilterAssignment = '';
+    this.refreshData();
+  }
+
   groupSystems() {
     const groups: { [id: number]: any } = {};
-
-    // Units that are not "top-level" (parents) but actually COCs
-    const cocUnits = this.units.filter(u => u.parent !== null || u.code !== 'CREV');
 
     this.systems.forEach(sys => {
       const unit = sys.unit;

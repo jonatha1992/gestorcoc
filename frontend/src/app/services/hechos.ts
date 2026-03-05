@@ -28,6 +28,17 @@ export interface Hecho {
   resolution_details?: string;
 }
 
+export interface HechoFilters {
+  search?: string;
+  category?: string;
+  is_solved?: string;
+  camera?: number | string;
+  coc_intervention?: string;
+  generated_cause?: string;
+  timestamp__gte?: string;
+  timestamp__lte?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -35,8 +46,23 @@ export class HechosService {
   private api = inject(ApiService);
   private endpoint = 'api/hechos/';
 
-  getHechos(): Observable<Hecho[]> {
-    return this.api.get<Hecho[]>(this.endpoint);
+  getHechos(page = 1, filters: HechoFilters = {}): Observable<any> {
+    const params: string[] = [`page=${page}`];
+    if (filters.search) params.push(`search=${encodeURIComponent(filters.search)}`);
+    if (filters.category) params.push(`category=${filters.category}`);
+    if (filters.is_solved !== undefined && filters.is_solved !== '') params.push(`is_solved=${filters.is_solved}`);
+    if (filters.camera !== undefined && filters.camera !== null && filters.camera !== '') {
+      params.push(`camera=${encodeURIComponent(String(filters.camera))}`);
+    }
+    if (filters.coc_intervention !== undefined && filters.coc_intervention !== '') {
+      params.push(`coc_intervention=${filters.coc_intervention}`);
+    }
+    if (filters.generated_cause !== undefined && filters.generated_cause !== '') {
+      params.push(`generated_cause=${filters.generated_cause}`);
+    }
+    if (filters.timestamp__gte) params.push(`timestamp__gte=${encodeURIComponent(filters.timestamp__gte)}`);
+    if (filters.timestamp__lte) params.push(`timestamp__lte=${encodeURIComponent(filters.timestamp__lte)}`);
+    return this.api.get<any>(`${this.endpoint}?${params.join('&')}`);
   }
 
   createHecho(hecho: Partial<Hecho>): Observable<Hecho> {

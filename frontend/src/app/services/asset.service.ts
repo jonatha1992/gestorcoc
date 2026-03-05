@@ -11,6 +11,37 @@ export interface Unit {
     parent: number | null;
 }
 
+export interface SystemFilters {
+    search?: string;
+    ordering?: string;
+    unit?: number | string;
+    unit__code?: string;
+    system_type?: string;
+    is_active?: string;
+}
+
+export interface ServerFilters {
+    search?: string;
+    ordering?: string;
+    system?: number | string;
+    is_active?: string;
+}
+
+export interface CameraFilters {
+    search?: string;
+    ordering?: string;
+    server?: number | string;
+    status?: string;
+}
+
+export interface CameramanGearFilters {
+    search?: string;
+    ordering?: string;
+    condition?: string;
+    is_active?: string;
+    assigned_to?: string;
+}
+
 const KEYS = {
     units: 'asset_units',
     systems: 'asset_systems',
@@ -32,7 +63,12 @@ export class AssetService {
         );
     }
 
-    getSystems(): Observable<any[]> {
+    getSystems(): Observable<any[]>;
+    getSystems(filters: SystemFilters): Observable<any>;
+    getSystems(filters: SystemFilters = {}): Observable<any> {
+        if (this.hasActiveFilters(filters)) {
+            return this.api.get<any>(`api/systems/?${this.buildQuery(filters)}`);
+        }
         return this.cache.withCache<any[]>(
             KEYS.systems, TTL.MEDIUM,
             this.api.get<any[]>('api/systems/')
@@ -57,7 +93,12 @@ export class AssetService {
         );
     }
 
-    getCameras(): Observable<any[]> {
+    getCameras(): Observable<any[]>;
+    getCameras(filters: CameraFilters): Observable<any>;
+    getCameras(filters: CameraFilters = {}): Observable<any> {
+        if (this.hasActiveFilters(filters)) {
+            return this.api.get<any>(`api/cameras/?${this.buildQuery(filters)}`);
+        }
         return this.cache.withCache<any[]>(
             KEYS.cameras, TTL.MEDIUM,
             this.api.get<any[]>('api/cameras/')
@@ -82,7 +123,12 @@ export class AssetService {
         );
     }
 
-    getServers(): Observable<any[]> {
+    getServers(): Observable<any[]>;
+    getServers(filters: ServerFilters): Observable<any>;
+    getServers(filters: ServerFilters = {}): Observable<any> {
+        if (this.hasActiveFilters(filters)) {
+            return this.api.get<any>(`api/servers/?${this.buildQuery(filters)}`);
+        }
         return this.cache.withCache<any[]>(
             KEYS.servers, TTL.MEDIUM,
             this.api.get<any[]>('api/servers/')
@@ -107,7 +153,12 @@ export class AssetService {
         );
     }
 
-    getCameramanGear(): Observable<any[]> {
+    getCameramanGear(): Observable<any[]>;
+    getCameramanGear(filters: CameramanGearFilters): Observable<any>;
+    getCameramanGear(filters: CameramanGearFilters = {}): Observable<any> {
+        if (this.hasActiveFilters(filters)) {
+            return this.api.get<any>(`api/cameraman-gear/?${this.buildQuery(filters)}`);
+        }
         return this.cache.withCache<any[]>(
             KEYS.gear, TTL.MEDIUM,
             this.api.get<any[]>('api/cameraman-gear/')
@@ -130,5 +181,22 @@ export class AssetService {
         return this.api.delete<any>(`api/cameraman-gear/${id}/`).pipe(
             tap(() => this.cache.invalidate(KEYS.gear))
         );
+    }
+
+    private hasActiveFilters<T extends object>(filters: T): boolean {
+        const normalized = filters as Record<string, unknown>;
+        return Object.values(normalized).some(
+            (value) => value !== undefined && value !== null && value !== ''
+        );
+    }
+
+    private buildQuery<T extends object>(filters: T): string {
+        const normalized = filters as Record<string, unknown>;
+        const params: string[] = [];
+        for (const [key, value] of Object.entries(normalized)) {
+            if (value === undefined || value === null || value === '') continue;
+            params.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+        }
+        return params.join('&');
     }
 }

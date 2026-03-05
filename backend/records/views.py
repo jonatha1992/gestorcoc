@@ -36,9 +36,13 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
     filterset_fields = {
         'delivery_status': ['exact'],
         'has_backup': ['exact'],
+        'is_integrity_verified': ['exact'],
         'is_editable': ['exact'],
         'entry_date': ['gte', 'lte', 'exact'],
-        'verified_by_crev': ['isnull'],
+        'verified_by_crev': ['exact', 'isnull'],
+        'camera': ['exact'],
+        'operator': ['exact'],
+        'received_by': ['exact'],
     }
     
     # Búsqueda
@@ -49,6 +53,8 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
         'case_title',
         'requester',
         'camera__name',
+        'operator__first_name',
+        'operator__last_name',
     ]
     
     # Ordenamiento

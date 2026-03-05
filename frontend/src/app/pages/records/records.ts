@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -39,22 +39,22 @@ export class RecordsComponent implements OnInit {
   verifiedCount = signal(0);
   pendingCount = signal(0);
 
-  searchText = signal('');
+  // Pagination
+  currentPage = 1;
+  totalCount = 0;
+  pageSize = 50;
+  get totalPages() { return Math.ceil(this.totalCount / this.pageSize); }
 
-  filteredRecords = computed(() => {
-    const search = this.searchText().toLowerCase();
-    const allRecords = this.records();
-    if (!search) return allRecords;
-
-    return allRecords.filter(record =>
-      record.judicial_case_number?.toLowerCase().includes(search) ||
-      record.description?.toLowerCase().includes(search) ||
-      record.request_type?.toLowerCase().includes(search) ||
-      record.camera_name?.toLowerCase().includes(search) ||
-      record.operator_full_name?.toLowerCase().includes(search) ||
-      record.operator_name?.toLowerCase().includes(search)
-    );
-  });
+  // Filters
+  searchText = '';
+  filterDeliveryStatus = '';
+  filterVerified = '';
+  filterHasBackup = '';
+  filterCamera = '';
+  filterOperator = '';
+  filterDateFrom = '';
+  filterDateTo = '';
+  private searchTimer: any;
 
   newRecord: any = this.createEmptyRecord();
 
@@ -64,14 +64,58 @@ export class RecordsComponent implements OnInit {
   }
 
   loadData() {
-    this.recordsService.getRecords().subscribe({
+    this.recordsService.getRecords(this.currentPage, {
+      search: this.searchText || undefined,
+      delivery_status: this.filterDeliveryStatus || undefined,
+      is_integrity_verified: this.filterVerified,
+      has_backup: this.filterHasBackup,
+      camera: this.filterCamera || undefined,
+      operator: this.filterOperator || undefined,
+      entry_date__gte: this.filterDateFrom || undefined,
+      entry_date__lte: this.filterDateTo || undefined,
+    }).subscribe({
       next: (data) => {
-        this.records.set((data as any)?.results ?? data);
+        const results = (data as any)?.results ?? data;
+        this.records.set(results);
+        this.totalCount = (data as any)?.count ?? results.length;
         this.updateStats();
         this.loadInformesMap();
       },
       error: () => this.toastService.show('Error al cargar registros', 'error')
     });
+  }
+
+  onSearchChange() {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.currentPage = 1;
+      this.loadData();
+    }, 400);
+  }
+
+  onFilterChange() {
+    this.currentPage = 1;
+    this.loadData();
+  }
+
+  goToPage(page: number) {
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
+    this.loadData();
+  }
+
+  get pageNumbers(): number[] {
+    const total = this.totalPages;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const current = this.currentPage;
+    const pages: number[] = [1];
+    if (current > 3) pages.push(-1);
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+      pages.push(i);
+    }
+    if (current < total - 2) pages.push(-1);
+    pages.push(total);
+    return pages;
   }
 
   loadInformesMap() {
