@@ -23,11 +23,41 @@ export class NovedadesComponent implements OnInit {
   cameras: any[] = [];
   gear: any[] = [];
 
+  globalSearchText: string = '';
+  searchText: string = ''; // For asset search in modal
+
+  get filteredNovedades() {
+    const search = this.globalSearchText.toLowerCase();
+    const allNovedades = this.novedades;
+    if (!search) return allNovedades;
+
+    return allNovedades.filter(n =>
+      n.title?.toLowerCase().includes(search) ||
+      n.description?.toLowerCase().includes(search) ||
+      n.camera_name?.toLowerCase().includes(search) ||
+      n.system_name?.toLowerCase().includes(search) ||
+      n.server_name?.toLowerCase().includes(search) ||
+      n.gear_name?.toLowerCase().includes(search) ||
+      n.status?.toLowerCase().includes(search) ||
+      n.severity?.toLowerCase().includes(search)
+    );
+  }
+
   filteredAssets: any[] = [];
-  searchText: string = '';
+  // searchText: string = ''; // This line is removed as searchText is now a signal
 
   showForm = false;
   isEditing = false;
+
+  showActaModal = false;
+  actaForm = {
+    numero: '',
+    grado: '',
+    nombre: '',
+    aeropuerto: '',
+    hora: '',
+    firma: ''
+  };
 
   targetType: 'SYSTEM' | 'SERVER' | 'CAMERA' | 'GEAR' = 'CAMERA';
   selectedAssets: any[] = [];
@@ -259,11 +289,151 @@ export class NovedadesComponent implements OnInit {
           },
           error: (err) => {
             console.error('Error al crear novedad:', err);
-            this.toastService.error(`Error al crear novedad para ${asset.name}`);
+            this.toastService.error(`Error al crear novedad para ${asset.name} `);
           }
         });
       });
     }
+  }
+
+  openActaModal() {
+    const saved = localStorage.getItem('acta_responsable');
+    if (saved) {
+      const p = JSON.parse(saved);
+      this.actaForm.grado = p.grado || '';
+      this.actaForm.nombre = p.nombre || '';
+      this.actaForm.aeropuerto = p.aeropuerto || '';
+      this.actaForm.firma = p.firma || '';
+    }
+    const now = new Date();
+    this.actaForm.hora = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    this.actaForm.numero = '';
+    this.showActaModal = true;
+  }
+
+  closeActaModal() {
+    this.showActaModal = false;
+  }
+
+  async generateActa() {
+    localStorage.setItem('acta_responsable', JSON.stringify({
+      grado: this.actaForm.grado,
+      nombre: this.actaForm.nombre,
+      aeropuerto: this.actaForm.aeropuerto,
+      firma: this.actaForm.firma
+    }));
+    const logoBase64 = await this.getLogoBase64();
+    const html = this.buildActaHtml(logoBase64);
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `acta_novedades_${this.actaForm.numero || 'sin_numero'}.doc`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.toastService.success('Acta generada correctamente');
+    this.showActaModal = false;
+  }
+
+  private async getLogoBase64(): Promise<string> {
+    try {
+      const response = await fetch('/Logo-PSA.png');
+      const blob = await response.blob();
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch { return ''; }
+  }
+
+  private buildActaHtml(logoBase64: string): string {
+    const now = new Date();
+    const [hh, mm] = this.actaForm.hora.split(':');
+    const day = now.getDate().toString().padStart(2, '0');
+    const monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const month = monthNames[now.getMonth()];
+    const year = now.getFullYear();
+
+    const groups = this.filteredNovedades.reduce((acc, n) => {
+      const key = n.incident_type || 'SIN CLASIFICAR';
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(n.camera_name || n.server_name || n.system_name || n.cameraman_gear_name || 'Desconocido');
+      return acc;
+    }, {} as Record<string, string[]>);
+
+    const sectionsHtml = Object.entries(groups).map(([type, assets]) => `
+      <h2>${this.escapeHtml(type)}</h2>
+      <ul>
+        ${(assets as string[]).map(a => `<li>${this.escapeHtml(a)}</li>`).join('')}
+      </ul>
+    `).join('');
+
+    const logoHtml = logoBase64
+      ? `<img src="${logoBase64}" width="120" alt="Logo PSA" style="margin-bottom: 10px;">`
+      : '';
+
+    const firmaHtml = this.actaForm.firma && this.actaForm.firma.startsWith('data:image')
+      ? `<img src="${this.actaForm.firma}" style="max-height: 80px; display: block; margin: 0 auto 5px auto;" />`
+      : '';
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 2.5cm 3cm; }
+  body { font-family: Arial, sans-serif; font-size: 12pt; color: #000; text-align: justify; }
+  h1 { font-size: 14pt; text-align: center; text-decoration: underline; font-weight: bold; }
+  h2 { font-size: 12pt; text-decoration: underline; font-weight: bold; margin-top: 20pt; }
+  ul { margin-left: 20pt; }
+  li { margin-bottom: 4pt; }
+  .intro { text-indent: 1.5cm; }
+  .footer { text-align: center; margin-top: 50px; }
+</style>
+</head>
+<body>
+  <div style="text-align: left;">${logoHtml}</div>
+
+  <h1>ACTA DEJANDO CONSTANCIA Nro. ${this.escapeHtml(this.actaForm.numero)}</h1>
+
+  <p class="intro">En el aeropuerto Internacional ${this.escapeHtml(this.actaForm.aeropuerto)}, asiento del Centro Operativo
+  de Control ${this.escapeHtml(this.actaForm.aeropuerto)}, a los ${day} días del mes de ${month} del
+  año ${year}, siendo las ${this.escapeHtml(hh || '00')}:${this.escapeHtml(mm || '00')} horas, el funcionario que suscribe,
+  ${this.escapeHtml(this.actaForm.grado)} ${this.escapeHtml(this.actaForm.nombre)}, responsable del Turno COC ${this.escapeHtml(this.actaForm.aeropuerto)}, labra la
+  presente acta dejando constancia de las novedades registradas durante el turno:</p>
+
+  ${sectionsHtml}
+
+  <p><strong>ES TODO CONSTE----------------------------------------------------------------------</strong></p>
+
+  <div class="footer">
+    ${logoHtml}
+    ${firmaHtml}
+    <p><strong>${this.escapeHtml(this.actaForm.grado)} ${this.escapeHtml(this.actaForm.nombre)}</strong></p>
+    <p>RESPONSABLE TURNO COC</p>
+    <p>UOSP ${this.escapeHtml(this.actaForm.aeropuerto).toUpperCase()}</p>
+  </div>
+</body>
+</html>`;
+  }
+
+  onFirmaChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onloadend = () => { this.actaForm.firma = reader.result as string; };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  private escapeHtml(value: string): string {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   getSeverityLabel(severity: string): string {

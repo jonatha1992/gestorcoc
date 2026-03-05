@@ -102,10 +102,12 @@ def seed():
     
     
     # Topology definition
-    locations = [unit_eze, unit_aep]
+    locations = [unit_eze, unit_aep, unit_crep, unit_cor]
     topology_map = {
-        'EZE': ['Avigilon'],
-        'AEP': ['Milestone']
+        'EZE': ['Avigilon', 'Genetec', 'Bosch VMS'],
+        'AEP': ['Milestone', 'Avigilon'],
+        'CREP': ['ISS SecurOS', 'HikCentral'],
+        'COR': ['Dahua DSS', 'Milestone']
     }
     
     systems_list = []
@@ -151,6 +153,23 @@ def seed():
                                 'resolution': random.choice(['1080p', '4MP', '5MP', '4K'])
                             }
                         )
+
+    # Add CameramanGear data
+    from assets.models import CameramanGear
+    CameramanGear.objects.all().delete()
+    print("Creating Cameraman Gear...")
+    gear_types = ['Cámara Portátil', 'Mochila de Transmisión', 'Drone', 'Trípode Pesado']
+    for idx in range(15):
+        unit_assigned = random.choice(locations)
+        CameramanGear.objects.get_or_create(
+            name=f"Equipo {random.choice(gear_types)} - {unit_assigned.code}-{idx:02d}",
+            unit=unit_assigned,
+            defaults={
+                'serial_number': fake.unique.bothify(text='SN-######-??'),
+                'gear_type': random.choice(gear_types),
+                'is_active': random.choice([True, True, False])
+            }
+        )
             
     all_cameras = list(Camera.objects.all())
     

@@ -34,6 +34,42 @@ export class AssetsComponent implements OnInit {
   expandedSystemIds = new Set<number>();
   expandedServerIds = new Set<number>();
 
+  searchText = '';
+
+  get filteredGear() {
+    const search = this.searchText.toLowerCase();
+    if (!search) return this.gear;
+    return this.gear.filter(g =>
+      g.name?.toLowerCase().includes(search) ||
+      g.serial_number?.toLowerCase().includes(search) ||
+      g.assigned_to?.toLowerCase().includes(search)
+    );
+  }
+
+  get filteredGroupedSystems() {
+    const search = this.searchText.toLowerCase();
+    if (!search) return this.groupedSystems;
+
+    return this.groupedSystems.map(group => {
+      const isGroupMatch = group.unitName?.toLowerCase().includes(search) || group.unitCode?.toLowerCase().includes(search);
+
+      const matchingSystems = group.systems.filter(s =>
+        isGroupMatch ||
+        s.name?.toLowerCase().includes(search) ||
+        s.servers?.some((srv: any) =>
+          srv.name?.toLowerCase().includes(search) ||
+          srv.ip_address?.toLowerCase().includes(search) ||
+          srv.cameras?.some((cam: any) => cam.name?.toLowerCase().includes(search) || cam.ip_address?.toLowerCase().includes(search))
+        )
+      );
+
+      return {
+        ...group,
+        systems: matchingSystems
+      };
+    }).filter(group => group.systems.length > 0 || group.unitName?.toLowerCase().includes(search) || group.unitCode?.toLowerCase().includes(search));
+  }
+
   ngOnInit() {
     this.refreshData();
   }

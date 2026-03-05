@@ -25,6 +25,8 @@ class FilmRecord(TimeStampedModel):
     DELIVERY_STATUS_CHOICES = [
         ('PENDIENTE', 'Pendiente'),
         ('ENTREGADO', 'Entregado'),
+        ('DERIVADO', 'Derivado'),
+        ('FINALIZADO', 'Finalizado'),
         ('ANULADO', 'Anulado'),
     ]
 

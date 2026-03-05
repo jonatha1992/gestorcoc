@@ -1,18 +1,35 @@
 <div class="space-y-6 animate-in fade-in duration-500">
     <!-- Header Actions -->
-    <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+    <div
+        class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex-wrap gap-4">
         <div>
             <h2 class="text-lg font-bold text-slate-800">Bitácora de Hechos</h2>
             <p class="text-slate-500 text-xs">Registro de eventos operativos y novedades policiales</p>
         </div>
-        <button (click)="openForm()"
-            class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-100 hover:scale-[1.02]">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Nuevo Registro
-        </button>
+
+        <div class="flex items-center gap-4">
+            <!-- Búsqueda / Filtro -->
+            <div class="relative w-64">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input type="text" [(ngModel)]="searchText"
+                    class="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs transition-colors shadow-sm"
+                    placeholder="Buscar hecho...">
+            </div>
+
+            <button (click)="openForm()"
+                class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-100 hover:scale-[1.02]">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Nuevo Registro
+            </button>
+        </div>
     </div>
 
     <!-- Table View -->
@@ -31,7 +48,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    @for (hecho of hechos(); track hecho.id) {
+                    @for (hecho of filteredHechos; track hecho.id) {
                     <tr class="hover:bg-slate-50/50 transition-colors">
                         <td class="px-4 py-3 font-medium text-slate-900">#{{ hecho.id }}</td>
                         <td class="px-4 py-3">

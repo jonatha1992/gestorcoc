@@ -1,0 +1,54 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Backend (Django)",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "runserver",
+                "localhost:8000"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "manage.py",
+            "python": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "cwd": "${workspaceFolder}/backend/",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONUNBUFFERED": "1"
+            },
+            "justMyCode": false
+        },
+        {
+            // Recompila Angular al dist/ en cada guardado (~3-8s).
+            // Django sirve el resultado desde :8000 con whitenoise.
+            "name": "Frontend (ng build --watch)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run",
+                "watch:dev"
+            ],
+            "cwd": "${workspaceFolder}/frontend",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "🚀 Full Stack (:8000)",
+            "configurations": [
+                "Backend (Django)",
+                "Frontend (ng build --watch)"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "fullstack",
+                "order": 1
+            }
+        }
+    ]
+}

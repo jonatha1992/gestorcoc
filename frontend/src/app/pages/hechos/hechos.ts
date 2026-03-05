@@ -21,6 +21,20 @@ export class HechosComponent implements OnInit {
   cameras = signal<any[]>([]);
   showForm = signal(false);
 
+  searchText = '';
+
+  get filteredHechos() {
+    const search = this.searchText.toLowerCase();
+    const allHechos = this.hechos();
+    if (!search) return allHechos;
+
+    return allHechos.filter(h =>
+      h.category?.toLowerCase().includes(search) ||
+      h.description?.toLowerCase().includes(search) ||
+      h.sector?.toLowerCase().includes(search)
+    );
+  }
+
   currentHecho: Partial<Hecho> = {
     category: 'OPERATIVO',
     timestamp: new Date().toISOString().slice(0, 16) // Default to now

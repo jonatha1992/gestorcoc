@@ -22,6 +22,22 @@ export class PersonnelComponent implements OnInit {
   units = signal<Unit[]>([]);
   showForm = signal(false);
   isEditing = false;
+  searchText = '';
+
+  get filteredPeople() {
+    const search = this.searchText.toLowerCase();
+    const allPeople = this.people();
+    if (!search) return allPeople;
+
+    return allPeople.filter(p =>
+      p.first_name?.toLowerCase().includes(search) ||
+      p.last_name?.toLowerCase().includes(search) ||
+      p.badge_number?.toLowerCase().includes(search) ||
+      p.role?.toLowerCase().includes(search) ||
+      p.rank?.toLowerCase().includes(search) ||
+      p.unit?.toLowerCase().includes(search)
+    );
+  }
 
   currentPerson: any = this.getEmptyPerson();
 

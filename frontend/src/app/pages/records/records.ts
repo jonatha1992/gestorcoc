@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -38,6 +38,23 @@ export class RecordsComponent implements OnInit {
 
   verifiedCount = signal(0);
   pendingCount = signal(0);
+
+  searchText = signal('');
+
+  filteredRecords = computed(() => {
+    const search = this.searchText().toLowerCase();
+    const allRecords = this.records();
+    if (!search) return allRecords;
+
+    return allRecords.filter(record =>
+      record.judicial_case_number?.toLowerCase().includes(search) ||
+      record.description?.toLowerCase().includes(search) ||
+      record.request_type?.toLowerCase().includes(search) ||
+      record.camera_name?.toLowerCase().includes(search) ||
+      record.operator_full_name?.toLowerCase().includes(search) ||
+      record.operator_name?.toLowerCase().includes(search)
+    );
+  });
 
   newRecord: any = this.createEmptyRecord();
 
@@ -140,6 +157,7 @@ export class RecordsComponent implements OnInit {
       start_time: this.toDateTimeLocal(record?.start_time),
       end_time: this.toDateTimeLocal(record?.end_time),
       operator: record?.operator ?? '',
+      delivery_status: record?.delivery_status || 'PENDIENTE',
       is_integrity_verified: !!record?.is_integrity_verified
     };
     this.isEditing.set(true);
@@ -250,6 +268,7 @@ export class RecordsComponent implements OnInit {
       start_time: '',
       end_time: '',
       operator: '',
+      delivery_status: 'PENDIENTE',
       is_integrity_verified: false
     };
   }
