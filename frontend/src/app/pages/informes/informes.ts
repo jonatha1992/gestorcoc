@@ -59,6 +59,51 @@ export class InformesComponent implements OnInit, OnDestroy {
     'No correspondía por el tipo de análisis solicitado',
   ];
 
+  readonly sistemaOptions: string[] = [
+    'Milestone XProtect',
+    'Avigilon Control Center',
+    'BMS Aeroportuario',
+    'Intercargo',
+    'TCA',
+    'Cámara Bipro',
+    'Sistema CCTV propio',
+    'Dispositivo externo',
+    'Otro',
+  ];
+
+  showAirportDropdown = false;
+  showSistemaDropdown = false;
+
+  get filteredAirportOptions(): string[] {
+    const q = (this.form.aeropuerto || '').toLowerCase();
+    return this.airportOptions.filter(o => o.toLowerCase().includes(q));
+  }
+
+  get filteredSistemaOptions(): string[] {
+    const q = (this.form.sistema || '').toLowerCase();
+    return this.sistemaOptions.filter(o => o.toLowerCase().includes(q));
+  }
+
+  onAirportInputBlur(): void {
+    setTimeout(() => { this.showAirportDropdown = false; }, 150);
+  }
+
+  onSistemaInputBlur(): void {
+    setTimeout(() => { this.showSistemaDropdown = false; }, 150);
+  }
+
+  selectAirportOption(opt: string): void {
+    this.form.aeropuerto = opt;
+    this.showAirportDropdown = false;
+    this.onAirportSelect(opt);
+  }
+
+  selectSistemaOption(opt: string): void {
+    this.form.sistema = opt;
+    this.showSistemaDropdown = false;
+    this.markDirty('sistema');
+  }
+
   isGenerating = false;
   isGeneratingFullReport = false;
   isProcessingFrames = false;
@@ -117,10 +162,10 @@ export class InformesComponent implements OnInit, OnDestroy {
   ];
 
   readonly vmsAuthenticityOptions: { value: VideoReportVmsAuthenticityMode; label: string }[] = [
-    { value: 'vms_propio', label: 'Propio VMS (Milestone / Avigilon)' },
-    { value: 'hash_preventivo', label: 'Hash calculado externamente (ej: HashMyFiles)' },
-    { value: 'sin_autenticacion', label: 'Sin método de verificación' },
-    { value: 'otro', label: 'Otro' },
+    { value: 'vms_propio', label: 'El material fue recibido con hash propio del sistema' },
+    { value: 'hash_preventivo', label: 'El material fue recibido sin hash — el operador calculó el hash' },
+    { value: 'sin_autenticacion', label: 'No fue posible aplicar hash' },
+    { value: 'otro', label: 'Otro método' },
   ];
   private readonly hashAlgorithmLabelByCode: Record<VideoReportHashAlgorithm, string> = {
     sha1: 'SHA-1',
@@ -524,7 +569,7 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   /**
    * Calcula automáticamente franja_horaria_analizada y tiempo_total_analisis
-   * a partir de hora_inicio y hora_fin.
+   * a partir de hora_inicio y hora_fin (valores datetime-local: YYYY-MM-DDTHH:MM).
    */
   onTimeChange(): void {
     const start = this.hora_inicio;
@@ -534,27 +579,43 @@ export class InformesComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Construir franja horaria como texto legible
-    this.form.franja_horaria_analizada = `${start} a ${end}`;
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return;
+    }
+
+    // Formato legible: DD/MM/YYYY HH:MM
+    const fmt = (d: Date): string => {
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      const hh = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+    };
+
+    this.form.franja_horaria_analizada = `${fmt(startDate)} a ${fmt(endDate)}`;
     this.markDirty('franja_horaria_analizada');
 
-    // Calcular duración total en minutos
-    const [sh, sm] = start.split(':').map(Number);
-    const [eh, em] = end.split(':').map(Number);
-    let totalMinutes = (eh * 60 + em) - (sh * 60 + sm);
-    if (totalMinutes < 0) {
-      totalMinutes += 24 * 60; // Si cruza medianoche
+    const diffMs = endDate.getTime() - startDate.getTime();
+    if (diffMs < 0) {
+      this.form.tiempo_total_analisis = 'Fecha fin anterior al inicio';
+      this.markDirty('tiempo_total_analisis');
+      return;
     }
 
-    const hours = Math.floor(totalMinutes / 60);
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
     const minutes = totalMinutes % 60;
+
     const parts: string[] = [];
-    if (hours > 0) {
-      parts.push(`${hours} hora${hours > 1 ? 's' : ''}`);
-    }
-    if (minutes > 0) {
-      parts.push(`${minutes} minuto${minutes > 1 ? 's' : ''}`);
-    }
+    if (days > 0) parts.push(`${days} día${days !== 1 ? 's' : ''}`);
+    if (hours > 0) parts.push(`${hours} hora${hours !== 1 ? 's' : ''}`);
+    if (minutes > 0) parts.push(`${minutes} minuto${minutes !== 1 ? 's' : ''}`);
+
     this.form.tiempo_total_analisis = parts.length > 0 ? parts.join(' ') : '0 minutos';
     this.markDirty('tiempo_total_analisis');
   }
@@ -627,10 +688,11 @@ export class InformesComponent implements OnInit, OnDestroy {
       this.form.hash_algorithm_other = '';
     }
     if (value === 'vms_propio') {
-      this.utilizoHash = false;
-      this.form.hash_program = '';
-      this.form.hash_algorithms = [];
-      this.form.hash_algorithm_other = '';
+      this.utilizoHash = true;
+      if (!(this.form.hash_program || '').trim()) {
+        this.form.hash_program = 'HashMyFiles';
+        this.markDirty('hash_program');
+      }
     }
     if (value === 'hash_preventivo') {
       this.utilizoHash = true;
@@ -842,6 +904,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     franja_horaria_analizada: '',
     tiempo_total_analisis: '',
     sintesis_conclusion: '',
+    sintesis_desarrollo: '',
     vms_native_hash_algorithms: [],
     vms_native_hash_algorithm_other: '',
     hash_algorithms: [],
@@ -883,6 +946,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     franja_horaria_analizada: 'Franja horaria analizada',
     tiempo_total_analisis: 'Tiempo total de análisis',
     sintesis_conclusion: 'Síntesis para conclusión',
+    sintesis_desarrollo: 'Síntesis para el desarrollo',
     vms_native_hash_algorithms: 'Algoritmos Hash Nativos del VMS',
     vms_native_hash_algorithm_other: 'Otro algoritmo de hash nativo',
     hash_algorithms: 'Algoritmos SHA',
@@ -969,6 +1033,10 @@ export class InformesComponent implements OnInit, OnDestroy {
     sintesis_conclusion: {
       quePoner: 'Resumen breve que quieras ver reflejado en la conclusión.',
       ejemplo: 'No se observa manipulación posterior del bulto denunciado',
+    },
+    sintesis_desarrollo: {
+      quePoner: 'Puntos clave que quieras que la IA incluya en el desarrollo cronológico.',
+      ejemplo: 'A las 14:05 se observa ingreso al hall, a las 14:22 retiro del bulto en cinta 3',
     },
     vms_native_hash_algorithms: {
       quePoner: 'Algoritmos hash generados nativamente por el VMS.',
@@ -1078,7 +1146,7 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   private readonly requiredFields: (keyof VideoReportFormData)[] = [
     'operador', 'grado', 'lup', 'report_date', 'destinatarios', 'unidad', 'numero_informe',
-    'sistema', 'material_filmico', 'prevencion_sumaria', 'caratula', 'denunciante',
+    'sistema', 'prevencion_sumaria', 'caratula', 'denunciante',
     'objeto_denunciado', 'vms_authenticity_mode',
   ];
 

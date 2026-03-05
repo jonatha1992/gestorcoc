@@ -165,13 +165,13 @@ class Command(BaseCommand):
         delivery_statuses = ["PENDIENTE", "ENTREGADO", "ANULADO"]
         created_records = []
 
-        for i in range(40):
+        for i in range(90):
             camera = random.choice(created_cameras)
             operator = random.choice(created_people)
             received_by = random.choice(created_people) if random.random() > 0.30 else None
 
             start_time = fake.date_time_between(
-                start_date="-45d",
+                start_date="-365d",
                 end_date="-1d",
                 tzinfo=timezone.get_current_timezone(),
             )
@@ -263,7 +263,7 @@ class Command(BaseCommand):
         asset_kinds = ["camera", "server", "system", "gear"]
 
         created_novedades = []
-        for i in range(20):
+        for i in range(60):
             asset_kind = asset_kinds[i % len(asset_kinds)]
             payload = {
                 "description": fake.paragraph(nb_sentences=2),
@@ -286,55 +286,85 @@ class Command(BaseCommand):
             else:
                 payload["cameraman_gear"] = created_gear[i % len(created_gear)]
 
-            created_novedades.append(Novedad.objects.create(**payload))
-
-        # 7. Hechos
-        hecho_categories = ["POLICIAL", "OPERATIVO", "INFORMATIVO", "RELEVAMIENTO"]
-        created_hechos = []
-        for i in range(25):
-            timestamp = fake.date_time_between(
-                start_date="-30d",
+            nov = Novedad.objects.create(**payload)
+            backdated_ts = fake.date_time_between(
+                start_date="-365d",
                 end_date="now",
+                tzinfo=timezone.get_current_timezone(),
+            )
+            Novedad.objects.filter(pk=nov.pk).update(created_at=backdated_ts)
+            created_novedades.append(nov)
+
+        # 7. Hechos — distribuidos en 12 meses + densidad últimos 30 días
+        hecho_categories = ["POLICIAL", "OPERATIVO", "INFORMATIVO", "RELEVAMIENTO"]
+        hecho_descriptions = [
+            "Deteccion de pasajero con conducta sospechosa en zona de embarque, se solicita intervencion.",
+            "Alerta de sistema CCTV por perdida de senal en camara del sector bodegas.",
+            "Incidente con vehiculo de rampa sin autorizacion en plataforma norte.",
+            "Disturbio entre pasajeros en area de check-in, interviene personal de seguridad.",
+            "Objeto abandonado sin identificar detectado en zona de migraciones.",
+            "Persona no autorizada intentando acceder a zona restringida de plataforma.",
+            "Falla en sistema de control de acceso en terminal A, se activa protocolo manual.",
+            "Colision menor entre equipos de rampa en sector de carga, sin lesionados.",
+            "Reporte de actitud sospechosa de personal en zona de bodegas.",
+            "Pasajero extraviado localizado en sector de puertas de embarque.",
+        ]
+        sectors = [
+            "Plataforma Norte",
+            "Check-in Terminal A",
+            "Acceso Principal",
+            "Sector Bodegas",
+            "Migraciones",
+        ]
+        elements_options = [
+            "Equipaje, personal de rampa",
+            "Pasajeros, cinta transportadora",
+            "Vehiculo utilitario, barreras",
+            "Personal de seguridad, vallado",
+            "Elementos varios",
+        ]
+        groups_options = [
+            "PSA",
+            "PSA y SAME",
+            "PSA y Policia Local",
+            "PSA y Bomberos",
+            "Sin intervencion externa",
+        ]
+        created_hechos = []
+
+        def _create_hecho(i, start_date, end_date):
+            timestamp = fake.date_time_between(
+                start_date=start_date,
+                end_date=end_date,
                 tzinfo=timezone.get_current_timezone(),
             )
             solved = random.random() > 0.45
             end_time = timestamp + timedelta(minutes=random.randint(10, 180)) if solved else None
-            hecho = Hecho.objects.create(
+            return Hecho.objects.create(
                 timestamp=timestamp,
-                description=fake.sentence(nb_words=14),
+                description=random.choice(hecho_descriptions),
                 camera=random.choice(created_cameras) if random.random() > 0.10 else None,
                 category=hecho_categories[i % len(hecho_categories)],
                 reported_by=random.choice(created_people) if random.random() > 0.15 else None,
-                sector=random.choice(
-                    [
-                        "Plataforma Norte",
-                        "Check-in Terminal A",
-                        "Acceso Principal",
-                        "Sector Bodegas",
-                        "Migraciones",
-                    ]
-                ),
-                elements=random.choice(
-                    [
-                        "Equipaje, personal de rampa",
-                        "Pasajeros, cinta transportadora",
-                        "Vehiculo utilitario, barreras",
-                        "Personal de seguridad, vallado",
-                        "Elementos varios",
-                    ]
-                ),
-                intervening_groups=random.choice(
-                    ["PSA", "PSA y SAME", "PSA y Policia Local", "PSA y Bomberos", "Sin intervencion externa"]
-                ),
+                sector=random.choice(sectors),
+                elements=random.choice(elements_options),
+                intervening_groups=random.choice(groups_options),
                 is_solved=solved,
                 coc_intervention=random.random() > 0.35,
                 generated_cause=random.random() > 0.65,
                 end_time=end_time,
                 resolution_time=f"{random.randint(15, 180)} min" if solved else None,
                 resolution_details=fake.sentence(nb_words=10) if solved else "",
-                external_ref=f"HEC-{2026}-{1000 + i}" if i % 3 == 0 else None,
+                external_ref=f"HEC-2026-{1000 + i}" if i % 3 == 0 else None,
             )
-            created_hechos.append(hecho)
+
+        # Tramo 1: 70 hechos distribuidos en los últimos 12 meses (sin los últimos 30 días)
+        for i in range(70):
+            created_hechos.append(_create_hecho(i, "-365d", "-31d"))
+
+        # Tramo 2: 80 hechos en los últimos 30 días (visibilidad en gráfico diario)
+        for i in range(80):
+            created_hechos.append(_create_hecho(70 + i, "-30d", "now"))
 
         # 8. Validation summary
         invalid_time_count = FilmRecord.objects.filter(start_time__gte=F("end_time")).count()

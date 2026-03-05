@@ -339,30 +339,55 @@
                                 class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
                                 aria-label="Ayuda Aeropuerto">?</button>
                         </div>
-                        <input [(ngModel)]="form.aeropuerto" (ngModelChange)="onAirportSelect($event)" name="aeropuerto"
-                            list="airport-options-list"
-                            placeholder="Ej: Aeropuerto Internacional Mtro. Pistarini / Plataforma Norte"
-                            [attr.data-invalid]="isFieldInvalid('aeropuerto') ? 'true' : null"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                        <datalist id="airport-options-list">
-                            <option *ngFor="let airportOption of airportOptions" [value]="airportOption">
-                            </option>
-                        </datalist>
+                        <div class="relative">
+                            <input [(ngModel)]="form.aeropuerto" (ngModelChange)="onAirportSelect($event)"
+                                (focus)="showAirportDropdown = true" (blur)="onAirportInputBlur()"
+                                name="aeropuerto"
+                                placeholder="Ej: Aeropuerto Internacional Mtro. Pistarini / Plataforma Norte"
+                                [attr.data-invalid]="isFieldInvalid('aeropuerto') ? 'true' : null"
+                                class="w-full px-2 py-1.5 pr-8 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                            <button type="button" (mousedown)="$event.preventDefault()"
+                                (click)="showAirportDropdown = !showAirportDropdown"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs leading-none">▾</button>
+                            <div *ngIf="showAirportDropdown && filteredAirportOptions.length > 0"
+                                class="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                                <div *ngFor="let opt of filteredAirportOptions"
+                                    (mousedown)="$event.preventDefault(); selectAirportOption(opt)"
+                                    class="px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50 hover:text-indigo-700">
+                                    {{ opt }}
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Sistema -->
+                    <!-- Sistema / Dispositivo de origen -->
                     <div class="md:col-span-12">
                         <div class="flex items-center gap-1 mb-1">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">VMS / Sistema de
-                                cámaras *</label>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Dispositivo/Sistema de
+                                origen *</label>
                             <button type="button" data-help-trigger (click)="toggleHelp('sistema', $event)"
                                 class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
                                 aria-label="Ayuda Sistema">?</button>
                         </div>
-                        <input [(ngModel)]="form.sistema" (ngModelChange)="markDirty('sistema')" name="sistema"
-                            type="text" placeholder="Ej: MILESTONE"
-                            [attr.data-invalid]="isFieldInvalid('sistema') ? 'true' : null"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                        <div class="relative">
+                            <input [(ngModel)]="form.sistema" (ngModelChange)="markDirty('sistema')"
+                                (focus)="showSistemaDropdown = true" (blur)="onSistemaInputBlur()"
+                                name="sistema" type="text"
+                                placeholder="Ej: Milestone XProtect, BMS Aeroportuario, Intercargo..."
+                                [attr.data-invalid]="isFieldInvalid('sistema') ? 'true' : null"
+                                class="w-full px-2 py-1.5 pr-8 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                            <button type="button" (mousedown)="$event.preventDefault()"
+                                (click)="showSistemaDropdown = !showSistemaDropdown"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs leading-none">▾</button>
+                            <div *ngIf="showSistemaDropdown && filteredSistemaOptions.length > 0"
+                                class="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                                <div *ngFor="let opt of filteredSistemaOptions"
+                                    (mousedown)="$event.preventDefault(); selectSistemaOption(opt)"
+                                    class="px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50 hover:text-indigo-700">
+                                    {{ opt }}
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- 1. Autenticidad del material (va primero) -->
@@ -420,52 +445,43 @@
 
                 <!-- 3. Sección de hash — condicional según modo de autenticidad -->
 
-                <!-- vms_propio: checkbox opcional de hash externo adicional -->
+                <!-- vms_propio: hash del operador siempre visible -->
                 <ng-container *ngIf="form.vms_authenticity_mode === 'vms_propio'">
                     <div class="border-t border-emerald-200 pt-3 space-y-3">
-                        <label class="inline-flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" [checked]="utilizoHash"
-                                (change)="onUtilizaHashChange($any($event.target).checked)"
-                                class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="text-sm font-semibold text-slate-700">¿Se realizó también un hash externo
-                                preventivo?</span>
-                        </label>
-
-                        <ng-container *ngIf="utilizoHash">
-                            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 pl-1">
-                                <div class="md:col-span-6">
-                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Programa de
-                                        Hash *</label>
-                                    <input [(ngModel)]="form.hash_program" (ngModelChange)="markDirty('hash_program')"
-                                        name="hash_program" type="text" placeholder="HashMyFiles"
-                                        [attr.data-invalid]="isFieldInvalid('hash_program') ? 'true' : null"
-                                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                                </div>
-                                <div class="md:col-span-6">
-                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Algoritmos
-                                        utilizados *</label>
-                                    <div class="flex flex-wrap gap-3">
-                                        <label *ngFor="let algo of hashAlgorithmOptions"
-                                            class="inline-flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                                            <input type="checkbox" [checked]="hasHashAlgorithm(algo.value)"
-                                                (change)="toggleHashAlgorithm(algo.value)"
-                                                [class.border-rose-400]="isFieldInvalid('hash_algorithms')"
-                                                class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                            <span>{{ algo.label }}</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div *ngIf="hasHashAlgorithm('otro')" class="md:col-span-12">
-                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Especificar
-                                        algoritmo *</label>
-                                    <input [(ngModel)]="form.hash_algorithm_other"
-                                        (ngModelChange)="markDirty('hash_algorithm_other')" name="hash_algorithm_other"
-                                        type="text" placeholder="Ej: BLAKE3"
-                                        [attr.data-invalid]="isFieldInvalid('hash_algorithm_other') ? 'true' : null"
-                                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                        <p class="text-xs font-semibold text-slate-700">Hash calculado por el operador</p>
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 pl-1">
+                            <div class="md:col-span-6">
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Programa de
+                                    Hash *</label>
+                                <input [(ngModel)]="form.hash_program" (ngModelChange)="markDirty('hash_program')"
+                                    name="hash_program" type="text" placeholder="HashMyFiles"
+                                    [attr.data-invalid]="isFieldInvalid('hash_program') ? 'true' : null"
+                                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                            </div>
+                            <div class="md:col-span-6">
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Algoritmos
+                                    utilizados *</label>
+                                <div class="flex flex-wrap gap-3">
+                                    <label *ngFor="let algo of hashAlgorithmOptions"
+                                        class="inline-flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                                        <input type="checkbox" [checked]="hasHashAlgorithm(algo.value)"
+                                            (change)="toggleHashAlgorithm(algo.value)"
+                                            [class.border-rose-400]="isFieldInvalid('hash_algorithms')"
+                                            class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span>{{ algo.label }}</span>
+                                    </label>
                                 </div>
                             </div>
-                        </ng-container>
+                            <div *ngIf="hasHashAlgorithm('otro')" class="md:col-span-12">
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Especificar
+                                    algoritmo *</label>
+                                <input [(ngModel)]="form.hash_algorithm_other"
+                                    (ngModelChange)="markDirty('hash_algorithm_other')" name="hash_algorithm_other"
+                                    type="text" placeholder="Ej: BLAKE3"
+                                    [attr.data-invalid]="isFieldInvalid('hash_algorithm_other') ? 'true' : null"
+                                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                            </div>
+                        </div>
                     </div>
                 </ng-container>
 
@@ -525,58 +541,46 @@
                     </div>
                 </ng-container>
             </div>
-            <div>
-                <div class="flex items-center gap-1 mb-1">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Material Filmico Analizado
-                        *</label>
-                    <button type="button" data-help-trigger (click)="toggleHelp('material_filmico', $event)"
-                        class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                        aria-label="Ayuda Material Filmico">?</button>
-                </div>
-                <textarea [ngModel]="form.material_filmico" (ngModelChange)="onMaterialFilmicoChange($event)"
-                    name="material_filmico" rows="4"
-                    placeholder="Describa el material filmico analizado (ej: grabaciones de camara 01, fecha...)"
-                    [attr.data-invalid]="isFieldInvalid('material_filmico') ? 'true' : null"
-                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
-            </div>
 
         </div>
 
         <div class="space-y-4">
-            <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1">Desarrollo y fotogramas
-            </h3>
+            <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1">Contexto y Fotogramas</h3>
             <div class="shadow-sm p-4 rounded-xl bg-sky-50/60 border border-sky-100 space-y-3">
-                <h4 class="text-sm font-bold text-sky-900">Contexto para la IA</h4>
+                <h4 class="text-sm font-bold text-sky-900">Contexto</h4>
                 <p class="text-xs text-slate-600">
                     Completá estos datos para que la IA genere texto de mayor calidad. Si redactás el desarrollo y
                     conclusión manualmente, podés omitirlos.
                 </p>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Hora inicio</label>
-                        <input [(ngModel)]="hora_inicio" (ngModelChange)="onTimeChange()" name="hora_inicio" type="time"
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha y hora inicio</label>
+                        <input [(ngModel)]="hora_inicio" (ngModelChange)="onTimeChange()" name="hora_inicio"
+                            type="datetime-local"
                             class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Hora fin</label>
-                        <input [(ngModel)]="hora_fin" (ngModelChange)="onTimeChange()" name="hora_fin" type="time"
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha y hora fin</label>
+                        <input [(ngModel)]="hora_fin" (ngModelChange)="onTimeChange()" name="hora_fin"
+                            type="datetime-local"
                             class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Franja horaria
-                            analizada</label>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Franja analizada</label>
                         <input [(ngModel)]="form.franja_horaria_analizada"
                             (ngModelChange)="markDirty('franja_horaria_analizada')" name="franja_horaria_analizada"
-                            type="text" placeholder="Auto: 14:05 a 15:42" [readonly]="!!hora_inicio && !!hora_fin"
+                            type="text" placeholder="Auto: 15/02/2026 14:05 a 02/03/2026 09:30"
+                            [readonly]="!!hora_inicio && !!hora_fin"
                             [class.bg-slate-50]="!!hora_inicio && !!hora_fin"
                             class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     </div>
-                    <div>
+                    <div class="md:col-span-2">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tiempo total de
                             análisis</label>
                         <input [(ngModel)]="form.tiempo_total_analisis"
                             (ngModelChange)="markDirty('tiempo_total_analisis')" name="tiempo_total_analisis"
-                            type="text" placeholder="Auto: 1 hora 37 min" [readonly]="!!hora_inicio && !!hora_fin"
+                            type="text" placeholder="Auto: 15 días 19 horas 25 minutos"
+                            [readonly]="!!hora_inicio && !!hora_fin"
                             [class.bg-slate-50]="!!hora_inicio && !!hora_fin"
                             class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     </div>
@@ -587,7 +591,7 @@
                             name="cantidad_observada" type="text" placeholder="Ej: 2 personas / 1 bulto"
                             class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     </div>
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-3">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Sectores
                             analizados</label>
                         <input [(ngModel)]="form.sectores_analizados" (ngModelChange)="markDirty('sectores_analizados')"
@@ -595,76 +599,9 @@
                             placeholder="Ej: Hall de arribos, cinta 3, plataforma norte"
                             class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Síntesis para
-                            conclusión</label>
-                        <input [(ngModel)]="form.sintesis_conclusion" (ngModelChange)="markDirty('sintesis_conclusion')"
-                            name="sintesis_conclusion" type="text"
-                            placeholder="Ej: No se observa manipulación posterior del bulto"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
                 </div>
             </div>
-            <div>
-                <div class="flex items-center gap-1 mb-1">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Desarrollo</label>
-                    <button type="button" data-help-trigger (click)="toggleHelp('desarrollo', $event)"
-                        class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                        aria-label="Ayuda Desarrollo">?</button>
-                </div>
-                <textarea [ngModel]="form.desarrollo" (ngModelChange)="onDesarrolloChange($event)" name="desarrollo"
-                    rows="6" placeholder="Describa cronologicamente lo observado en las camaras y horarios relevantes."
-                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
-            </div>
-            <div>
-                <div class="flex items-center gap-1 mb-1">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Conclusion</label>
-                    <button type="button" data-help-trigger (click)="toggleHelp('conclusion', $event)"
-                        class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                        aria-label="Ayuda Conclusion">?</button>
-                </div>
-                <textarea [ngModel]="form.conclusion" (ngModelChange)="onConclusionChange($event)" name="conclusion"
-                    rows="5" placeholder="Indique el resultado final del analisis de forma concreta y verificable."
-                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
-            </div>
-
-            <!-- Opciones globales de IA -->
-            <div
-                class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-                <div class="flex flex-col gap-1 w-full md:w-auto">
-                    <label class="text-xs font-bold text-slate-600 uppercase">Proveedor de IA</label>
-                    <select [(ngModel)]="selectedAiProvider" name="aiProvider"
-                        class="px-3 py-2 text-sm border border-indigo-200 rounded-xl bg-white text-indigo-900 shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400">
-                        <option value="gemini">Gemini</option>
-                        <option value="groq">Groq</option>
-                        <option value="openrouter">OpenRouter</option>
-                    </select>
-                </div>
-
-                <button type="button" (click)="generateFullReportWithAi()" [disabled]="isGeneratingFullReport || !canGenerateFullReport()"
-                    class="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md text-white text-sm font-bold shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span *ngIf="isGeneratingFullReport"
-                        class="w-4 h-4 rounded-full border-2 border-indigo-200 border-t-white animate-spin"></span>
-                    ✨ {{ isGeneratingFullReport ? 'Generando todo el informe...' : 'Completar Todo el Informe con IA' }}
-                </button>
-            </div>
-
-            <div *ngIf="isGeneratingFullReport"
-                class="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-cyan-50 to-indigo-50 px-3 py-2">
-                <div class="flex items-center justify-between text-xs text-slate-700">
-                    <span class="inline-flex items-center gap-2 font-medium">
-                        <span class="ai-status-dot"></span>
-                        {{ aiProgressLabel || 'Analizando con IA' }}
-                    </span>
-                    <span class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">Procesando</span>
-                </div>
-                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-indigo-100">
-                    <div
-                        class="ai-progress-bar h-full w-1/3 rounded-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500">
-                    </div>
-                </div>
-            </div>
-
+            <!-- Fotogramas -->
             <div class="border border-slate-200 rounded-2xl p-4 space-y-3">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
@@ -732,6 +669,108 @@
                             class="px-3 py-1.5 rounded-lg border border-rose-300 text-rose-700 text-sm">Eliminar</button>
                     </div>
                 </div>
+            </div>
+
+            <!-- Síntesis para el desarrollo — ancho completo, debajo de fotogramas -->
+            <div class="shadow-sm p-4 rounded-xl bg-sky-50/30 border border-sky-100 space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Síntesis para el
+                        desarrollo</label>
+                    <p class="text-[10px] text-slate-400 mb-1">Puntos clave cronológicos para que la IA redacte el desarrollo. Si no completás este campo, la IA usará el resto del contexto.</p>
+                    <textarea [(ngModel)]="form.sintesis_desarrollo"
+                        (ngModelChange)="markDirty('sintesis_desarrollo')"
+                        name="sintesis_desarrollo" rows="4"
+                        placeholder="Ej: 14:05 ingresa al hall → 14:22 retira bulto en cinta 3 → 14:35 sale por acceso norte sin ser detectado"
+                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Síntesis para la
+                        conclusión</label>
+                    <p class="text-[10px] text-slate-400 mb-1">Resultado final que la IA debe reflejar en la conclusión. Si no completás este campo, la IA concluirá en base al desarrollo.</p>
+                    <textarea [(ngModel)]="form.sintesis_conclusion"
+                        (ngModelChange)="markDirty('sintesis_conclusion')"
+                        name="sintesis_conclusion" rows="4"
+                        placeholder="Ej: No se observa manipulación posterior del bulto. El material fue exportado con integridad verificada mediante SHA-256."
+                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
+                </div>
+            </div>
+
+            <!-- Texto del Informe (generado por IA) -->
+            <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1 mt-2">Texto del Informe</h3>
+            <p class="text-xs text-slate-500">Completado por IA — usá el botón de abajo para generar el texto de los tres campos.</p>
+
+            <!-- Opciones globales de IA -->
+            <div
+                class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex flex-col gap-1 w-full md:w-auto">
+                    <label class="text-xs font-bold text-slate-600 uppercase">Proveedor de IA</label>
+                    <select [(ngModel)]="selectedAiProvider" name="aiProvider"
+                        class="px-3 py-2 text-sm border border-indigo-200 rounded-xl bg-white text-indigo-900 shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400">
+                        <option value="gemini">Gemini</option>
+                        <option value="groq">Groq</option>
+                        <option value="openrouter">OpenRouter</option>
+                    </select>
+                </div>
+
+                <button type="button" (click)="generateFullReportWithAi()" [disabled]="isGeneratingFullReport || !canGenerateFullReport()"
+                    class="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md text-white text-sm font-bold shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span *ngIf="isGeneratingFullReport"
+                        class="w-4 h-4 rounded-full border-2 border-indigo-200 border-t-white animate-spin"></span>
+                    ✨ {{ isGeneratingFullReport ? 'Generando todo el informe...' : 'Completar Todo el Informe con IA' }}
+                </button>
+            </div>
+
+            <div *ngIf="isGeneratingFullReport"
+                class="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-cyan-50 to-indigo-50 px-3 py-2">
+                <div class="flex items-center justify-between text-xs text-slate-700">
+                    <span class="inline-flex items-center gap-2 font-medium">
+                        <span class="ai-status-dot"></span>
+                        {{ aiProgressLabel || 'Analizando con IA' }}
+                    </span>
+                    <span class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">Procesando</span>
+                </div>
+                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-indigo-100">
+                    <div
+                        class="ai-progress-bar h-full w-1/3 rounded-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500">
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="flex items-center gap-1 mb-1">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Introducción / Material Fílmico Analizado</label>
+                    <span class="text-[10px] text-indigo-500 font-semibold ml-1">✨ IA</span>
+                    <button type="button" data-help-trigger (click)="toggleHelp('material_filmico', $event)"
+                        class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                        aria-label="Ayuda Material Filmico">?</button>
+                </div>
+                <p class="text-[10px] text-slate-400 mb-1">La IA genera este campo automáticamente con los datos del formulario (sistema, caso, hash, operador, etc.).</p>
+                <textarea [ngModel]="form.material_filmico" (ngModelChange)="onMaterialFilmicoChange($event)"
+                    name="material_filmico" rows="5"
+                    placeholder="La IA completará este campo al usar el botón ✨ — no es necesario escribirlo."
+                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
+            </div>
+            <div>
+                <div class="flex items-center gap-1 mb-1">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Desarrollo</label>
+                    <button type="button" data-help-trigger (click)="toggleHelp('desarrollo', $event)"
+                        class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                        aria-label="Ayuda Desarrollo">?</button>
+                </div>
+                <textarea [ngModel]="form.desarrollo" (ngModelChange)="onDesarrolloChange($event)" name="desarrollo"
+                    rows="6" placeholder="Completado por IA — describirá cronológicamente lo observado en las cámaras..."
+                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
+            </div>
+            <div>
+                <div class="flex items-center gap-1 mb-1">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Conclusion</label>
+                    <button type="button" data-help-trigger (click)="toggleHelp('conclusion', $event)"
+                        class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                        aria-label="Ayuda Conclusion">?</button>
+                </div>
+                <textarea [ngModel]="form.conclusion" (ngModelChange)="onConclusionChange($event)" name="conclusion"
+                    rows="5" placeholder="Completado por IA — indicará el resultado final del análisis..."
+                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
             </div>
         </div>
 

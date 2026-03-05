@@ -51,6 +51,7 @@ export interface VideoReportFormData {
     franja_horaria_analizada: string;
     tiempo_total_analisis: string;
     sintesis_conclusion: string;
+    sintesis_desarrollo: string;
     vms_native_hash_algorithms: VideoReportHashAlgorithm[];
     vms_native_hash_algorithm_other: string;
     hash_algorithms: VideoReportHashAlgorithm[];

@@ -93,6 +93,7 @@ def seed():
                 'rank': random.choice(['Oficial', 'Suboficial', 'Cabo']),
                 'unit': random.choice(units)
             }
+            
         )
         people.append(p)
     
