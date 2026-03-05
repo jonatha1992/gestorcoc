@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Observable, asyncScheduler, of } from 'rxjs';
+import { observeOn, tap } from 'rxjs/operators';
 
 interface CacheEntry<T> {
     data: T;
@@ -52,7 +52,7 @@ export class CacheService {
     withCache<T>(key: string, ttlMs: number, source: Observable<T>): Observable<T> {
         const cached = this.get<T>(key);
         if (cached !== null) {
-            return of(cached);
+            return of(cached).pipe(observeOn(asyncScheduler));
         }
         return source.pipe(
             tap(data => this.set(key, data, ttlMs))

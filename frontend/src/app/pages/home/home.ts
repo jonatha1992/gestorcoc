@@ -2,181 +2,101 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { NgApexchartsModule } from 'ng-apexcharts';
 import * as XLSX from 'xlsx';
 import { AssetService } from '../../services/asset.service';
 import { NovedadService } from '../../services/novedad.service';
 import { PersonnelService } from '../../services/personnel.service';
-import { ApiService } from '../../services/api.service';
+import { RecordsService } from '../../services/records.service';
+import { HechosService } from '../../services/hechos';
 
-interface DashboardStats {
-  monthly: {
-    records: { month: string; count: number }[];
-    hechos: { month: string; count: number }[];
-    novedades: { month: string; count: number }[];
-  };
-  daily: {
-    records: { day: string; count: number }[];
-    hechos: { day: string; count: number }[];
-    novedades: { day: string; count: number }[];
-  };
-}
+type Module = 'novedades' | 'hechos' | 'records' | 'personal';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [RouterLink, CommonModule, FormsModule, NgApexchartsModule],
+  imports: [RouterLink, CommonModule, FormsModule],
   templateUrl: './home.html',
-  providers: [AssetService, NovedadService, PersonnelService],
+  providers: [AssetService, NovedadService, PersonnelService, RecordsService, HechosService],
 })
 export class HomeComponent implements OnInit {
   private assetService = inject(AssetService);
   private novedadService = inject(NovedadService);
   private personnelService = inject(PersonnelService);
-  private apiService = inject(ApiService);
+  private recordsService = inject(RecordsService);
+  private hechosService = inject(HechosService);
 
-  // Raw Signals
+  // Raw data
   systems = signal<any[]>([]);
   servers = signal<any[]>([]);
   cameras = signal<any[]>([]);
   novedades = signal<any[]>([]);
   people = signal<any[]>([]);
-  dashboardStats = signal<DashboardStats | null>(null);
+  records = signal<any[]>([]);
+  hechos = signal<any[]>([]);
 
-  // Loading state — se pone false cuando systems Y cameras ambos llegaron
   loadingAssets = signal(true);
 
-  // Filter Signal
-  selectedCoc = signal<string>('ALL');
+  // Module selector
+  selectedModule = signal<Module>('novedades');
 
-  // Computed Signals for Filtered Data
-  filteredSystemsCount = computed(() => {
-    if (this.selectedCoc() === 'ALL') return this.systems().length;
-    return this.systems().filter((s) => s.id == this.selectedCoc()).length;
+  readonly modules: { value: Module; label: string }[] = [
+    { value: 'novedades', label: 'Novedades' },
+    { value: 'hechos', label: 'Hechos' },
+    { value: 'records', label: 'Registros Fílmicos' },
+    { value: 'personal', label: 'Personal' },
+  ];
+
+  // ——— Top-bar KPIs (always visible) ———
+  camerasOnline = computed(() => this.cameras().filter((c) => c.status === 'ONLINE').length);
+  camerasOffline = computed(() => this.cameras().filter((c) => c.status === 'OFFLINE').length);
+  openNovedades = computed(() => this.novedades().filter((n) => n.status === 'OPEN').length);
+  activePersonnel = computed(() => this.people().filter((p) => p.is_active).length);
+
+  // ——— Novedades module ———
+  novedadesCritical = computed(
+    () =>
+      this.novedades().filter(
+        (n) => n.status === 'OPEN' && (n.severity === 'CRITICAL' || n.severity === 'HIGH'),
+      ).length,
+  );
+  novedadesClosed = computed(() => this.novedades().filter((n) => n.status === 'CLOSED').length);
+  recentOpenNovedades = computed(() => this.novedades().filter((n) => n.status === 'OPEN').slice(0, 6));
+
+  // ——— Hechos module ———
+  hechosToday = computed(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return this.hechos().filter((h) => h.timestamp?.slice(0, 10) === today).length;
   });
+  hechosUnsolved = computed(() => this.hechos().filter((h) => !h.is_solved).length);
+  recentHechos = computed(() => [...this.hechos()].reverse().slice(0, 6));
 
-  filteredServersCount = computed(() => {
-    if (this.selectedCoc() === 'ALL') return this.servers().length;
-    return this.servers().filter((s) => s.system == this.selectedCoc()).length;
+  // ——— Records module ———
+  recordsToday = computed(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return this.records().filter((r) => r.created_at?.slice(0, 10) === today).length;
   });
-
-  filteredCamerasTotal = computed(() => {
-    if (this.selectedCoc() === 'ALL') return this.cameras().length;
-    return this.cameras().filter((c) => c.system == this.selectedCoc()).length;
+  recordsThisMonth = computed(() => {
+    const month = new Date().toISOString().slice(0, 7);
+    return this.records().filter((r) => r.created_at?.slice(0, 7) === month).length;
   });
+  recentRecords = computed(() => [...this.records()].reverse().slice(0, 6));
 
-  filteredCamerasOnline = computed(() => {
-    const list =
-      this.selectedCoc() === 'ALL'
-        ? this.cameras()
-        : this.cameras().filter((c) => c.system == this.selectedCoc());
-    return list.filter((c) => c.status === 'ONLINE').length;
-  });
+  // ——— Personal module ———
+  personnelInactive = computed(() => this.people().filter((p) => !p.is_active).length);
+  recentActivePeople = computed(() => this.people().filter((p) => p.is_active).slice(0, 8));
 
-  filteredCamerasOffline = computed(() => {
-    const list =
-      this.selectedCoc() === 'ALL'
-        ? this.cameras()
-        : this.cameras().filter((c) => c.system == this.selectedCoc());
-    return list.filter((c) => c.status === 'OFFLINE').length;
-  });
-
-  stats = computed(() => ({
-    openNovedades: this.novedades().filter((n: any) => n.status === 'OPEN').length,
-    personnelActive: this.people().filter((p: any) => p.is_active).length,
-  }));
-
-  // Chart options computed from dashboardStats
-  monthlyChartOptions = computed(() => {
-    const stats = this.dashboardStats();
-    const categories = this._mergeCategories(
-      stats?.monthly.records.map((r) => r.month) ?? [],
-      stats?.monthly.hechos.map((r) => r.month) ?? [],
-      stats?.monthly.novedades.map((r) => r.month) ?? [],
-    ).map((d) => this._formatMonth(d));
-
-    const allMonths = this._mergeCategories(
-      stats?.monthly.records.map((r) => r.month) ?? [],
-      stats?.monthly.hechos.map((r) => r.month) ?? [],
-      stats?.monthly.novedades.map((r) => r.month) ?? [],
-    );
-
-    return {
-      series: [
-        {
-          name: 'Registros',
-          data: allMonths.map(
-            (m) => stats?.monthly.records.find((r) => r.month.startsWith(m.slice(0, 7)))?.count ?? 0,
-          ),
-        },
-        {
-          name: 'Hechos',
-          data: allMonths.map(
-            (m) => stats?.monthly.hechos.find((r) => r.month.startsWith(m.slice(0, 7)))?.count ?? 0,
-          ),
-        },
-        {
-          name: 'Novedades',
-          data: allMonths.map(
-            (m) =>
-              stats?.monthly.novedades.find((r) => r.month.startsWith(m.slice(0, 7)))?.count ?? 0,
-          ),
-        },
-      ],
-      chart: { type: 'bar' as const, height: 260, toolbar: { show: false } },
-      colors: ['#6366f1', '#10b981', '#f43f5e'],
-      plotOptions: { bar: { columnWidth: '55%', borderRadius: 4 } },
-      dataLabels: { enabled: false },
-      xaxis: { categories, labels: { style: { fontSize: '11px' } } },
-      yaxis: { labels: { style: { fontSize: '11px' } } },
-      legend: { position: 'top' as const, fontSize: '12px' },
-      grid: { borderColor: '#f1f5f9' },
-    };
-  });
-
-  dailyChartOptions = computed(() => {
-    const stats = this.dashboardStats();
-    const allDays = this._mergeCategories(
-      stats?.daily.records.map((r) => r.day) ?? [],
-      stats?.daily.hechos.map((r) => r.day) ?? [],
-      stats?.daily.novedades.map((r) => r.day) ?? [],
-    );
-
-    return {
-      series: [
-        {
-          name: 'Registros',
-          data: allDays.map(
-            (d) => stats?.daily.records.find((r) => r.day === d)?.count ?? 0,
-          ),
-        },
-        {
-          name: 'Hechos',
-          data: allDays.map(
-            (d) => stats?.daily.hechos.find((r) => r.day === d)?.count ?? 0,
-          ),
-        },
-        {
-          name: 'Novedades',
-          data: allDays.map(
-            (d) => stats?.daily.novedades.find((r) => r.day === d)?.count ?? 0,
-          ),
-        },
-      ],
-      chart: { type: 'line' as const, height: 260, toolbar: { show: false } },
-      colors: ['#6366f1', '#10b981', '#f43f5e'],
-      stroke: { curve: 'smooth' as const, width: 2 },
-      markers: { size: 3 },
-      dataLabels: { enabled: false },
-      xaxis: {
-        categories: allDays.map((d) => this._formatDay(d)),
-        labels: { rotate: -45, style: { fontSize: '10px' } },
-      },
-      yaxis: { labels: { style: { fontSize: '11px' } } },
-      legend: { position: 'top' as const, fontSize: '12px' },
-      grid: { borderColor: '#f1f5f9' },
-    };
-  });
+  // Camera status per system
+  getSystemOnlineCount(systemId: number): number {
+    return this.cameras().filter((c) => c.system === systemId && c.status === 'ONLINE').length;
+  }
+  getSystemTotalCount(systemId: number): number {
+    return this.cameras().filter((c) => c.system === systemId).length;
+  }
+  getSystemOnlinePercentage(systemId: number): number {
+    const total = this.getSystemTotalCount(systemId);
+    if (total === 0) return 0;
+    return (this.getSystemOnlineCount(systemId) / total) * 100;
+  }
 
   ngOnInit() {
     this.refreshData();
@@ -186,31 +106,45 @@ export class HomeComponent implements OnInit {
     this.loadingAssets.set(true);
     let systemsDone = false;
     let camerasDone = false;
-    const checkDone = () => { if (systemsDone && camerasDone) this.loadingAssets.set(false); };
+    const checkDone = () => {
+      if (systemsDone && camerasDone) this.loadingAssets.set(false);
+    };
 
-    this.assetService.getSystems().subscribe((data) => { this.systems.set(data); systemsDone = true; checkDone(); });
-    this.assetService.getServers().subscribe((data) => this.servers.set(data));
-    this.assetService.getCameras().subscribe((data) => { this.cameras.set(data); camerasDone = true; checkDone(); });
-    this.novedadService.getNovedades().subscribe((data) => this.novedades.set(data));
-    this.personnelService.getPeople().subscribe((data) => this.people.set(data));
-    this.apiService
-      .get<DashboardStats>('api/dashboard-stats/')
-      .subscribe((data) => this.dashboardStats.set(data));
+    this.assetService.getSystems().subscribe((data) => {
+      this.systems.set((data as any)?.results ?? data);
+      systemsDone = true;
+      checkDone();
+    });
+    this.assetService.getServers().subscribe((data) => this.servers.set((data as any)?.results ?? data));
+    this.assetService.getCameras().subscribe((data) => {
+      this.cameras.set((data as any)?.results ?? data);
+      camerasDone = true;
+      checkDone();
+    });
+    this.novedadService.getNovedades().subscribe((data) => this.novedades.set((data as any)?.results ?? data));
+    this.personnelService.getPeople().subscribe((data) => this.people.set((data as any)?.results ?? data));
+    this.recordsService.getRecords().subscribe((data) => this.records.set((data as any)?.results ?? data));
+    this.hechosService.getHechos().subscribe((data) => this.hechos.set((data as any)?.results ?? data));
   }
 
-  // Helpers for Camera Chart
-  getSystemOnlineCount(systemId: number): number {
-    return this.cameras().filter((c) => c.system === systemId && c.status === 'ONLINE').length;
+  getSeverityLabel(severity: string): string {
+    const map: Record<string, string> = {
+      LOW: 'Baja',
+      MEDIUM: 'Media',
+      HIGH: 'Alta',
+      CRITICAL: 'Crítica',
+    };
+    return map[severity] || severity;
   }
 
-  getSystemTotalCount(systemId: number): number {
-    return this.cameras().filter((c) => c.system === systemId).length;
-  }
-
-  getSystemOnlinePercentage(systemId: number): number {
-    const total = this.getSystemTotalCount(systemId);
-    if (total === 0) return 0;
-    return (this.getSystemOnlineCount(systemId) / total) * 100;
+  getCategoryLabel(cat: string): string {
+    const map: Record<string, string> = {
+      POLICIAL: 'Policial',
+      OPERATIVO: 'Operativo',
+      INFORMATIVO: 'Informativo',
+      RELEVAMIENTO: 'Relevamiento',
+    };
+    return map[cat] || cat;
   }
 
   exportToExcel() {
@@ -240,12 +174,7 @@ export class HomeComponent implements OnInit {
     XLSX.utils.book_append_sheet(
       wb,
       XLSX.utils.json_to_sheet(
-        this.cameras().map((c) => ({
-          ID: c.id,
-          Nombre: c.name,
-          Estado: c.status,
-          Sistema: c.system,
-        })),
+        this.cameras().map((c) => ({ ID: c.id, Nombre: c.name, Estado: c.status, Sistema: c.system })),
       ),
       'Cámaras',
     );
@@ -278,22 +207,5 @@ export class HomeComponent implements OnInit {
     );
 
     XLSX.writeFile(wb, `dashboard_${new Date().toISOString().slice(0, 10)}.xlsx`);
-  }
-
-  // Private helpers
-  private _mergeCategories(...arrays: string[][]): string[] {
-    const set = new Set<string>();
-    arrays.forEach((arr) => arr.forEach((v) => set.add(v)));
-    return Array.from(set).sort();
-  }
-
-  private _formatMonth(isoDate: string): string {
-    const d = new Date(isoDate);
-    return d.toLocaleDateString('es-AR', { month: 'short', year: '2-digit' });
-  }
-
-  private _formatDay(isoDate: string): string {
-    const d = new Date(isoDate + 'T00:00:00');
-    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, HostListener } from '@angular/core';
+import { Component, OnInit, inject, HostListener, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NovedadService } from '../../services/novedad.service';
@@ -16,6 +16,8 @@ export class NovedadesComponent implements OnInit {
   private novedadService = inject(NovedadService);
   private assetService = inject(AssetService);
   private toastService = inject(ToastService);
+
+  @ViewChild('sigPad') sigPad!: ElementRef<HTMLCanvasElement>;
 
   novedades: any[] = [];
   systems: any[] = [];
@@ -59,6 +61,17 @@ export class NovedadesComponent implements OnInit {
     firma: ''
   };
 
+  // Post-create prompt
+  showActaPrompt = false;
+  pendingActaNovedades: any[] = [];
+
+  // Acta target (null = use filteredNovedades)
+  actaTargetNovedades: any[] | null = null;
+
+  // Signature pad
+  private sigDrawing = false;
+  private sigCtx: CanvasRenderingContext2D | null = null;
+
   targetType: 'SYSTEM' | 'SERVER' | 'CAMERA' | 'GEAR' = 'CAMERA';
   selectedAssets: any[] = [];
   showDropdown = false;
@@ -72,26 +85,26 @@ export class NovedadesComponent implements OnInit {
 
   loadData() {
     this.novedadService.getNovedades().subscribe({
-      next: (data) => this.novedades = data,
+      next: (data) => this.novedades = (data as any)?.results ?? data,
       error: (err) => console.error('Error fetching novedades:', err)
     });
   }
 
   loadAssets() {
     this.assetService.getSystems().subscribe(data => {
-      this.systems = data;
+      this.systems = (data as any)?.results ?? data;
       if (this.targetType === 'SYSTEM') this.filterAssets();
     });
     this.assetService.getServers().subscribe(data => {
-      this.servers = data;
+      this.servers = (data as any)?.results ?? data;
       if (this.targetType === 'SERVER') this.filterAssets();
     });
     this.assetService.getCameras().subscribe(data => {
-      this.cameras = data;
+      this.cameras = (data as any)?.results ?? data;
       if (this.targetType === 'CAMERA') this.filterAssets();
     });
     this.assetService.getCameramanGear().subscribe(data => {
-      this.gear = data;
+      this.gear = (data as any)?.results ?? data;
       if (this.targetType === 'GEAR') this.filterAssets();
     });
   }
@@ -264,6 +277,7 @@ export class NovedadesComponent implements OnInit {
       // For create mode, create one novedad per selected asset
       let createCount = 0;
       const totalAssets = this.selectedAssets.length;
+      const createdNovedades: any[] = [];
 
       this.selectedAssets.forEach((asset) => {
         const payload: any = { ...baseData };
@@ -275,8 +289,9 @@ export class NovedadesComponent implements OnInit {
         else if (this.targetType === 'GEAR') payload.cameraman_gear = asset.id;
 
         this.novedadService.createNovedad(payload).subscribe({
-          next: () => {
+          next: (novedad) => {
             createCount++;
+            createdNovedades.push(novedad);
             if (createCount === totalAssets) {
               this.toastService.success(
                 totalAssets === 1
@@ -285,6 +300,8 @@ export class NovedadesComponent implements OnInit {
               );
               this.closeForm();
               this.loadData();
+              this.pendingActaNovedades = [...createdNovedades];
+              this.showActaPrompt = true;
             }
           },
           error: (err) => {
@@ -296,19 +313,31 @@ export class NovedadesComponent implements OnInit {
     }
   }
 
-  openActaModal() {
+  openActaModal(novedades?: any[]) {
+    this.actaTargetNovedades = novedades || null;
     const saved = localStorage.getItem('acta_responsable');
     if (saved) {
       const p = JSON.parse(saved);
       this.actaForm.grado = p.grado || '';
       this.actaForm.nombre = p.nombre || '';
       this.actaForm.aeropuerto = p.aeropuerto || '';
-      this.actaForm.firma = p.firma || '';
     }
     const now = new Date();
     this.actaForm.hora = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     this.actaForm.numero = '';
     this.showActaModal = true;
+    setTimeout(() => this.initSignaturePad(), 50);
+  }
+
+  dismissActaPrompt() {
+    this.showActaPrompt = false;
+    this.pendingActaNovedades = [];
+  }
+
+  openActaFromPrompt() {
+    this.showActaPrompt = false;
+    this.openActaModal([...this.pendingActaNovedades]);
+    this.pendingActaNovedades = [];
   }
 
   closeActaModal() {
@@ -320,9 +349,9 @@ export class NovedadesComponent implements OnInit {
       grado: this.actaForm.grado,
       nombre: this.actaForm.nombre,
       aeropuerto: this.actaForm.aeropuerto,
-      firma: this.actaForm.firma
     }));
     const logoBase64 = await this.getLogoBase64();
+    this.actaForm.firma = this.getSignatureBase64();
     const html = this.buildActaHtml(logoBase64);
     const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -356,7 +385,8 @@ export class NovedadesComponent implements OnInit {
     const month = monthNames[now.getMonth()];
     const year = now.getFullYear();
 
-    const groups = this.filteredNovedades.reduce((acc, n) => {
+    const novedades = this.actaTargetNovedades ?? this.filteredNovedades;
+    const groups = novedades.reduce((acc, n) => {
       const key = n.incident_type || 'SIN CLASIFICAR';
       if (!acc[key]) acc[key] = [];
       acc[key].push(n.camera_name || n.server_name || n.system_name || n.cameraman_gear_name || 'Desconocido');
@@ -419,13 +449,50 @@ export class NovedadesComponent implements OnInit {
 </html>`;
   }
 
-  onFirmaChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      const reader = new FileReader();
-      reader.onloadend = () => { this.actaForm.firma = reader.result as string; };
-      reader.readAsDataURL(input.files[0]);
+  initSignaturePad() {
+    const canvas = this.sigPad?.nativeElement;
+    if (!canvas) return;
+    this.sigCtx = canvas.getContext('2d')!;
+    this.sigCtx.strokeStyle = '#000';
+    this.sigCtx.lineWidth = 2;
+    this.sigCtx.lineCap = 'round';
+    this.sigCtx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.addEventListener('mousedown', (e) => this.sigStart(e.offsetX, e.offsetY));
+    canvas.addEventListener('mousemove', (e) => { if (this.sigDrawing) this.sigDraw(e.offsetX, e.offsetY); });
+    canvas.addEventListener('mouseup', () => this.sigDrawing = false);
+    canvas.addEventListener('mouseleave', () => this.sigDrawing = false);
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); const t = e.touches[0]; const r = canvas.getBoundingClientRect(); this.sigStart(t.clientX - r.left, t.clientY - r.top); }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); if (!this.sigDrawing) return; const t = e.touches[0]; const r = canvas.getBoundingClientRect(); this.sigDraw(t.clientX - r.left, t.clientY - r.top); }, { passive: false });
+    canvas.addEventListener('touchend', () => this.sigDrawing = false);
+  }
+
+  private sigStart(x: number, y: number) {
+    this.sigDrawing = true;
+    this.sigCtx!.beginPath();
+    this.sigCtx!.moveTo(x, y);
+  }
+
+  private sigDraw(x: number, y: number) {
+    this.sigCtx!.lineTo(x, y);
+    this.sigCtx!.stroke();
+  }
+
+  clearSignature() {
+    const canvas = this.sigPad?.nativeElement;
+    if (canvas && this.sigCtx) {
+      this.sigCtx.clearRect(0, 0, canvas.width, canvas.height);
     }
+    this.actaForm.firma = '';
+  }
+
+  private getSignatureBase64(): string {
+    const canvas = this.sigPad?.nativeElement;
+    if (!canvas) return '';
+    const blank = document.createElement('canvas');
+    blank.width = canvas.width;
+    blank.height = canvas.height;
+    if (canvas.toDataURL() === blank.toDataURL()) return '';
+    return canvas.toDataURL('image/png');
   }
 
   private escapeHtml(value: string): string {

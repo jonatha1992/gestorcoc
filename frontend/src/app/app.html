@@ -2,11 +2,11 @@
 <app-toast></app-toast>
 <div class="ui-compact flex h-screen bg-slate-50 overflow-hidden font-sans">
   <!-- Sidebar -->
-<aside [class.w-64]="!isSidebarCollapsed" [class.w-16]="isSidebarCollapsed"
+  <aside [class.w-64]="!isSidebarCollapsed" [class.w-16]="isSidebarCollapsed"
     class="relative bg-slate-900 text-slate-300 transition-all duration-300 ease-in-out flex flex-col shadow-xl z-20">
     <!-- Logo area -->
     <div class="h-14 flex items-center px-4 border-b border-slate-800 shrink-0 overflow-hidden">
-<div class="w-8 h-8 flex items-center justify-center shrink-0">
+      <div class="w-8 h-8 flex items-center justify-center shrink-0">
         <img src="Logo-PSA.png" alt="PSA Logo" class="w-full h-auto object-contain">
       </div>
       <span *ngIf="!isSidebarCollapsed"
@@ -17,7 +17,7 @@
 
     <!-- Navigation links -->
     <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-0.5 custom-scrollbar">
-<a routerLink="/" routerLinkActive="bg-primary-600 text-white shadow-md shadow-primary-600/20"
+      <a routerLink="/" routerLinkActive="bg-primary-600 text-white shadow-md shadow-primary-600/20"
         [routerLinkActiveOptions]="{exact: true}"
         class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-colors group-hover:text-primary-400"
@@ -30,7 +30,7 @@
       </a>
 
       <a routerLink="/assets" routerLinkActive="bg-primary-600 text-white shadow-md shadow-primary-600/20"
-class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
+        class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-colors group-hover:text-primary-400"
           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
           stroke-linejoin="round">
@@ -43,7 +43,7 @@ class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-s
       </a>
 
       <a routerLink="/novedades" routerLinkActive="bg-primary-600 text-white shadow-md shadow-primary-600/20"
-class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
+        class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-colors group-hover:text-primary-400"
           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
           stroke-linejoin="round">
@@ -54,7 +54,7 @@ class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-s
       </a>
 
       <a routerLink="/hechos" routerLinkActive="bg-primary-600 text-white shadow-md shadow-primary-600/20"
-class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
+        class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-colors group-hover:text-primary-400"
           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
           stroke-linejoin="round">
@@ -64,11 +64,11 @@ class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-s
           <line x1="16" y1="17" x2="8" y2="17" />
           <polyline points="10 9 9 9 8 9" />
         </svg>
-        <span *ngIf="!isSidebarCollapsed" class="ml-2.5 text-sm font-medium">Bitácora</span>
+        <span *ngIf="!isSidebarCollapsed" class="ml-2.5 text-sm font-medium">Hechos</span>
       </a>
 
       <a routerLink="/personnel" routerLinkActive="bg-primary-600 text-white shadow-md shadow-primary-600/20"
-class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
+        class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-colors group-hover:text-primary-400"
           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
           stroke-linejoin="round">
@@ -81,7 +81,7 @@ class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-s
       </a>
 
       <a routerLink="/records" routerLinkActive="bg-primary-600 text-white shadow-md shadow-primary-600/20"
-class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
+        class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-colors group-hover:text-primary-400"
           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
           stroke-linejoin="round">
@@ -92,7 +92,7 @@ class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-s
       </a>
 
       <a routerLink="/integrity" routerLinkActive="bg-primary-600 text-white shadow-md shadow-primary-600/20"
-class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
+        class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-colors group-hover:text-primary-400"
           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
           stroke-linejoin="round">
@@ -105,12 +105,12 @@ class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-s
       </a>
 
 
-<div class="pt-4 pb-1 px-2">
+      <div class="pt-4 pb-1 px-2">
         <div class="h-px bg-slate-800 w-full"></div>
       </div>
 
       <a routerLink="/settings" routerLinkActive="bg-primary-600 text-white shadow-md shadow-primary-600/20"
-class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
+        class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-colors group-hover:text-primary-400"
           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
           stroke-linejoin="round">
@@ -122,7 +122,7 @@ class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-s
       </a>
     </nav>
 
-<!-- Sidebar footer -->
+    <!-- Sidebar footer -->
     <div class="p-3 border-t border-slate-800">
       <button (click)="toggleSidebar()"
         class="w-full flex items-center justify-center p-2 rounded-lg bg-slate-800 transition-all duration-200 hover:bg-slate-700 text-slate-400 hover:text-white">
@@ -136,7 +136,7 @@ class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-s
     </div>
   </aside>
 
-<!-- Main Content -->
+  <!-- Main Content -->
   <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative overflow-hidden">
     <!-- Header -->
     <header class="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-5 z-10 shrink-0">

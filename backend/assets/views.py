@@ -14,7 +14,10 @@ class UnitViewSet(viewsets.ModelViewSet):
 
 
 class SystemViewSet(viewsets.ModelViewSet):
-    queryset = System.objects.all()
+    queryset = System.objects.select_related('unit').prefetch_related(
+        'servers',
+        'servers__cameras',
+    ).all()
     serializer_class = SystemSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'system_type', 'unit__name', 'unit__code']

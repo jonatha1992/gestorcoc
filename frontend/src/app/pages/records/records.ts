@@ -66,7 +66,7 @@ export class RecordsComponent implements OnInit {
   loadData() {
     this.recordsService.getRecords().subscribe({
       next: (data) => {
-        this.records.set(data);
+        this.records.set((data as any)?.results ?? data);
         this.updateStats();
         this.loadInformesMap();
       },
@@ -77,8 +77,9 @@ export class RecordsComponent implements OnInit {
   loadInformesMap() {
     this.informeService.listReports().subscribe({
       next: (informes) => {
+        const list: any[] = (informes as any)?.results ?? informes;
         const map: Record<number, any> = {};
-        for (const informe of informes) {
+        for (const informe of list) {
           if (informe.film_record != null) {
             map[informe.film_record] = informe;
           }
@@ -124,13 +125,13 @@ export class RecordsComponent implements OnInit {
   loadMetadata() {
     this.assetService.getCameras().subscribe({
       next: (data) => {
-        this.cameras.set(data);
+        this.cameras.set((data as any)?.results ?? data);
         this.ensureDefaultSelections();
       }
     });
     this.personnelService.getPeople().subscribe({
       next: (data) => {
-        this.people.set(data);
+        this.people.set((data as any)?.results ?? data);
         this.ensureDefaultSelections();
       }
     });

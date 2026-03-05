@@ -56,7 +56,7 @@ export class App {
     } else if (url.includes('/novedades')) {
       this.pageTitle = 'Novedades de CCTV y Equipamiento';
     } else if (url.includes('/hechos')) {
-      this.pageTitle = 'Bitacora Operativa';
+      this.pageTitle = 'Bitacora Operativa de Hechos';
     } else if (url.includes('/personnel')) {
       this.pageTitle = 'Gestion de Personal';
     } else if (url.includes('/records')) {

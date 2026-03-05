@@ -115,7 +115,7 @@ class FilmRecord(TimeStampedModel):
         super().save(*args, **kwargs)
 
 class Catalog(TimeStampedModel):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, db_index=True)
     records = models.ManyToManyField(FilmRecord, related_name='catalogs')
 
     def __str__(self):

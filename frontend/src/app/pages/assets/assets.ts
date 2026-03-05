@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AssetService } from '../../services/asset.service';
 import { ApiService } from '../../services/api.service';
@@ -18,6 +18,7 @@ import { timeout } from 'rxjs/operators';
 export class AssetsComponent implements OnInit {
   private assetService = inject(AssetService);
   private apiService = inject(ApiService);
+  private cdr = inject(ChangeDetectorRef);
   loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
   systems: any[] = [];
@@ -71,7 +72,9 @@ export class AssetsComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.refreshData();
+    // setTimeout evita NG0100: las señales del interceptor HTTP disparan CD
+    // antes de que el forkJoin complete, causando que systems.length cambie en mid-cycle
+    setTimeout(() => this.refreshData());
   }
 
   refreshData() {
@@ -88,27 +91,31 @@ export class AssetsComponent implements OnInit {
       timeout(30000)
     ).subscribe({
       next: (results) => {
-        // Process Systems
-        if (results.systems) {
-          this.systems = results.systems;
+        // Process Systems (paginado: {count, results: [...]})
+        const systemsArr = (results.systems as any)?.results ?? results.systems;
+        if (systemsArr) {
+          this.systems = systemsArr;
           this.totalCameras = this.systems.reduce((acc: number, sys: any) => acc + (sys.camera_count || 0), 0);
           this.totalServers = this.systems.reduce((acc: number, sys: any) => acc + (sys.servers?.length || 0), 0);
         }
 
-        // Process Units
-        if (results.units) {
-          this.units = results.units;
+        // Process Units (paginado: {count, results: [...]})
+        const unitsArr = (results.units as any)?.results ?? results.units;
+        if (unitsArr) {
+          this.units = unitsArr;
           this.groupSystems();
         }
 
-        // Process Gear
-        if (results.gear) {
-          this.gear = results.gear;
+        // Process Gear (paginado: {count, results: [...]})
+        const gearArr = (results.gear as any)?.results ?? results.gear;
+        if (gearArr) {
+          this.gear = gearArr;
         }
 
         this.isLoadingCctv = false;
         this.isLoadingGear = false;
         this.loadingService.hide();
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading assets:', err);
@@ -117,6 +124,7 @@ export class AssetsComponent implements OnInit {
         this.isLoadingCctv = false;
         this.isLoadingGear = false;
         this.loadingService.hide();
+        this.cdr.detectChanges();
       }
     });
   }

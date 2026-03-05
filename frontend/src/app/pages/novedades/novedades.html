@@ -31,6 +31,22 @@
         </div>
     </div>
 
+    <!-- Post-create prompt -->
+    @if (showActaPrompt) {
+    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span class="text-sm font-medium text-emerald-800">Novedad registrada. ¿Desea generar el Acta Dejando Constancia?</span>
+        </div>
+        <div class="flex gap-2 shrink-0 ml-4">
+            <button (click)="dismissActaPrompt()" class="text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors">No</button>
+            <button (click)="openActaFromPrompt()" class="text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg transition-colors">Generar Acta</button>
+        </div>
+    </div>
+    }
+
     <!-- Modal Form -->
     @if (showForm) {
     <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -204,9 +220,11 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Firma (opcional)</label>
-                    <input type="file" accept="image/*" (change)="onFirmaChange($event)"
-                        class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Firma Digital (opcional)</label>
+                    <div class="border border-slate-300 rounded-xl overflow-hidden bg-white">
+                        <canvas #sigPad width="368" height="120" class="block w-full cursor-crosshair touch-none"></canvas>
+                    </div>
+                    <button type="button" (click)="clearSignature()" class="mt-1.5 text-xs text-slate-500 hover:text-slate-700 underline">Limpiar firma</button>
                 </div>
                 <div class="pt-2 flex gap-4">
                     <button type="button" (click)="closeActaModal()"

@@ -22,7 +22,17 @@
       "mcp__excel__read_data_from_excel",
       "Bash(\"D:/Repositorio/jonatha1992/gestorcoc/backend/.venv/Scripts/pip.exe\" install:*)",
       "Bash(head:*)",
-      "Bash(cd:* Sí, por favor)"
+      "mcp__playwright__browser_navigate",
+      "Bash(curl:*)",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_click",
+      "mcp__chrome-devtools__navigate_page",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__click",
+      "mcp__chrome-devtools__list_console_messages",
+      "mcp__chrome-devtools__evaluate_script"
     ]
   }
 }

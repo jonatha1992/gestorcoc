@@ -2,8 +2,8 @@ from django.db import models
 from core.models import TimeStampedModel
 
 class Unit(TimeStampedModel):
-    name = models.CharField(max_length=100)
-    code = models.CharField(max_length=10, unique=True, help_text="e.g., AEP, EZE")
+    name = models.CharField(max_length=100, db_index=True)
+    code = models.CharField(max_length=10, unique=True, db_index=True, help_text="e.g., AEP, EZE")
     airport = models.CharField(max_length=100, blank=True, null=True, help_text="Aeropuerto")
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_units', help_text="Entidad Superior (e.g., CREV)")
 
@@ -17,7 +17,7 @@ class System(TimeStampedModel):
     ]
 
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='systems', null=True, blank=True)
-    name = models.CharField(max_length=100, unique=True, help_text="e.g., SITE-01-NVR")
+    name = models.CharField(max_length=100, unique=True, db_index=True, help_text="e.g., SITE-01-NVR")
     system_type = models.CharField(max_length=10, choices=SYSTEM_TYPE_CHOICES, default='CCTV')
     is_active = models.BooleanField(default=True)
 
@@ -26,7 +26,7 @@ class System(TimeStampedModel):
 
 class Server(TimeStampedModel):
     system = models.ForeignKey(System, on_delete=models.CASCADE, related_name='servers')
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, db_index=True)
     ip_address = models.GenericIPAddressField(unique=True)
     is_active = models.BooleanField(default=True)
 
@@ -41,9 +41,9 @@ class Camera(TimeStampedModel):
     ]
 
     server = models.ForeignKey(Server, on_delete=models.CASCADE, related_name='cameras', null=True, blank=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, db_index=True)
     ip_address = models.GenericIPAddressField(blank=True, null=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ONLINE')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ONLINE', db_index=True)
     resolution = models.CharField(max_length=20, default='1080p')
 
     def __str__(self):
@@ -58,9 +58,9 @@ class CameramanGear(TimeStampedModel):
         ('BROKEN', 'Roto'),
     ]
 
-    name = models.CharField(max_length=100, help_text="e.g., Chaleco, Radio, Batería")
-    serial_number = models.CharField(max_length=100, blank=True, null=True)
-    assigned_to = models.CharField(max_length=100, blank=True, null=True, help_text="Nombre del camarógrafo responsable")
+    name = models.CharField(max_length=100, db_index=True, help_text="e.g., Chaleco, Radio, Batería")
+    serial_number = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    assigned_to = models.CharField(max_length=100, blank=True, null=True, db_index=True, help_text="Nombre del camarógrafo responsable")
     condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='GOOD')
     is_active = models.BooleanField(default=True)
 

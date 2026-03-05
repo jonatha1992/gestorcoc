@@ -50,7 +50,8 @@ export class PersonnelComponent implements OnInit {
   loadUnits() {
     this.assetService.getUnits().subscribe({
       next: (data) => {
-        const sorted = [...(data || [])].sort((a, b) =>
+        const results = (data as any)?.results ?? data;
+        const sorted = [...(results || [])].sort((a, b) =>
           (a.name || '').localeCompare((b.name || ''), 'es', { sensitivity: 'base' })
         );
         this.units.set(sorted);
@@ -68,14 +69,14 @@ export class PersonnelComponent implements OnInit {
 
   loadPeople() {
     this.personnelService.getPeople().subscribe({
-      next: (data) => this.people.set(data),
+      next: (data) => this.people.set((data as any)?.results ?? data),
       error: (err) => console.error('Error fetching people:', err)
     });
   }
 
   loadSystems() {
     this.assetService.getSystems().subscribe({
-      next: (data) => this.systems.set(data),
+      next: (data) => this.systems.set((data as any)?.results ?? data),
       error: (err) => console.error('Error fetching systems:', err)
     });
   }

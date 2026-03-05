@@ -47,14 +47,14 @@ export class HechosComponent implements OnInit {
 
   loadHechos() {
     this.hechosService.getHechos().subscribe({
-      next: (data) => this.hechos.set(data),
+      next: (data) => this.hechos.set((data as any)?.results ?? data),
       error: (err) => console.error('Error loading hechos', err)
     });
   }
 
   loadCameras() {
     this.assetService.getCameras().subscribe({
-      next: (data) => this.cameras.set(data),
+      next: (data) => this.cameras.set((data as any)?.results ?? data),
       error: (err) => console.error('Error loading cameras', err)
     });
   }
