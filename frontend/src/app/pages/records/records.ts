@@ -8,15 +8,13 @@ import { ToastService } from '../../services/toast.service';
 import { AssetService } from '../../services/asset.service';
 import { PersonnelService } from '../../services/personnel.service';
 import { InformeService } from '../../services/informe.service';
-import { EncryptionService, AesAlgorithm } from '../../services/encryption.service';
-import { HashService, SupportedHashAlgorithm } from '../../services/hash.service';
 
 @Component({
   selector: 'app-records',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './records.html',
-  providers: [RecordsService, AssetService, PersonnelService, InformeService, EncryptionService, HashService]
+  providers: [RecordsService, AssetService, PersonnelService, InformeService]
 })
 export class RecordsComponent implements OnInit {
   private recordsService = inject(RecordsService);
@@ -24,8 +22,6 @@ export class RecordsComponent implements OnInit {
   private personnelService = inject(PersonnelService);
   private toastService = inject(ToastService);
   private informeService = inject(InformeService);
-  private encryptionService = inject(EncryptionService);
-  private hashService = inject(HashService);
   private router = inject(Router);
 
   records = signal<any[]>([]);
@@ -43,15 +39,22 @@ export class RecordsComponent implements OnInit {
   verifiedCount = signal(0);
   pendingCount = signal(0);
 
-  // Encryption Modal State
-  showEncryptionModal = signal(false);
-  encryptionMode: 'encrypt' | 'decrypt' | 'hash' = 'encrypt';
-  encryptionPassword = '';
-  encryptionAlgorithm: AesAlgorithm = 'AES-256';
-  hashAlgorithm: SupportedHashAlgorithm = 'sha256';
-  encryptionFile: File | null = null;
-  isProcessingEncryption = signal(false);
-  hashResult = signal<{ hash: string, time: number } | null>(null);
+  // Pagination
+  currentPage = 1;
+  totalCount = 0;
+  pageSize = 50;
+  get totalPages() { return Math.ceil(this.totalCount / this.pageSize); }
+
+  // Filters
+  searchText = '';
+  filterDeliveryStatus = '';
+  filterVerified = '';
+  filterHasBackup = '';
+  filterCamera = '';
+  filterOperator = '';
+  filterDateFrom = '';
+  filterDateTo = '';
+  private searchTimer: any;
 
   newRecord: any = this.createEmptyRecord();
 
@@ -61,9 +64,20 @@ export class RecordsComponent implements OnInit {
   }
 
   loadData() {
-    this.recordsService.getRecords().subscribe({
+    this.recordsService.getRecords(this.currentPage, {
+      search: this.searchText || undefined,
+      delivery_status: this.filterDeliveryStatus || undefined,
+      is_integrity_verified: this.filterVerified,
+      has_backup: this.filterHasBackup,
+      camera: this.filterCamera || undefined,
+      operator: this.filterOperator || undefined,
+      entry_date__gte: this.filterDateFrom || undefined,
+      entry_date__lte: this.filterDateTo || undefined,
+    }).subscribe({
       next: (data) => {
-        this.records.set(data);
+        const results = (data as any)?.results ?? data;
+        this.records.set(results);
+        this.totalCount = (data as any)?.count ?? results.length;
         this.updateStats();
         this.loadInformesMap();
       },
@@ -71,11 +85,56 @@ export class RecordsComponent implements OnInit {
     });
   }
 
+  onSearchChange() {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.currentPage = 1;
+      this.loadData();
+    }, 400);
+  }
+
+  onFilterChange() {
+    this.currentPage = 1;
+    this.loadData();
+  }
+
+  clearFilters() {
+    this.filterDateFrom = '';
+    this.filterDateTo = '';
+    this.filterCamera = '';
+    this.filterOperator = '';
+    this.filterVerified = '';
+    this.filterHasBackup = '';
+    this.filterDeliveryStatus = '';
+    this.onFilterChange();
+  }
+
+  goToPage(page: number) {
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
+    this.loadData();
+  }
+
+  get pageNumbers(): number[] {
+    const total = this.totalPages;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const current = this.currentPage;
+    const pages: number[] = [1];
+    if (current > 3) pages.push(-1);
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+      pages.push(i);
+    }
+    if (current < total - 2) pages.push(-1);
+    pages.push(total);
+    return pages;
+  }
+
   loadInformesMap() {
     this.informeService.listReports().subscribe({
       next: (informes) => {
+        const list: any[] = (informes as any)?.results ?? informes;
         const map: Record<number, any> = {};
-        for (const informe of informes) {
+        for (const informe of list) {
           if (informe.film_record != null) {
             map[informe.film_record] = informe;
           }
@@ -94,7 +153,7 @@ export class RecordsComponent implements OnInit {
     if (informe?.id) {
       this.informeService.getReport(informe.id).subscribe({
         next: (full) => this.selectedInforme.set(full),
-        error: () => {}
+        error: () => { }
       });
     }
   }
@@ -121,13 +180,13 @@ export class RecordsComponent implements OnInit {
   loadMetadata() {
     this.assetService.getCameras().subscribe({
       next: (data) => {
-        this.cameras.set(data);
+        this.cameras.set((data as any)?.results ?? data);
         this.ensureDefaultSelections();
       }
     });
     this.personnelService.getPeople().subscribe({
       next: (data) => {
-        this.people.set(data);
+        this.people.set((data as any)?.results ?? data);
         this.ensureDefaultSelections();
       }
     });
@@ -154,6 +213,7 @@ export class RecordsComponent implements OnInit {
       start_time: this.toDateTimeLocal(record?.start_time),
       end_time: this.toDateTimeLocal(record?.end_time),
       operator: record?.operator ?? '',
+      delivery_status: record?.delivery_status || 'PENDIENTE',
       is_integrity_verified: !!record?.is_integrity_verified
     };
     this.isEditing.set(true);
@@ -264,6 +324,7 @@ export class RecordsComponent implements OnInit {
       start_time: '',
       end_time: '',
       operator: '',
+      delivery_status: 'PENDIENTE',
       is_integrity_verified: false
     };
   }

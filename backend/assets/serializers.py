@@ -4,7 +4,7 @@ from .models import System, Server, Camera, CameramanGear, Unit
 class UnitSerializer(serializers.ModelSerializer):
     class Meta:
         model = Unit
-        fields = ['id', 'name', 'code', 'parent']
+        fields = ['id', 'name', 'code', 'airport', 'parent']
 
 class CameraSerializer(serializers.ModelSerializer):
     # Se usan SerializerMethodField para manejar cámaras con server=null
@@ -59,4 +59,11 @@ class SystemSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
     def get_camera_count(self, obj):
+        # Usa el prefetch de servers__cameras si está disponible para evitar N+1
+        if hasattr(obj, '_prefetched_objects_cache') and 'servers' in obj._prefetched_objects_cache:
+            return sum(
+                len(srv._prefetched_objects_cache.get('cameras', []))
+                for srv in obj.servers.all()
+                if hasattr(srv, '_prefetched_objects_cache')
+            )
         return Camera.objects.filter(server__system=obj).count()

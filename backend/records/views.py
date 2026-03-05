@@ -36,9 +36,13 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
     filterset_fields = {
         'delivery_status': ['exact'],
         'has_backup': ['exact'],
+        'is_integrity_verified': ['exact'],
         'is_editable': ['exact'],
         'entry_date': ['gte', 'lte', 'exact'],
-        'verified_by_crev': ['isnull'],
+        'verified_by_crev': ['exact', 'isnull'],
+        'camera': ['exact'],
+        'operator': ['exact'],
+        'received_by': ['exact'],
     }
     
     # Búsqueda
@@ -49,6 +53,8 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
         'case_title',
         'requester',
         'camera__name',
+        'operator__first_name',
+        'operator__last_name',
     ]
     
     # Ordenamiento
@@ -133,6 +139,29 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
             filename=filename,
             content_type='application/pdf'
         )
+
+    @action(detail=True, methods=['post', 'put', 'patch'])
+    def save_report_draft(self, request, pk=None):
+        """
+        Guarda el estado actual del informe (borrador) asociado a este registro.
+        
+        POST/PUT/PATCH /api/film-records/{id}/save_report_draft/
+        Body: JSON con los campos del informe.
+        """
+        film_record = self.get_object()
+        report, created = VideoAnalysisReport.objects.get_or_create(
+            film_record=film_record,
+            defaults={'form_data': request.data}
+        )
+        if not created:
+            # Update existing form data
+            report.form_data = request.data
+            report.save()
+            
+        return Response({
+            'message': 'Borrador guardado exitosamente',
+            'report_id': report.id
+        }, status=status.HTTP_200_OK)
 
 class CatalogViewSet(viewsets.ModelViewSet):
     queryset = Catalog.objects.all()
@@ -292,6 +321,7 @@ class VideoAnalysisImproveTextView(views.APIView):
                 custom_api_key=serializer.validated_data.get('api_key', ''),
                 material_context=serializer.validated_data.get('material_context', {}),
                 mode=serializer.validated_data.get('mode', 'full'),
+                preferred_provider=serializer.validated_data.get('preferred_provider', ''),
             )
             return Response(improved_text, status=status.HTTP_200_OK)
         except Exception as exc:

@@ -328,31 +328,42 @@ class IntegrityService:
         ctx = material_context if isinstance(material_context, dict) else {}
 
         STYLE_NOTE = (
-            "Usa estilo de acta policial argentina: oraciones completas, voz pasiva institucional, "
-            "sin abreviaturas, sin inventar hechos. Cuando falte un dato usa 'no consignado'."
+            "REGLAS DE ESTILO OBLIGATORIAS:\n"
+            "1. Usa estilo de acta policial argentina: oraciones completas, voz institucional e impersonal.\n"
+            "2. PROHIBIDO inventar hechos, datos, fechas, cantidades o nombres que no esten explicitamente en el contexto provisto.\n"
+            "3. Si falta informacion estructurada o no hay datos, ajusta la redaccion para omitirlos de manera fluida en lugar de usar textos como 'no consignado' o 'no determinado'. El texto resultante debe tener total sentido sin estos datos.\n"
+            "4. Sin abreviaturas informales. Usar terminos tecnicos precisos.\n"
+            "5. Cada apartado debe tener entre 3 y 8 oraciones, claras y directas.\n"
+            "6. Devolver UNICAMENTE un JSON valido, sin texto adicional fuera del JSON."
         )
 
         if mode == 'material_filmico':
-            sistema = (ctx.get('sistema') or 'sistema no consignado').strip()
-            aeropuerto = (ctx.get('aeropuerto') or 'lugar no consignado').strip()
+            sistema = (ctx.get('sistema') or '').strip()
+            aeropuerto = (ctx.get('aeropuerto') or '').strip()
             hash_algorithms = ctx.get('hash_algorithms') or []
-            hash_program = (ctx.get('hash_program') or 'programa no consignado').strip()
+            hash_program = (ctx.get('hash_program') or '').strip()
             vms_mode = ctx.get('vms_authenticity_mode') or ''
             vms_detail = ctx.get('vms_authenticity_detail') or ''
             medida = IntegrityService._vms_mode_to_text(vms_mode, vms_detail)
-            hash_text = ', '.join(h.upper() for h in hash_algorithms) if hash_algorithms else 'algoritmo no consignado'
+            hash_text = ', '.join(h.upper() for h in hash_algorithms) if hash_algorithms else ''
 
             system_prompt = (
-                "Eres redactor de informes policiales argentinos. "
-                "Tu tarea es redactar el apartado 'MATERIAL FILMICO ANALIZADO' de un informe de analisis de video. "
-                "El apartado debe describir: el sistema de CCTV utilizado, el material filmico observado, "
-                "y las medidas de integridad y autenticidad aplicadas (hash y/o VMS). " + STYLE_NOTE
+                "Eres un redactor experto en informes policiales argentinos de analisis de video de CCTV. "
+                "Tu tarea es redactar el apartado 'MATERIAL FILMICO ANALIZADO' de un informe oficial. "
+                "Este apartado DEBE describir con precision:\n"
+                "- El sistema de videovigilancia (VMS/CCTV) utilizado para obtener las grabaciones.\n"
+                "- El lugar fisico de donde proviene el material filmico (aeropuerto, dependencia, etc.).\n"
+                "- Las medidas de integridad aplicadas: si se uso hash preventivo (indicar algoritmo y programa), "
+                "si el VMS posee autenticacion propia, o si no se aplico ningun metodo.\n"
+                "- El material debe describirse de forma generica (no inventar camaras ni horarios especificos a menos que se provean).\n\n"
+                + STYLE_NOTE
             )
             payload_prompt = {
                 "instrucciones": (
-                    "Redacta o mejora el texto del apartado de material filmico analizado. "
-                    "Incorpora los datos del sistema de manera natural en la redaccion. "
-                    "Devuelve SOLO JSON valido con la clave 'material_filmico'."
+                    "Redacta o mejora el texto del apartado de MATERIAL FILMICO ANALIZADO. "
+                    "Incorpora los datos del sistema provistos de manera natural. "
+                    "Si hay texto_original, mejorarlo. Si no hay, redactar desde cero. "
+                    "Devuelve SOLO un JSON valido con la clave 'material_filmico'. Ejemplo: {\"material_filmico\": \"texto...\"}"
                 ),
                 "formato_estricto": {"material_filmico": "texto redactado"},
                 "texto_original": str(material_filmico or ''),
@@ -366,25 +377,26 @@ class IntegrityService:
             }
 
         elif mode == 'desarrollo':
-            sectores = (ctx.get('sectores_analizados') or 'sectores no consignados').strip()
-            franja = (ctx.get('franja_horaria_analizada') or 'franja horaria no consignada').strip()
-            tiempo = (ctx.get('tiempo_total_analisis') or 'tiempo total no consignado').strip()
-            cantidad = (ctx.get('cantidad_observada') or 'cantidad no consignada').strip()
+            sectores = (ctx.get('sectores_analizados') or '').strip()
+            franja = (ctx.get('franja_horaria_analizada') or '').strip()
+            tiempo = (ctx.get('tiempo_total_analisis') or '').strip()
+            cantidad = (ctx.get('cantidad_observada') or '').strip()
             caratula = (ctx.get('caratula') or '').strip()
-            sistema = (ctx.get('sistema') or 'sistema no consignado').strip()
+            sistema = (ctx.get('sistema') or '').strip()
 
             system_prompt = (
-                "Eres redactor de informes policiales argentinos. "
-                "Tu tarea es redactar el apartado 'DESARROLLO' de un informe de analisis de video de CCTV. "
-                "El apartado debe narrar de forma objetiva el analisis visual practicado: "
-                "sectores revisados, franja horaria abarcada, tiempo invertido y observaciones cuantitativas. "
-                "No debe incluir interpretaciones juridicas ni conclusiones. " + STYLE_NOTE
+                "Eres un redactor experto en informes policiales argentinos de analisis de video de CCTV. "
+                "Tu tarea es redactar el apartado 'DESARROLLO' de un informe oficial de analisis de video. "
+                "Este apartado DEBE narrar de forma objetiva y cronologica lo observado.\n"
+                "- Limitar la descripcion a lo objetivamente observable en el material filmico.\n\n"
+                + STYLE_NOTE
             )
             payload_prompt = {
                 "instrucciones": (
-                    "Redacta o mejora el texto del apartado de desarrollo del analisis. "
-                    "Describe el proceso de revision del material filmico con los datos provistos. "
-                    "Devuelve SOLO JSON valido con la clave 'desarrollo'."
+                    "Redacta o mejora el texto del apartado DESARROLLO usando los datos provistos. "
+                    "Si hay texto_original, mejorar su redaccion manteniendo la informacion. "
+                    "Si texto_original esta vacio, redactar desde cero. "
+                    "Devuelve SOLO un JSON valido con la clave 'desarrollo'. Ejemplo: {\"desarrollo\": \"texto...\"}"
                 ),
                 "formato_estricto": {"desarrollo": "texto redactado"},
                 "texto_original": str(desarrollo or ''),
@@ -400,21 +412,21 @@ class IntegrityService:
 
         elif mode == 'conclusion':
             sintesis = (ctx.get('sintesis_conclusion') or '').strip()
-            cantidad = (ctx.get('cantidad_observada') or 'cantidad no consignada').strip()
+            cantidad = (ctx.get('cantidad_observada') or '').strip()
             caratula = (ctx.get('caratula') or '').strip()
 
             system_prompt = (
-                "Eres redactor de informes policiales argentinos. "
-                "Tu tarea es redactar el apartado 'CONCLUSION' de un informe de analisis de video de CCTV. "
-                "La conclusion debe sintetizar el resultado del analisis visual de manera objetiva e institucional, "
-                "sin apartarse de los hechos observados y remitiendo la valoracion juridica a la autoridad competente. "
+                "Eres un redactor experto en informes policiales argentinos de analisis de video de CCTV. "
+                "Tu tarea es redactar el apartado 'CONCLUSION' de un informe oficial de analisis de video. "
+                "La conclusion DEBE sintetizar el resultado del analisis visual e institucional.\n"
+                "- Si se provee una sintesis_del_analisis, priorizarla como eje central.\n"
+                "- Ser un parrafo de cierre formal.\n\n"
                 + STYLE_NOTE
             )
             payload_prompt = {
                 "instrucciones": (
-                    "Redacta o mejora el texto de la conclusion del informe. "
-                    "Debe ser un parrafo de cierre formal que sintetice lo observado. "
-                    "Devuelve SOLO JSON valido con la clave 'conclusion'."
+                    "Redacta o mejora la CONCLUSION. "
+                    "Devuelve SOLO un JSON valido con la clave 'conclusion'. Ejemplo: {\"conclusion\": \"texto...\"}"
                 ),
                 "formato_estricto": {"conclusion": "texto redactado"},
                 "texto_original": str(conclusion or ''),
@@ -427,19 +439,23 @@ class IntegrityService:
 
         else:  # mode == 'full'
             system_prompt = (
-                "Eres redactor de informes policiales argentinos. "
-                "Tu tarea es mejorar los tres apartados narrativos de un informe de analisis de video: "
-                "'material filmico analizado', 'desarrollo' y 'conclusion'. " + STYLE_NOTE
+                "Eres un redactor experto en informes policiales argentinos de analisis de video de CCTV. "
+                "Tu tarea es mejorar o redactar desde cero los tres apartados narrativos de un informe oficial: "
+                "'material filmico analizado', 'desarrollo' y 'conclusion'.\n"
+                "Cada apartado debe ser coherente con el anterior y mantener un tono institucional uniforme. " + STYLE_NOTE
             )
             payload_prompt = {
                 "instrucciones": (
-                    "Mejora y/o completa los tres apartados usando el contexto estructurado provisto. "
-                    "No inventes hechos. Devuelve SOLO JSON valido."
+                    "Mejora y/o redacta desde cero los tres apartados usando el contexto estructurado provisto. "
+                    "Se sumamente inteligente: los datos que faltan deben excluirse fluidamente. Crea un texto generico pero realista en estilo policial si la mayor parte de la informacion falta y no hay textos originales."
+                    "PROHIBIDO inventar hechos concretos no provistos. "
+                    "Devuelve SOLO un JSON valido con TRES CLAVES obligatorias. "
+                    "Ejemplo: {\"material_filmico\": \"...\", \"desarrollo\": \"...\", \"conclusion\": \"...\"}"
                 ),
                 "formato_estricto": {
-                    "material_filmico": "texto mejorado",
-                    "desarrollo": "texto mejorado",
-                    "conclusion": "texto mejorado",
+                    "material_filmico": "texto mejorado o redactado desde cero",
+                    "desarrollo": "texto mejorado o redactado desde cero",
+                    "conclusion": "texto mejorado o redactado desde cero",
                 },
                 "material_filmico_original": str(material_filmico or ''),
                 "desarrollo_original": str(desarrollo or ''),
@@ -500,22 +516,35 @@ class IntegrityService:
                 or 'quota' in message
                 or 'token' in message
             )
+            
+        if provider == 'ollama':
+            # Locales no suelen tener cuota, pero por si acaso.
+            return False
 
         return False
 
     @staticmethod
-    def _get_ai_provider_chain(custom_api_key=''):
+    def _get_ai_provider_chain(custom_api_key='', preferred_provider=''):
         provider_order_raw = str(
-            getattr(settings, 'AI_TEXT_PROVIDER_ORDER', 'gemini,openrouter,groq') or ''
+            getattr(settings, 'AI_TEXT_PROVIDER_ORDER', 'ollama,gemini,openrouter,groq') or ''
         ).strip()
         provider_order = [item.strip().lower() for item in provider_order_raw.split(',') if item.strip()]
         if not provider_order:
-            provider_order = ['gemini', 'openrouter', 'groq']
+            provider_order = ['ollama', 'gemini', 'openrouter', 'groq']
+
+        if preferred_provider:
+            preferred = str(preferred_provider).strip().lower()
+            if preferred in provider_order:
+                provider_order.remove(preferred)
+                provider_order.insert(0, preferred)
+            # If not in the pre-configured order, just add it at the top
+            elif preferred in ['ollama', 'gemini', 'openrouter', 'groq']:
+                provider_order.insert(0, preferred)
 
         selection_mode = str(
             getattr(settings, 'AI_TEXT_PROVIDER_SELECTION', 'ordered') or 'ordered'
         ).strip().lower()
-        if selection_mode == 'round_robin' and len(provider_order) > 1:
+        if selection_mode == 'round_robin' and len(provider_order) > 1 and not preferred_provider:
             with IntegrityService._provider_rotation_lock:
                 start_idx = IntegrityService._provider_rotation_index % len(provider_order)
                 IntegrityService._provider_rotation_index += 1
@@ -546,6 +575,12 @@ class IntegrityService:
                 'api_url': str(getattr(settings, 'AI_TEXT_GROQ_API_URL', '') or '').strip(),
                 'model': str(getattr(settings, 'AI_TEXT_GROQ_MODEL', '') or '').strip(),
             },
+            'ollama': {
+                'name': 'ollama',
+                'api_key': str(getattr(settings, 'OLLAMA_API_KEY', 'ollama') or 'ollama').strip(),  # Ollama doesn't strictly need it, but for standardized headers
+                'api_url': str(getattr(settings, 'AI_TEXT_OLLAMA_API_URL', 'http://localhost:11434/v1/chat/completions') or '').strip(),
+                'model': str(getattr(settings, 'AI_TEXT_OLLAMA_MODEL', 'llama3.2') or '').strip(),
+            },
         }
 
         chain = []
@@ -567,10 +602,10 @@ class IntegrityService:
         return chain
 
     @staticmethod
-    def improve_report_text_with_ai(material_filmico, desarrollo, conclusion, custom_api_key="", material_context=None, mode='full'):
+    def improve_report_text_with_ai(material_filmico, desarrollo, conclusion, custom_api_key="", material_context=None, mode='full', preferred_provider=""):
         timeout_seconds = int(getattr(settings, 'AI_TEXT_TIMEOUT_SECONDS', 45))
         fallback_mode = str(getattr(settings, 'AI_TEXT_FALLBACK_MODE', 'quota_only') or 'quota_only').strip().lower()
-        providers = IntegrityService._get_ai_provider_chain(custom_api_key)
+        providers = IntegrityService._get_ai_provider_chain(custom_api_key, preferred_provider)
 
         if not providers:
             raise RuntimeError(

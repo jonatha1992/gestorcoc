@@ -1,16 +1,17 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 
 @Injectable({
     providedIn: 'root'
 })
 export class LoadingService {
-    isLoading = signal(false);
+    private pendingCount = signal(0);
+    isLoading = computed(() => this.pendingCount() > 0);
 
-    show() {
-        this.isLoading.set(true);
+    show(): void {
+        this.pendingCount.update(n => n + 1);
     }
 
-    hide() {
-        this.isLoading.set(false);
+    hide(): void {
+        this.pendingCount.update(n => Math.max(0, n - 1));
     }
 }

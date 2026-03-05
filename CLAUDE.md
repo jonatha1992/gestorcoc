@@ -27,6 +27,10 @@ El `manage.py` y el venv (`.venv/`) están en `backend/` directamente.
 .venv\Scripts\python.exe manage.py test
 .venv\Scripts\python.exe manage.py test records
 .venv\Scripts\python.exe manage.py test records.tests.FilmRecordAPITest
+# Otras clases en records/tests.py:
+#   VideoAnalysisReportApiTests, VideoAnalysisImproveTextApiTests
+#   IntegrityServiceAiRequestTests, SerializerLimitConsistencyTests
+.venv\Scripts\python.exe manage.py test hechos
 
 # Migraciones
 .venv\Scripts\python.exe manage.py makemigrations
@@ -100,12 +104,13 @@ Límites actuales (en `config/settings.py`):
 - `VIDEO_REPORT_MAX_FRAME_SIZE_BYTES = 8 * 1024 * 1024`
 - `VIDEO_REPORT_MAX_TOTAL_BYTES = 80 * 1024 * 1024`
 
-Configuración IA por entorno (`backend/.env`), tomando base en `backend/.env.example`:
+Configuración IA por entorno (`backend/.env`), tomando base en `backend/.env.example`. Proveedores soportados: **Gemini, OpenRouter, Groq, Ollama**.
 
 - `GEMINI_API_KEY`
 - `OPEN_ROUTER_API_KEY`
 - `GROQ_API_KEY`
-- `AI_TEXT_PROVIDER_ORDER`
+- `OLLAMA_API_KEY`
+- `AI_TEXT_PROVIDER_ORDER` (default: `gemini,openrouter,groq,ollama`)
 - `AI_TEXT_PROVIDER_SELECTION`
 - `AI_TEXT_FALLBACK_MODE`
 - `AI_TEXT_TIMEOUT_SECONDS`
@@ -115,8 +120,17 @@ Configuración IA por entorno (`backend/.env`), tomando base en `backend/.env.ex
 - `AI_TEXT_OPENROUTER_MODEL`
 - `AI_TEXT_GROQ_API_URL`
 - `AI_TEXT_GROQ_MODEL`
+- `AI_TEXT_OLLAMA_API_URL`
+- `AI_TEXT_OLLAMA_MODEL`
 
 Nota: `settings.py` carga `.env` con `_load_local_env_file()` (sin `python-dotenv`).
+
+#### Base de datos y despliegue
+
+- Desarrollo local: SQLite en `backend/db.sqlite3` (por defecto).
+- Producción: se respeta `DATABASE_URL` env var (vía `dj-database-url`), por ejemplo para Railway.
+- El frontend compilado (`frontend/dist/gestor-coc/browser/`) es servido por **WhiteNoise** desde el propio Django (`WHITENOISE_ROOT` apunta a esa ruta).
+- Health check disponible en `/api/health/`.
 
 ### Frontend (`frontend/src/app/`)
 
@@ -209,8 +223,9 @@ Lineamientos importantes:
 
 - `ApiService` es wrapper HTTP base para llamadas estándar.
 - Excepción aceptada en servicios puntuales donde se requiere `HttpClient` directo para `Blob`, `FormData` o respuestas especiales.
-- `EncryptionService`: cifrado/descifrado AES de archivos en frontend (via `crypto-js`), usando PBKDF2 + CBC. Soporta `AES-128`, `AES-192`, `AES-256`. El binario cifrado incluye salt (16 bytes) + IV (16 bytes) + ciphertext.
-- `HashService`: cálculo de hash local de archivos (usado en `/integrity`).
+- `HashService`: cálculo de hash local de archivos (SHA-256, SHA-512, SHA-3); usado en `/integrity`.
+- `InformeService`: generación de informe de análisis de video; gestiona tipos `VideoReportHashAlgorithm` y `VideoReportVmsAuthenticityMode`.
+- `LoadingService`, `ToastService`: estado de carga y notificaciones globales.
 
 ### Convenciones de código
 

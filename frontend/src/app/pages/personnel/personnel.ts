@@ -22,6 +22,20 @@ export class PersonnelComponent implements OnInit {
   units = signal<Unit[]>([]);
   showForm = signal(false);
   isEditing = false;
+  searchText = '';
+
+  // Pagination
+  currentPage = 1;
+  totalCount = 0;
+  pageSize = 50;
+  get totalPages() { return Math.ceil(this.totalCount / this.pageSize); }
+
+  // Filters
+  filterRole = '';
+  filterActive = '';
+  filterUnit = '';
+  filterGuardGroup = '';
+  private searchTimer: any;
 
   currentPerson: any = this.getEmptyPerson();
 
@@ -34,7 +48,8 @@ export class PersonnelComponent implements OnInit {
   loadUnits() {
     this.assetService.getUnits().subscribe({
       next: (data) => {
-        const sorted = [...(data || [])].sort((a, b) =>
+        const results = (data as any)?.results ?? data;
+        const sorted = [...(results || [])].sort((a, b) =>
           (a.name || '').localeCompare((b.name || ''), 'es', { sensitivity: 'base' })
         );
         this.units.set(sorted);
@@ -51,15 +66,66 @@ export class PersonnelComponent implements OnInit {
   }
 
   loadPeople() {
-    this.personnelService.getPeople().subscribe({
-      next: (data) => this.people.set(data),
+    this.personnelService.getPeople(this.currentPage, {
+      search: this.searchText || undefined,
+      role: this.filterRole || undefined,
+      is_active: this.filterActive,
+      unit: this.filterUnit || undefined,
+      guard_group: this.filterGuardGroup || undefined,
+    }).subscribe({
+      next: (data) => {
+        const results = (data as any)?.results ?? data;
+        this.people.set(results);
+        this.totalCount = (data as any)?.count ?? results.length;
+      },
       error: (err) => console.error('Error fetching people:', err)
     });
   }
 
+  onSearchChange() {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.currentPage = 1;
+      this.loadPeople();
+    }, 400);
+  }
+
+  onFilterChange() {
+    this.currentPage = 1;
+    this.loadPeople();
+  }
+
+  clearFilters() {
+    this.filterUnit = '';
+    this.filterGuardGroup = '';
+    this.filterRole = '';
+    this.filterActive = '';
+    this.onFilterChange();
+  }
+
+  goToPage(page: number) {
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
+    this.loadPeople();
+  }
+
+  get pageNumbers(): number[] {
+    const total = this.totalPages;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const current = this.currentPage;
+    const pages: number[] = [1];
+    if (current > 3) pages.push(-1);
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+      pages.push(i);
+    }
+    if (current < total - 2) pages.push(-1);
+    pages.push(total);
+    return pages;
+  }
+
   loadSystems() {
     this.assetService.getSystems().subscribe({
-      next: (data) => this.systems.set(data),
+      next: (data) => this.systems.set((data as any)?.results ?? data),
       error: (err) => console.error('Error fetching systems:', err)
     });
   }

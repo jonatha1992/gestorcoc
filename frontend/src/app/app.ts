@@ -54,13 +54,13 @@ export class App {
     if (url.includes('/assets')) {
       this.pageTitle = 'Inventario de Equipamiento';
     } else if (url.includes('/novedades')) {
-      this.pageTitle = 'Libro de Novedades';
+      this.pageTitle = 'Novedades de CCTV y Equipamiento';
     } else if (url.includes('/hechos')) {
-      this.pageTitle = 'Bitacora Operativa';
+      this.pageTitle = 'Bitacora Operativa de Hechos';
     } else if (url.includes('/personnel')) {
       this.pageTitle = 'Gestion de Personal';
     } else if (url.includes('/records')) {
-      this.pageTitle = 'Registros Filmicos';
+      this.pageTitle = 'Registros Filmicos-Informes';
     } else if (url.includes('/integrity')) {
       this.pageTitle = 'Verificacion de Integridad';
     } else if (url.includes('/informes')) {

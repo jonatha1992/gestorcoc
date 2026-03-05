@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AssetService } from '../../services/asset.service';
 import { ApiService } from '../../services/api.service';
@@ -18,6 +18,7 @@ import { timeout } from 'rxjs/operators';
 export class AssetsComponent implements OnInit {
   private assetService = inject(AssetService);
   private apiService = inject(ApiService);
+  private cdr = inject(ChangeDetectorRef);
   loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
   systems: any[] = [];
@@ -34,8 +35,93 @@ export class AssetsComponent implements OnInit {
   expandedSystemIds = new Set<number>();
   expandedServerIds = new Set<number>();
 
+  searchText = '';
+  cctvFilterUnit = '';
+  cctvFilterSystemType = '';
+  cctvFilterIsActive = '';
+  cctvFilterCameraStatus = '';
+  gearFilterCondition = '';
+  gearFilterIsActive = '';
+  gearFilterAssignment = '';
+
+  get filteredGear() {
+    const search = this.searchText.toLowerCase().trim();
+    return this.gear.filter(g => {
+      const matchesSearch = !search ||
+        g.name?.toLowerCase().includes(search) ||
+        g.serial_number?.toLowerCase().includes(search) ||
+        g.assigned_to?.toLowerCase().includes(search);
+
+      const isAssigned = !!(g.assigned_to && String(g.assigned_to).trim());
+      const matchesAssignment =
+        this.gearFilterAssignment === 'assigned'
+          ? isAssigned
+          : this.gearFilterAssignment === 'unassigned'
+            ? !isAssigned
+            : true;
+
+      return matchesSearch && matchesAssignment;
+    });
+  }
+
+  get filteredGroupedSystems() {
+    const search = this.searchText.toLowerCase().trim();
+
+    return this.groupedSystems.map(group => {
+      const isGroupMatch =
+        !search ||
+        group.unitName?.toLowerCase().includes(search) ||
+        group.unitCode?.toLowerCase().includes(search);
+
+      const systems = (group.systems || []).map((system: any) => {
+        const servers = (system.servers || []).map((server: any) => {
+          const cameras = (server.cameras || []).filter((cam: any) =>
+            this.cctvFilterCameraStatus ? cam.status === this.cctvFilterCameraStatus : true
+          );
+          return { ...server, cameras };
+        }).filter((server: any) =>
+          this.cctvFilterCameraStatus ? server.cameras.length > 0 : true
+        );
+
+        return {
+          ...system,
+          servers,
+          camera_count: servers.reduce((acc: number, server: any) => acc + (server.cameras?.length || 0), 0),
+        };
+      }).filter((system: any) =>
+        this.cctvFilterCameraStatus ? (system.servers?.length || 0) > 0 : true
+      );
+
+      const matchingSystems = systems.filter((s: any) => {
+        const matchesSearch = !search ||
+          isGroupMatch ||
+          s.name?.toLowerCase().includes(search) ||
+          s.servers?.some((srv: any) =>
+            srv.name?.toLowerCase().includes(search) ||
+            srv.ip_address?.toLowerCase().includes(search) ||
+            srv.cameras?.some((cam: any) =>
+              cam.name?.toLowerCase().includes(search) || cam.ip_address?.toLowerCase().includes(search)
+            )
+          );
+        return matchesSearch;
+      });
+
+      return {
+        ...group,
+        systems: matchingSystems
+      };
+    }).filter(group =>
+      group.systems.length > 0 ||
+      (!search && group.systems.length === 0 && this.cctvFilterCameraStatus === '') ||
+      group.unitName?.toLowerCase().includes(search) ||
+      group.unitCode?.toLowerCase().includes(search)
+    );
+  }
+
   ngOnInit() {
-    this.refreshData();
+    // setTimeout evita NG0100: las señales del interceptor HTTP disparan CD
+    // antes de que el forkJoin complete, causando que systems.length cambie en mid-cycle
+    setTimeout(() => this.refreshData());
   }
 
   refreshData() {
@@ -45,34 +131,45 @@ export class AssetsComponent implements OnInit {
     this.error = null;
 
     forkJoin({
-      systems: this.assetService.getSystems(),
+      systems: this.assetService.getSystems({
+        unit: this.cctvFilterUnit || undefined,
+        system_type: this.cctvFilterSystemType || undefined,
+        is_active: this.cctvFilterIsActive || undefined,
+      }),
       units: this.apiService.get<any[]>('api/units/'),
-      gear: this.assetService.getCameramanGear()
+      gear: this.assetService.getCameramanGear({
+        condition: this.gearFilterCondition || undefined,
+        is_active: this.gearFilterIsActive || undefined,
+      })
     }).pipe(
       timeout(30000)
     ).subscribe({
       next: (results) => {
-        // Process Systems
-        if (results.systems) {
-          this.systems = results.systems;
+        // Process Systems (paginado: {count, results: [...]})
+        const systemsArr = (results.systems as any)?.results ?? results.systems;
+        if (systemsArr) {
+          this.systems = systemsArr;
           this.totalCameras = this.systems.reduce((acc: number, sys: any) => acc + (sys.camera_count || 0), 0);
           this.totalServers = this.systems.reduce((acc: number, sys: any) => acc + (sys.servers?.length || 0), 0);
         }
 
-        // Process Units
-        if (results.units) {
-          this.units = results.units;
+        // Process Units (paginado: {count, results: [...]})
+        const unitsArr = (results.units as any)?.results ?? results.units;
+        if (unitsArr) {
+          this.units = unitsArr;
           this.groupSystems();
         }
 
-        // Process Gear
-        if (results.gear) {
-          this.gear = results.gear;
+        // Process Gear (paginado: {count, results: [...]})
+        const gearArr = (results.gear as any)?.results ?? results.gear;
+        if (gearArr) {
+          this.gear = gearArr;
         }
 
         this.isLoadingCctv = false;
         this.isLoadingGear = false;
         this.loadingService.hide();
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading assets:', err);
@@ -81,15 +178,36 @@ export class AssetsComponent implements OnInit {
         this.isLoadingCctv = false;
         this.isLoadingGear = false;
         this.loadingService.hide();
+        this.cdr.detectChanges();
       }
     });
   }
 
+  onCctvFilterChange() {
+    this.refreshData();
+  }
+
+  onGearFilterChange() {
+    this.refreshData();
+  }
+
+  clearCctvFilters() {
+    this.cctvFilterUnit = '';
+    this.cctvFilterSystemType = '';
+    this.cctvFilterIsActive = '';
+    this.cctvFilterCameraStatus = '';
+    this.refreshData();
+  }
+
+  clearGearFilters() {
+    this.gearFilterCondition = '';
+    this.gearFilterIsActive = '';
+    this.gearFilterAssignment = '';
+    this.refreshData();
+  }
+
   groupSystems() {
     const groups: { [id: number]: any } = {};
-
-    // Units that are not "top-level" (parents) but actually COCs
-    const cocUnits = this.units.filter(u => u.parent !== null || u.code !== 'CREV');
 
     this.systems.forEach(sys => {
       const unit = sys.unit;

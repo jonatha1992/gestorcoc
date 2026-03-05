@@ -211,7 +211,7 @@ VIDEO_REPORT_MAX_FRAME_SIZE_BYTES = 8 * 1024 * 1024
 VIDEO_REPORT_MAX_TOTAL_BYTES = 80 * 1024 * 1024
 
 # AI text improvement for report narrative fields
-AI_TEXT_PROVIDER_ORDER = os.getenv('AI_TEXT_PROVIDER_ORDER', 'gemini,openrouter,groq')
+AI_TEXT_PROVIDER_ORDER = os.getenv('AI_TEXT_PROVIDER_ORDER', 'gemini,openrouter,groq,ollama')
 AI_TEXT_PROVIDER_SELECTION = os.getenv('AI_TEXT_PROVIDER_SELECTION', 'ordered')
 AI_TEXT_FALLBACK_MODE = os.getenv('AI_TEXT_FALLBACK_MODE', 'quota_only')
 AI_TEXT_TIMEOUT_SECONDS = int(os.getenv('AI_TEXT_TIMEOUT_SECONDS', '45'))
@@ -237,6 +237,13 @@ AI_TEXT_GROQ_API_URL = os.getenv(
 )
 AI_TEXT_GROQ_MODEL = os.getenv('AI_TEXT_GROQ_MODEL', 'llama-3.3-70b-versatile')
 
+OLLAMA_API_KEY = os.getenv('OLLAMA_API_KEY', '')
+AI_TEXT_OLLAMA_API_URL = os.getenv(
+    'AI_TEXT_OLLAMA_API_URL',
+    'http://localhost:11434/v1/chat/completions',
+)
+AI_TEXT_OLLAMA_MODEL = os.getenv('AI_TEXT_OLLAMA_MODEL', 'llama3.2')
+
 # Legacy aliases (backward compatibility)
 AI_TEXT_API_URL = os.getenv('AI_TEXT_API_URL', AI_TEXT_OPENROUTER_API_URL)
 AI_TEXT_API_KEY = os.getenv('AI_TEXT_API_KEY', OPEN_ROUTER_API_KEY)
@@ -244,6 +251,8 @@ AI_TEXT_MODEL = os.getenv('AI_TEXT_MODEL', AI_TEXT_OPENROUTER_MODEL)
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 50,
 }
 
 SPECTACULAR_SETTINGS = {

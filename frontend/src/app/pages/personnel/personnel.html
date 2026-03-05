@@ -1,13 +1,71 @@
 <div class="space-y-6 animate-in fade-in duration-500">
-    <div class="flex justify-end items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <button (click)="openForm()"
-            class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-md shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98]">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Alta de Personal
-        </button>
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="relative w-full lg:w-80">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input type="text" [(ngModel)]="searchText" (ngModelChange)="onSearchChange()"
+                    class="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs transition-colors shadow-sm"
+                    placeholder="Buscar personal...">
+            </div>
+            <button (click)="openForm()"
+                class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-md shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98]">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Alta de Personal
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-2">
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Unidad</label>
+                <select [(ngModel)]="filterUnit" (ngModelChange)="onFilterChange()"
+                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
+                    <option value="">Todas</option>
+                    @for (u of units(); track u.code) {
+                    <option [value]="u.code">{{ u.name }}</option>
+                    }
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Grupo de guardia</label>
+                <input type="text" [(ngModel)]="filterGuardGroup" (ngModelChange)="onFilterChange()"
+                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
+                    placeholder="Ej: A, B, C">
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rol</label>
+                <select [(ngModel)]="filterRole" (ngModelChange)="onFilterChange()"
+                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
+                    <option value="">Todos</option>
+                    <option value="OPERATOR">Operador</option>
+                    <option value="SUPERVISOR">Fiscalizador</option>
+                    <option value="ADMIN">Administrador</option>
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Estado</label>
+                <select [(ngModel)]="filterActive" (ngModelChange)="onFilterChange()"
+                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
+                    <option value="">Todos</option>
+                    <option value="true">Activos</option>
+                    <option value="false">Inactivos</option>
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Acciones</label>
+                <button type="button" (click)="clearFilters()"
+                    class="w-full text-xs font-semibold text-slate-600 hover:text-indigo-600 border border-slate-200 rounded-lg px-3 py-2 hover:bg-slate-100 transition-colors">
+                    Limpiar filtros
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Main Table -->
@@ -28,8 +86,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @for (person of people(); track person.id) {
-                    <tr class="hover:bg-slate-50/50 transition-colors group" [class.opacity-50]="!person.is_active"
-                        [class.grayscale]="!person.is_active">
+                    <tr class="hover:bg-slate-100/80 transition-colors">
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-3">
                                 <div
@@ -48,11 +105,19 @@
                                     }
                                 </div>
                                 <div>
-                                    <div class="font-bold text-slate-800 transition-colors group-hover:text-indigo-600">
+                                    <div class="font-bold text-slate-800">
                                         {{ person.last_name }}, {{ person.first_name }}
                                     </div>
-                                    <div class="text-[11px] text-slate-400 font-medium uppercase tracking-tighter">{{
-                                        person.role }}</div>
+                                    <div class="flex items-center gap-2 mt-0.5">
+                                        <span class="text-[11px] text-slate-400 font-medium uppercase tracking-tighter">{{
+                                            person.role }}</span>
+                                        <span [class]="person.is_active
+                                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                            : 'bg-slate-100 text-slate-600 border-slate-200'"
+                                            class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold border uppercase tracking-wide">
+                                            {{ person.is_active ? 'Activo' : 'Inactivo' }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </td>
@@ -79,8 +144,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 text-center">
-                            <div
-                                class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div class="flex items-center justify-end gap-2">
                                 <button (click)="toggleActive(person)" class="p-2 rounded-lg transition-colors"
                                     [class.text-emerald-600]="!person.is_active"
                                     [class.hover:bg-emerald-50]="!person.is_active"
@@ -132,6 +196,40 @@
                 </tbody>
             </table>
         </div>
+
+        @if (totalPages > 1) {
+        <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <span class="text-xs text-slate-500">
+                {{ (currentPage - 1) * pageSize + 1 }}–{{ currentPage * pageSize > totalCount ? totalCount : currentPage * pageSize }} de {{ totalCount }} personas
+            </span>
+            <div class="flex items-center gap-1">
+                <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1"
+                    class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                @for (page of pageNumbers; track $index) {
+                    @if (page === -1) {
+                    <span class="px-2 text-slate-400 text-xs">…</span>
+                    } @else {
+                    <button (click)="goToPage(page)"
+                        [class]="page === currentPage
+                            ? 'w-8 h-8 rounded-lg text-xs font-bold bg-indigo-600 text-white'
+                            : 'w-8 h-8 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors'">
+                        {{ page }}
+                    </button>
+                    }
+                }
+                <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages"
+                    class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        }
     </div>
 
     <!-- User Creation/Edit Modal -->

@@ -25,6 +25,8 @@ class FilmRecord(TimeStampedModel):
     DELIVERY_STATUS_CHOICES = [
         ('PENDIENTE', 'Pendiente'),
         ('ENTREGADO', 'Entregado'),
+        ('DERIVADO', 'Derivado'),
+        ('FINALIZADO', 'Finalizado'),
         ('ANULADO', 'Anulado'),
     ]
 
@@ -57,7 +59,13 @@ class FilmRecord(TimeStampedModel):
     # ========== Gestión de Archivos y Backup ==========
     has_backup = models.BooleanField(default=False, verbose_name="¿Tiene Backup?")
     backup_path = models.CharField(max_length=500, blank=True, null=True, verbose_name="Ruta del Backup", help_text="Ubicación física o lógica del backup")
-    file_hash = models.CharField(max_length=64, blank=True, null=True, verbose_name="Hash del Archivo", help_text="SHA-256 hash para verificación de integridad", db_index=True)
+    file_hash = models.CharField(max_length=128, blank=True, null=True, verbose_name="Hash del Archivo", help_text="Hash para verificación de integridad", db_index=True)
+    hash_algorithm = models.CharField(
+        max_length=10, blank=True, null=True,
+        choices=[('sha256', 'SHA-256'), ('sha512', 'SHA-512'), ('sha3', 'SHA-3'), ('sha1', 'SHA-1')],
+        verbose_name="Algoritmo de Hash",
+        help_text="Algoritmo utilizado para calcular el hash"
+    )
     file_size = models.BigIntegerField(blank=True, null=True, verbose_name="Tamaño del Archivo", help_text="Tamaño en bytes")
     
     # ========== Control de Integridad ==========
@@ -107,7 +115,7 @@ class FilmRecord(TimeStampedModel):
         super().save(*args, **kwargs)
 
 class Catalog(TimeStampedModel):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, db_index=True)
     records = models.ManyToManyField(FilmRecord, related_name='catalogs')
 
     def __str__(self):
@@ -136,6 +144,7 @@ class AIUsageLog(TimeStampedModel):
         ('gemini', 'Gemini'),
         ('openrouter', 'OpenRouter'),
         ('groq', 'Groq'),
+        ('ollama', 'Ollama'),
     ]
     ENDPOINT_CHOICES = [
         ('improve_text', 'Mejora de texto'),
