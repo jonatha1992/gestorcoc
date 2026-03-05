@@ -538,32 +538,6 @@
                     placeholder="Describa el material filmico analizado (ej: grabaciones de camara 01, fecha...)"
                     [attr.data-invalid]="isFieldInvalid('material_filmico') ? 'true' : null"
                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
-                <div class="mt-2 flex justify-end">
-                    <button type="button" (click)="improveMaterialFilmicoWithAi()"
-                        [disabled]="isImprovingMaterialFilmico"
-                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold">
-                        <span *ngIf="isImprovingMaterialFilmico"
-                            class="w-3.5 h-3.5 rounded-full border border-indigo-200 border-t-white animate-spin"></span>
-                        {{ isImprovingMaterialFilmico ? 'Procesando con IA...' : 'Completar con IA — Material Fílmico'
-                        }}
-                    </button>
-                </div>
-                <div *ngIf="isImprovingMaterialFilmico"
-                    class="mt-3 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-cyan-50 to-indigo-50 px-3 py-2">
-                    <div class="flex items-center justify-between text-xs text-slate-700">
-                        <span class="inline-flex items-center gap-2 font-medium">
-                            <span class="ai-status-dot"></span>
-                            {{ aiProgressLabel || 'Analizando con IA' }}
-                        </span>
-                        <span
-                            class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">Procesando</span>
-                    </div>
-                    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-indigo-100">
-                        <div
-                            class="ai-progress-bar h-full w-1/3 rounded-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500">
-                        </div>
-                    </div>
-                </div>
             </div>
 
         </div>
@@ -641,14 +615,6 @@
                 <textarea [ngModel]="form.desarrollo" (ngModelChange)="onDesarrolloChange($event)" name="desarrollo"
                     rows="6" placeholder="Describa cronologicamente lo observado en las camaras y horarios relevantes."
                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
-                <div class="mt-2 flex justify-end">
-                    <button type="button" (click)="improveDesarrolloWithAi()" [disabled]="isImprovingDesarrollo"
-                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold">
-                        <span *ngIf="isImprovingDesarrollo"
-                            class="w-3.5 h-3.5 rounded-full border border-indigo-200 border-t-white animate-spin"></span>
-                        {{ isImprovingDesarrollo ? 'Procesando con IA...' : 'Completar con IA — Desarrollo' }}
-                    </button>
-                </div>
             </div>
             <div>
                 <div class="flex items-center gap-1 mb-1">
@@ -660,14 +626,6 @@
                 <textarea [ngModel]="form.conclusion" (ngModelChange)="onConclusionChange($event)" name="conclusion"
                     rows="5" placeholder="Indique el resultado final del analisis de forma concreta y verificable."
                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
-                <div class="mt-2 flex justify-end">
-                    <button type="button" (click)="improveConclusionWithAi()" [disabled]="isImprovingConclusion"
-                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold">
-                        <span *ngIf="isImprovingConclusion"
-                            class="w-3.5 h-3.5 rounded-full border border-indigo-200 border-t-white animate-spin"></span>
-                        {{ isImprovingConclusion ? 'Procesando con IA...' : 'Completar con IA — Conclusión' }}
-                    </button>
-                </div>
             </div>
 
             <!-- Opciones globales de IA -->
@@ -677,21 +635,21 @@
                     <label class="text-xs font-bold text-slate-600 uppercase">Proveedor de IA</label>
                     <select [(ngModel)]="selectedAiProvider" name="aiProvider"
                         class="px-3 py-2 text-sm border border-indigo-200 rounded-xl bg-white text-indigo-900 shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400">
-                        <!-- <option value="ollama">Local (Ollama)</option> -->
                         <option value="gemini">Gemini</option>
+                        <option value="groq">Groq</option>
                         <option value="openrouter">OpenRouter</option>
                     </select>
                 </div>
 
-                <button type="button" (click)="generateFullReportWithAi()" [disabled]="isGeneratingFullReport"
-                    class="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md text-white text-sm font-bold shrink-0">
+                <button type="button" (click)="generateFullReportWithAi()" [disabled]="isGeneratingFullReport || !canGenerateFullReport()"
+                    class="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md text-white text-sm font-bold shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
                     <span *ngIf="isGeneratingFullReport"
                         class="w-4 h-4 rounded-full border-2 border-indigo-200 border-t-white animate-spin"></span>
                     ✨ {{ isGeneratingFullReport ? 'Generando todo el informe...' : 'Completar Todo el Informe con IA' }}
                 </button>
             </div>
 
-            <div *ngIf="isGeneratingFullReport || isImprovingDesarrollo || isImprovingConclusion"
+            <div *ngIf="isGeneratingFullReport"
                 class="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-cyan-50 to-indigo-50 px-3 py-2">
                 <div class="flex items-center justify-between text-xs text-slate-700">
                     <span class="inline-flex items-center gap-2 font-medium">

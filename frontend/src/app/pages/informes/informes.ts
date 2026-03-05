@@ -60,10 +60,6 @@ export class InformesComponent implements OnInit, OnDestroy {
   ];
 
   isGenerating = false;
-  isImprovingNarrative = false; // Legacy (can be removed later if not used)
-  isImprovingMaterialFilmico = false;
-  isImprovingDesarrollo = false;
-  isImprovingConclusion = false;
   isGeneratingFullReport = false;
   isProcessingFrames = false;
   utilizoHash = false;
@@ -137,7 +133,7 @@ export class InformesComponent implements OnInit, OnDestroy {
   openHelpKey: HelpKey | null = null;
 
   get isAiProcessing(): boolean {
-    return this.isImprovingNarrative || this.isImprovingMaterialFilmico || this.isImprovingDesarrollo || this.isImprovingConclusion || this.isGeneratingFullReport;
+    return this.isGeneratingFullReport;
   }
 
   ngOnInit() {
@@ -1760,131 +1756,16 @@ export class InformesComponent implements OnInit, OnDestroy {
     return 'En virtud del análisis efectuado sobre el material fílmico, y dentro de los límites propios de la revisión visual practicada, no se advierten elementos adicionales a los ya consignados en el desarrollo. La valoración jurídica del material queda sujeta a la autoridad competente.';
   }
 
-  async improveDesarrolloWithAi(): Promise<void> {
-    if (this.isImprovingDesarrollo) return;
-
-    const desarrollo = (this.form.desarrollo || '').trim();
-    const hasStructuredContext = this.hasStructuredSpeechContext();
-    const desarrolloSeed = desarrollo || this.buildDesarrolloSeedFromContext();
-
-    if (!desarrollo && !hasStructuredContext) {
-      this.toastService.error('Completa algunos datos estructurados o inicia el texto para mejorarlo.');
-      return;
-    }
-
-    const materialContext = this.buildMaterialSpeechContext();
-    this.isImprovingDesarrollo = true;
-    this.startAiFeedback('Mejorando desarrollo con IA');
-
-    let deferredSuccess = false;
-    try {
-      const response = await firstValueFrom(
-        this.informeService.improveVideoText({
-          material_filmico: '',
-          desarrollo: desarrolloSeed,
-          conclusion: '',
-          material_context: materialContext,
-          mode: 'desarrollo',
-          preferred_provider: this.selectedAiProvider,
-        })
-      );
-
-      const elapsedSeconds = this.getAiElapsedSeconds();
-      const newDesarrollo = (response?.desarrollo || '').trim();
-
-      deferredSuccess = true;
-      window.setTimeout(() => {
-        if (newDesarrollo) {
-          this.form.desarrollo = newDesarrollo;
-          this.markDirty('desarrollo');
-        }
-        this.cdr.detectChanges();
-        if (response.ai_applied === false) {
-          this.toastService.warning(`Proceso IA finalizado en ${elapsedSeconds}s sin cambios en el desarrollo.`);
-        } else {
-          this.toastService.success(`Desarrollo mejorado con IA en ${elapsedSeconds}s.`);
-        }
-        this.isImprovingDesarrollo = false;
-        this.stopAiFeedback();
-      }, 50);
-    } catch (error) {
-      this.toastService.error(
-        this.getSimpleApiErrorMessage(error as HttpErrorResponse, 'No se pudo mejorar el desarrollo con IA.')
-      );
-    } finally {
-      if (!deferredSuccess) {
-        this.isImprovingDesarrollo = false;
-        this.stopAiFeedback();
-      }
-    }
-  }
-
-  async improveConclusionWithAi(): Promise<void> {
-    if (this.isImprovingConclusion) return;
-
-    const conclusion = (this.form.conclusion || '').trim();
-    const hasStructuredContext = this.hasStructuredSpeechContext();
-    const conclusionSeed = conclusion || this.buildConclusionSeedFromContext();
-
-    if (!conclusion && !hasStructuredContext) {
-      this.toastService.error('Completa algunos datos estructurados o inicia el texto para mejorarlo.');
-      return;
-    }
-
-    const materialContext = this.buildMaterialSpeechContext();
-    this.isImprovingConclusion = true;
-    this.startAiFeedback('Mejorando conclusión con IA');
-
-    let deferredSuccess = false;
-    try {
-      const response = await firstValueFrom(
-        this.informeService.improveVideoText({
-          material_filmico: '',
-          desarrollo: '',
-          conclusion: conclusionSeed,
-          material_context: materialContext,
-          mode: 'conclusion',
-          preferred_provider: this.selectedAiProvider,
-        })
-      );
-
-      const elapsedSeconds = this.getAiElapsedSeconds();
-      const newConclusion = (response?.conclusion || '').trim();
-
-      deferredSuccess = true;
-      window.setTimeout(() => {
-        if (newConclusion) {
-          this.form.conclusion = newConclusion;
-          this.markDirty('conclusion');
-        }
-        this.cdr.detectChanges();
-        if (response.ai_applied === false) {
-          this.toastService.warning(`Proceso IA finalizado en ${elapsedSeconds}s sin cambios en la conclusión.`);
-        } else {
-          this.toastService.success(`Conclusión mejorada con IA en ${elapsedSeconds}s.`);
-        }
-        this.isImprovingConclusion = false;
-        this.stopAiFeedback();
-      }, 50);
-    } catch (error) {
-      this.toastService.error(
-        this.getSimpleApiErrorMessage(error as HttpErrorResponse, 'No se pudo mejorar la conclusión con IA.')
-      );
-    } finally {
-      if (!deferredSuccess) {
-        this.isImprovingConclusion = false;
-        this.stopAiFeedback();
-      }
-    }
+  canGenerateFullReport(): boolean {
+    return this.validate(false);
   }
 
   async generateFullReportWithAi(): Promise<void> {
     if (this.isGeneratingFullReport) return;
 
-    const hasStructuredContext = this.hasStructuredSpeechContext();
-    if (!hasStructuredContext) {
-      this.toastService.warning('Completa los campos iniciales del informe para proveer contexto a la IA.');
-      // Permitir continuar de igual modo
+    if (!this.canGenerateFullReport()) {
+      this.toastService.warning('Completa todos los campos requeridos antes de generar el informe con IA.');
+      return;
     }
 
     // Pre-seed any unpopulated values from context in case they are empty
@@ -1949,79 +1830,6 @@ export class InformesComponent implements OnInit, OnDestroy {
     } finally {
       if (!deferredSuccess) {
         this.isGeneratingFullReport = false;
-        this.stopAiFeedback();
-      }
-    }
-  }
-
-  async improveMaterialFilmicoWithAi(): Promise<void> {
-    if (this.isImprovingMaterialFilmico) {
-      return;
-    }
-    if (this.form.vms_native_hash_algorithms?.includes('otro') && !(this.form.vms_native_hash_algorithm_other || '').trim()) {
-      this.toastService.warning('Completa el nombre del algoritmo hash nativo.');
-      return;
-    }
-    if (!this.form.vms_authenticity_mode) {
-      this.toastService.warning('Selecciona el método de autenticidad del material exportado.');
-      return;
-    }
-    if (this.form.vms_authenticity_mode === 'hash_preventivo' && this.getSelectedHashAlgorithmLabels().length === 0) {
-      this.toastService.warning('Para hash externo debes seleccionar al menos un algoritmo de hash.');
-      return;
-    }
-    if (this.form.vms_authenticity_mode === 'hash_preventivo' && !(this.form.hash_program || '').trim()) {
-      this.form.hash_program = 'HashMyFiles';
-      this.markDirty('hash_program');
-    }
-
-    const materialFilmico = (this.form.material_filmico || '').trim();
-    const desarrollo = (this.form.desarrollo || '').trim();
-    const materialSeed = materialFilmico || desarrollo || this.buildMaterialFilmicoSeedFromContext();
-    const materialContext = this.buildMaterialSpeechContext();
-
-    this.isImprovingMaterialFilmico = true;
-    this.startAiFeedback('Analizando material fílmico con IA');
-    let deferredSuccess = false;
-    try {
-      const response: ImproveVideoTextResponse = await firstValueFrom(
-        this.informeService.improveVideoText({
-          material_filmico: materialSeed,
-          desarrollo: '',
-          conclusion: '',
-          material_context: materialContext,
-          mode: 'material_filmico' as ImproveVideoTextMode,
-          preferred_provider: this.selectedAiProvider,
-        })
-      );
-
-      const elapsedSeconds = this.getAiElapsedSeconds();
-      const improvedMaterialFilmico = (response?.material_filmico || '').trim();
-      const fallbackFromDesarrollo = (response?.desarrollo || '').trim();
-      deferredSuccess = true;
-      window.setTimeout(() => {
-        if (improvedMaterialFilmico) {
-          this.form.material_filmico = improvedMaterialFilmico;
-        } else if (!materialFilmico && fallbackFromDesarrollo) {
-          this.form.material_filmico = fallbackFromDesarrollo;
-        }
-        this.markDirty('material_filmico');
-        this.cdr.detectChanges();
-        if (response.ai_applied === false) {
-          this.toastService.warning(`Proceso IA finalizado en ${elapsedSeconds}s sin cambios en material fílmico.`);
-        } else {
-          this.toastService.success(`Material fílmico completado con IA en ${elapsedSeconds}s.`);
-        }
-        this.isImprovingMaterialFilmico = false;
-        this.stopAiFeedback();
-      }, 50);
-    } catch (error) {
-      this.toastService.error(
-        this.getSimpleApiErrorMessage(error as HttpErrorResponse, 'No se pudo mejorar el material fílmico con IA.')
-      );
-    } finally {
-      if (!deferredSuccess) {
-        this.isImprovingMaterialFilmico = false;
         this.stopAiFeedback();
       }
     }

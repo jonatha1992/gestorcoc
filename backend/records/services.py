@@ -329,23 +329,23 @@ class IntegrityService:
 
         STYLE_NOTE = (
             "REGLAS DE ESTILO OBLIGATORIAS:\n"
-            "1. Usa estilo de acta policial argentina: oraciones completas, voz pasiva institucional.\n"
-            "2. PROHIBIDO inventar hechos, datos, fechas, cantidades o nombres que no esten en los datos provistos.\n"
-            "3. Cuando falte un dato usa la expresion 'no consignado' o 'no determinado al momento del analisis'.\n"
+            "1. Usa estilo de acta policial argentina: oraciones completas, voz institucional e impersonal.\n"
+            "2. PROHIBIDO inventar hechos, datos, fechas, cantidades o nombres que no esten explicitamente en el contexto provisto.\n"
+            "3. Si falta informacion estructurada o no hay datos, ajusta la redaccion para omitirlos de manera fluida en lugar de usar textos como 'no consignado' o 'no determinado'. El texto resultante debe tener total sentido sin estos datos.\n"
             "4. Sin abreviaturas informales. Usar terminos tecnicos precisos.\n"
             "5. Cada apartado debe tener entre 3 y 8 oraciones, claras y directas.\n"
             "6. Devolver UNICAMENTE un JSON valido, sin texto adicional fuera del JSON."
         )
 
         if mode == 'material_filmico':
-            sistema = (ctx.get('sistema') or 'sistema no consignado').strip()
-            aeropuerto = (ctx.get('aeropuerto') or 'lugar no consignado').strip()
+            sistema = (ctx.get('sistema') or '').strip()
+            aeropuerto = (ctx.get('aeropuerto') or '').strip()
             hash_algorithms = ctx.get('hash_algorithms') or []
-            hash_program = (ctx.get('hash_program') or 'programa no consignado').strip()
+            hash_program = (ctx.get('hash_program') or '').strip()
             vms_mode = ctx.get('vms_authenticity_mode') or ''
             vms_detail = ctx.get('vms_authenticity_detail') or ''
             medida = IntegrityService._vms_mode_to_text(vms_mode, vms_detail)
-            hash_text = ', '.join(h.upper() for h in hash_algorithms) if hash_algorithms else 'algoritmo no consignado'
+            hash_text = ', '.join(h.upper() for h in hash_algorithms) if hash_algorithms else ''
 
             system_prompt = (
                 "Eres un redactor experto en informes policiales argentinos de analisis de video de CCTV. "
@@ -361,9 +361,8 @@ class IntegrityService:
             payload_prompt = {
                 "instrucciones": (
                     "Redacta o mejora el texto del apartado de MATERIAL FILMICO ANALIZADO. "
-                    "Incorpora TODOS los datos del sistema provistos de manera natural en la redaccion. "
-                    "Si hay texto_original, mejorar su redaccion manteniendo la informacion. "
-                    "Si texto_original esta vacio, redactar desde cero con los datos provistos. "
+                    "Incorpora los datos del sistema provistos de manera natural. "
+                    "Si hay texto_original, mejorarlo. Si no hay, redactar desde cero. "
                     "Devuelve SOLO un JSON valido con la clave 'material_filmico'. Ejemplo: {\"material_filmico\": \"texto...\"}"
                 ),
                 "formato_estricto": {"material_filmico": "texto redactado"},
@@ -378,30 +377,25 @@ class IntegrityService:
             }
 
         elif mode == 'desarrollo':
-            sectores = (ctx.get('sectores_analizados') or 'sectores no consignados').strip()
-            franja = (ctx.get('franja_horaria_analizada') or 'franja horaria no consignada').strip()
-            tiempo = (ctx.get('tiempo_total_analisis') or 'tiempo total no consignado').strip()
-            cantidad = (ctx.get('cantidad_observada') or 'cantidad no consignada').strip()
+            sectores = (ctx.get('sectores_analizados') or '').strip()
+            franja = (ctx.get('franja_horaria_analizada') or '').strip()
+            tiempo = (ctx.get('tiempo_total_analisis') or '').strip()
+            cantidad = (ctx.get('cantidad_observada') or '').strip()
             caratula = (ctx.get('caratula') or '').strip()
-            sistema = (ctx.get('sistema') or 'sistema no consignado').strip()
+            sistema = (ctx.get('sistema') or '').strip()
 
             system_prompt = (
                 "Eres un redactor experto en informes policiales argentinos de analisis de video de CCTV. "
                 "Tu tarea es redactar el apartado 'DESARROLLO' de un informe oficial de analisis de video. "
-                "Este apartado DEBE narrar de forma objetiva y cronologica:\n"
-                "- Que sectores o areas se revisaron en las grabaciones.\n"
-                "- Que franja horaria se analizo y cuanto tiempo tomo la revision.\n"
-                "- Observaciones cuantitativas relevantes (cantidad de personas, bultos, eventos, etc.).\n"
-                "- PROHIBIDO incluir interpretaciones juridicas, opiniones subjetivas o conclusiones.\n"
+                "Este apartado DEBE narrar de forma objetiva y cronologica lo observado.\n"
                 "- Limitar la descripcion a lo objetivamente observable en el material filmico.\n\n"
                 + STYLE_NOTE
             )
             payload_prompt = {
                 "instrucciones": (
-                    "Redacta o mejora el texto del apartado DESARROLLO. "
-                    "Describe el proceso de revision del material filmico con los datos provistos. "
+                    "Redacta o mejora el texto del apartado DESARROLLO usando los datos provistos. "
                     "Si hay texto_original, mejorar su redaccion manteniendo la informacion. "
-                    "Si texto_original esta vacio, redactar desde cero con los datos provistos. "
+                    "Si texto_original esta vacio, redactar desde cero. "
                     "Devuelve SOLO un JSON valido con la clave 'desarrollo'. Ejemplo: {\"desarrollo\": \"texto...\"}"
                 ),
                 "formato_estricto": {"desarrollo": "texto redactado"},
@@ -418,25 +412,20 @@ class IntegrityService:
 
         elif mode == 'conclusion':
             sintesis = (ctx.get('sintesis_conclusion') or '').strip()
-            cantidad = (ctx.get('cantidad_observada') or 'cantidad no consignada').strip()
+            cantidad = (ctx.get('cantidad_observada') or '').strip()
             caratula = (ctx.get('caratula') or '').strip()
 
             system_prompt = (
                 "Eres un redactor experto en informes policiales argentinos de analisis de video de CCTV. "
                 "Tu tarea es redactar el apartado 'CONCLUSION' de un informe oficial de analisis de video. "
-                "La conclusion DEBE:\n"
-                "- Sintetizar el resultado del analisis visual de manera objetiva e institucional.\n"
-                "- NO apartarse de los hechos observados.\n"
-                "- Remitir la valoracion juridica a la autoridad competente.\n"
-                "- Si se provee una sintesis, incorporarla como eje central de la conclusion.\n"
-                "- Ser un parrafo de cierre formal de 3 a 5 oraciones.\n\n"
+                "La conclusion DEBE sintetizar el resultado del analisis visual e institucional.\n"
+                "- Si se provee una sintesis_del_analisis, priorizarla como eje central.\n"
+                "- Ser un parrafo de cierre formal.\n\n"
                 + STYLE_NOTE
             )
             payload_prompt = {
                 "instrucciones": (
-                    "Redacta o mejora el texto de la CONCLUSION del informe. "
-                    "Debe ser un parrafo de cierre formal que sintetice lo observado. "
-                    "Si hay texto_original, mejorar su redaccion. Si esta vacio, redactar desde cero. "
+                    "Redacta o mejora la CONCLUSION. "
                     "Devuelve SOLO un JSON valido con la clave 'conclusion'. Ejemplo: {\"conclusion\": \"texto...\"}"
                 ),
                 "formato_estricto": {"conclusion": "texto redactado"},
@@ -451,21 +440,22 @@ class IntegrityService:
         else:  # mode == 'full'
             system_prompt = (
                 "Eres un redactor experto en informes policiales argentinos de analisis de video de CCTV. "
-                "Tu tarea es mejorar los tres apartados narrativos de un informe oficial: "
+                "Tu tarea es mejorar o redactar desde cero los tres apartados narrativos de un informe oficial: "
                 "'material filmico analizado', 'desarrollo' y 'conclusion'.\n"
                 "Cada apartado debe ser coherente con el anterior y mantener un tono institucional uniforme. " + STYLE_NOTE
             )
             payload_prompt = {
                 "instrucciones": (
-                    "Mejora y/o completa los tres apartados usando el contexto estructurado provisto. "
-                    "PROHIBIDO inventar hechos o datos no provistos. "
-                    "Devuelve SOLO un JSON valido con tres claves. "
+                    "Mejora y/o redacta desde cero los tres apartados usando el contexto estructurado provisto. "
+                    "Se sumamente inteligente: los datos que faltan deben excluirse fluidamente. Crea un texto generico pero realista en estilo policial si la mayor parte de la informacion falta y no hay textos originales."
+                    "PROHIBIDO inventar hechos concretos no provistos. "
+                    "Devuelve SOLO un JSON valido con TRES CLAVES obligatorias. "
                     "Ejemplo: {\"material_filmico\": \"...\", \"desarrollo\": \"...\", \"conclusion\": \"...\"}"
                 ),
                 "formato_estricto": {
-                    "material_filmico": "texto mejorado",
-                    "desarrollo": "texto mejorado",
-                    "conclusion": "texto mejorado",
+                    "material_filmico": "texto mejorado o redactado desde cero",
+                    "desarrollo": "texto mejorado o redactado desde cero",
+                    "conclusion": "texto mejorado o redactado desde cero",
                 },
                 "material_filmico_original": str(material_filmico or ''),
                 "desarrollo_original": str(desarrollo or ''),

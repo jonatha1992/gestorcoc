@@ -6,7 +6,7 @@ WORKDIR /app/frontend
 
 # Instalar dependencias primero para aprovechar caché de capas
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 # Copiar el código fuente y compilar
 COPY frontend/ ./
@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copiar requirements.txt e instalar dependencias
 COPY backend/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
 # Copiar el código del backend
 COPY backend/ ./
