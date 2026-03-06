@@ -56,4 +56,4 @@ RUN DATABASE_URL="postgres://build:build@localhost:5432/build" \
 EXPOSE 8000
 
 # El CMD inicia aplicando las migraciones pendientes y levantando Gunicorn
-CMD ["sh", "-c", "python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120"]
+CMD ["sh", "-c", "python manage.py migrate || echo 'WARNING: migrate failed, starting server anyway'; gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120"]
