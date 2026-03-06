@@ -148,6 +148,13 @@ Hash algorithms válidos: `sha1`, `sha3`, `sha256`, `sha512` (en serializers y e
 
 ---
 
+#### Base de datos y despliegue
+
+- Desarrollo local: SQLite en `backend/db.sqlite3` (por defecto).
+- Producción: se respeta `DATABASE_URL` env var (vía `dj-database-url`), por ejemplo para Railway.
+- El frontend compilado (`frontend/dist/gestor-coc/browser/`) es servido por **WhiteNoise** desde el propio Django (`WHITENOISE_ROOT` apunta a esa ruta).
+- Health check disponible en `/api/health/`.
+
 ### Frontend (`frontend/src/app/`)
 
 #### Rutas SPA

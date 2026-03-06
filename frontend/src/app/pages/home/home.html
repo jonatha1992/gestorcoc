@@ -29,50 +29,50 @@
     <div class="mt-4 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-2">
       @if (selectedModule() === 'novedades') {
         <input
-          [(ngModel)]="novedadesFilters.search"
+          [(ngModel)]="novedadesFilters['search']"
           (ngModelChange)="applyFilters()"
           type="text"
           placeholder="Buscar"
           class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
-        <select [(ngModel)]="novedadesFilters.status" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+        <select [(ngModel)]="novedadesFilters['status']" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
           <option value="">Estado</option>
           <option value="OPEN">Abierta</option>
           <option value="IN_PROGRESS">En progreso</option>
           <option value="CLOSED">Cerrada</option>
         </select>
-        <select [(ngModel)]="novedadesFilters.severity" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+        <select [(ngModel)]="novedadesFilters['severity']" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
           <option value="">Severidad</option>
           <option value="LOW">Baja</option>
           <option value="MEDIUM">Media</option>
           <option value="HIGH">Alta</option>
           <option value="CRITICAL">Crítica</option>
         </select>
-        <input [(ngModel)]="novedadesFilters.incident_type" (ngModelChange)="applyFilters()" type="text" placeholder="Tipo incidente" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
-        <input [(ngModel)]="novedadesFilters.created_at__gte" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
-        <input [(ngModel)]="novedadesFilters.created_at__lte" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="novedadesFilters['incident_type']" (ngModelChange)="applyFilters()" type="text" placeholder="Tipo incidente" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="novedadesFilters['created_at__gte']" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="novedadesFilters['created_at__lte']" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
       }
 
       @if (selectedModule() === 'hechos') {
-        <input [(ngModel)]="hechosFilters.search" (ngModelChange)="applyFilters()" type="text" placeholder="Buscar" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
-        <select [(ngModel)]="hechosFilters.category" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+        <input [(ngModel)]="hechosFilters['search']" (ngModelChange)="applyFilters()" type="text" placeholder="Buscar" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <select [(ngModel)]="hechosFilters['category']" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
           <option value="">Categoría</option>
           <option value="POLICIAL">Policial</option>
           <option value="OPERATIVO">Operativo</option>
           <option value="INFORMATIVO">Informativo</option>
           <option value="RELEVAMIENTO">Relevamiento</option>
         </select>
-        <select [(ngModel)]="hechosFilters.is_solved" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+        <select [(ngModel)]="hechosFilters['is_solved']" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
           <option value="">Resolución</option>
           <option value="true">Resuelto</option>
           <option value="false">Pendiente</option>
         </select>
-        <input [(ngModel)]="hechosFilters.timestamp__gte" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
-        <input [(ngModel)]="hechosFilters.timestamp__lte" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="hechosFilters['timestamp__gte']" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="hechosFilters['timestamp__lte']" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
       }
 
       @if (selectedModule() === 'records') {
-        <input [(ngModel)]="recordsFilters.search" (ngModelChange)="applyFilters()" type="text" placeholder="Buscar" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
-        <select [(ngModel)]="recordsFilters.delivery_status" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+        <input [(ngModel)]="recordsFilters['search']" (ngModelChange)="applyFilters()" type="text" placeholder="Buscar" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <select [(ngModel)]="recordsFilters['delivery_status']" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
           <option value="">Entrega</option>
           <option value="PENDIENTE">Pendiente</option>
           <option value="ENTREGADO">Entregado</option>
@@ -80,36 +80,36 @@
           <option value="FINALIZADO">Finalizado</option>
           <option value="ANULADO">Anulado</option>
         </select>
-        <select [(ngModel)]="recordsFilters.is_integrity_verified" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+        <select [(ngModel)]="recordsFilters['is_integrity_verified']" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
           <option value="">Integridad</option>
           <option value="true">Verificado</option>
           <option value="false">Pendiente</option>
         </select>
-        <select [(ngModel)]="recordsFilters.has_backup" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+        <select [(ngModel)]="recordsFilters['has_backup']" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
           <option value="">Backup</option>
           <option value="true">Con backup</option>
           <option value="false">Sin backup</option>
         </select>
-        <input [(ngModel)]="recordsFilters.entry_date__gte" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
-        <input [(ngModel)]="recordsFilters.entry_date__lte" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="recordsFilters['entry_date__gte']" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="recordsFilters['entry_date__lte']" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
       }
 
       @if (selectedModule() === 'personnel') {
-        <input [(ngModel)]="personnelFilters.search" (ngModelChange)="applyFilters()" type="text" placeholder="Buscar" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
-        <input [(ngModel)]="personnelFilters.unit__code" (ngModelChange)="applyFilters()" type="text" placeholder="Unidad (code)" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
-        <select [(ngModel)]="personnelFilters.role" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+        <input [(ngModel)]="personnelFilters['search']" (ngModelChange)="applyFilters()" type="text" placeholder="Buscar" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="personnelFilters['unit__code']" (ngModelChange)="applyFilters()" type="text" placeholder="Unidad (code)" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <select [(ngModel)]="personnelFilters['role']" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
           <option value="">Rol</option>
           <option value="OPERADOR">Operador</option>
           <option value="SUPERVISOR">Supervisor</option>
           <option value="ADMIN">Admin</option>
           <option value="TECHNICAL">Técnico</option>
         </select>
-        <select [(ngModel)]="personnelFilters.is_active" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+        <select [(ngModel)]="personnelFilters['is_active']" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
           <option value="">Estado</option>
           <option value="true">Activo</option>
           <option value="false">Inactivo</option>
         </select>
-        <input [(ngModel)]="personnelFilters.guard_group" (ngModelChange)="applyFilters()" type="text" placeholder="Guardia" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="personnelFilters['guard_group']" (ngModelChange)="applyFilters()" type="text" placeholder="Guardia" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
       }
     </div>
   </div>
