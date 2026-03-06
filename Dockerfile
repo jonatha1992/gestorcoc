@@ -47,8 +47,10 @@ COPY backend/ ./
 COPY --from=frontend-builder /app/frontend/dist/gestor-coc/browser /app/frontend/dist/gestor-coc/browser
 
 # Recopilar estaticos de Django para WhiteNoise
-# (No fallara por falta de BD gracias a los fallbacks del settings.py)
-RUN python manage.py collectstatic --noinput
+# Se inyecta un DATABASE_URL ficticio porque settings.py lo exige al importarse,
+# aunque collectstatic no necesita conexion real a la base de datos.
+RUN DATABASE_URL="postgres://build:build@localhost:5432/build" \
+    python manage.py collectstatic --noinput
 
 # Puerto expuesto (documentacion; Railway inyecta PORT en runtime)
 EXPOSE 8000
