@@ -66,14 +66,6 @@ export class RecordsService {
         return this.api.get<any[]>('api/catalogs/');
     }
 
-    generateIntegrityReport(file: File, algorithm: string): Observable<Blob> {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('algorithm', algorithm);
-        const base = environment.apiUrl;
-        return this.http.post(`${base}/api/integrity-check/`, formData, { responseType: 'blob' });
-    }
-
     generateIntegritySummaryReport(entries: any[]): Observable<Blob> {
         const base = environment.apiUrl;
         return this.http.post(`${base}/api/integrity-summary-report/`, { entries }, { responseType: 'blob' });

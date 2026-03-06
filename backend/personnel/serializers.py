@@ -11,6 +11,7 @@ class PersonSerializer(serializers.ModelSerializer):
     assigned_systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True, required=False)
     unit = serializers.SlugRelatedField(queryset=Unit.objects.all(), slug_field="code", required=False, allow_null=True)
     rank_display = serializers.CharField(source="get_rank_display", read_only=True)
+    role_display = serializers.CharField(source="get_role_display", read_only=True)
 
     class Meta:
         model = Person
@@ -20,6 +21,7 @@ class PersonSerializer(serializers.ModelSerializer):
             "last_name",
             "badge_number",
             "role",
+            "role_display",
             "rank",
             "rank_display",
             "unit",

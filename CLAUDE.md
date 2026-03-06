@@ -8,7 +8,7 @@ Guía técnica para agentes que trabajen sobre este repositorio.
 
 GestorCOC es un sistema de gestión para Centro de Operaciones y Control (COC), con arquitectura desacoplada:
 
-- **Backend API**: Django 6 + Django REST Framework + PostgreSQL (producción) / SQLite (desarrollo).
+- **Backend API**: Django 5.2 + Django REST Framework + PostgreSQL (producción) / SQLite (desarrollo).
 - **Frontend SPA**: Angular 21 (standalone components) + Tailwind CSS v4.
 
 El backend **no** renderiza templates para la UI principal; expone únicamente APIs REST. El frontend compilado es servido por WhiteNoise desde el mismo proceso Django.
@@ -90,8 +90,8 @@ Unit (COC / aeropuerto)
 
 #### Roles de Person
 
-`Person.ROLE_CHOICES`: `OPERATOR` / `SUPERVISOR` / `ADMIN`.
-- Solo `SUPERVISOR` puede actuar como verificador CREV en `film-records/{id}/verify_by_crev/`.
+`Person.ROLE_CHOICES`: `ADMIN` / `OP_EXTRACTION` / `OP_CONTROL` / `OP_VIEWER`.
+- Solo `ADMIN` puede actuar como verificador CREV en `film-records/{id}/verify_by_crev/` (verificado en `records/views.py`).
 
 #### Campos de legado en modelos
 
@@ -145,14 +145,6 @@ Hash algorithms válidos: `sha1`, `sha3`, `sha256`, `sha512` (en serializers y e
 - Producción: PostgreSQL vía `DATABASE_URL` env var (`dj-database-url`). Railway usa esta variable.
 - Al migrar campos de tipo a FK en PostgreSQL, las migraciones que mezclan DDL deben marcarse `atomic = False`.
 - Frontend compilado (`frontend/dist/gestor-coc/browser/`) servido por **WhiteNoise** (`WHITENOISE_ROOT`).
-
----
-
-#### Base de datos y despliegue
-
-- Desarrollo local: SQLite en `backend/db.sqlite3` (por defecto).
-- Producción: se respeta `DATABASE_URL` env var (vía `dj-database-url`), por ejemplo para Railway.
-- El frontend compilado (`frontend/dist/gestor-coc/browser/`) es servido por **WhiteNoise** desde el propio Django (`WHITENOISE_ROOT` apunta a esa ruta).
 - Health check disponible en `/api/health/`.
 
 ### Frontend (`frontend/src/app/`)
@@ -216,6 +208,21 @@ Reglas de negocio:
 - Exponer campos de visualización (`*_name`, `*_full_name`, `*_display`) junto a FK IDs.
 - No asumir nested writable serializers salvo implementación explícita.
 - Campos `reported_by_name` y `assigned_to_display` son read-only derivados; no se escriben.
+
+### Paginación y filtros (server-side)
+
+DRF configurado con `PageNumberPagination` (`PAGE_SIZE=50` global en settings). Patrón estándar por módulo:
+
+- Backend: `DjangoFilterBackend + SearchFilter + OrderingFilter` en el ViewSet.
+- Frontend: pasa `?page=N&search=X&filtro=Y` como query params.
+- Debounce en búsqueda: `setTimeout 400ms` en `onSearchChange()`.
+- Componente de paginación: getter `pageNumbers` con elipsis para >7 páginas.
+
+Estado de implementación:
+- **Novedades**: paginación + filtros severidad/estado en encabezado de tabla ✅
+- **Hechos**: paginación + filtros categoría/estado en encabezado de tabla ✅
+- **Records**: backend filtering listo; falta frontend header filters + paginación visual
+- **Assets / Personnel**: verificar estado
 
 ### Convenciones de código
 

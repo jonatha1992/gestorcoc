@@ -1,0 +1,82 @@
+@startuml secuencia_integridad
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam SequenceArrowThickness 1.5
+
+title GestorCOC - Flujo de Verificacion de Integridad y Generacion de Informe IA
+
+actor "Usuario\n(Op / CREV)" as User
+participant "Angular SPA\n/integrity" as SPA
+participant "HashService\n(browser)" as Hash
+participant "IntegrityCheckView\nDRF" as API
+participant "IntegrityService\nrecords/services.py" as Service
+participant "Proveedor IA\n(Gemini/Groq/OR)" as AI
+database "Base de datos\n(AIUsageLog)" as DB
+
+== Calculo de Hash Local (sin subir archivo) ==
+
+User -> SPA : Selecciona archivo\n(ej: evidencia.mp4)
+SPA -> Hash : calcularHash(file, 'sha256')
+note right of Hash : Web Crypto API\nCalculo en el browser\nSIN subir el archivo
+Hash --> SPA : "3a7f9c2b..."
+SPA --> User : Muestra hash calculado\nComparar con el registrado
+
+== Calculo de Hash Server-Side (opcional) ==
+
+User -> SPA : Sube archivo al servidor\npara verificacion
+SPA -> API : POST /api/integrity-check/\n{ file: <binary>, algorithm: "sha256" }
+API -> Service : calcular_hash(file, 'sha256')
+Service --> API : { hash: "3a7f9c2b...", algorithm: "sha256" }
+API --> SPA : HTTP 200\n{ hash: "3a7f9c2b...", algorithm: "sha256" }
+SPA --> User : Resultado del hash server-side
+
+== Generacion de Informe PDF de Hashes ==
+
+User -> SPA : Solicita informe PDF\n(lista de archivos + hashes)
+SPA -> API : POST /api/integrity-summary-report/\n{ records: [ {filename, hash, algorithm}, ... ] }
+API -> Service : generar_pdf_resumen(records)
+Service --> API : PDF bytes
+API --> SPA : HTTP 200\nContent-Type: application/pdf
+SPA --> User : Descarga informe_integridad.pdf
+
+== Mejora de Texto con IA ==
+
+User -> SPA : Completa wizard /informes\nSolicita mejora de texto
+SPA -> API : POST /api/video-analysis-improve-text/\n{ text: "descripcion bruta...",\n  context: {...} }
+API -> Service : mejorar_texto_ia(text, context)
+
+Service -> AI : Request (proveedor 1: Gemini)
+alt Gemini responde OK
+    AI --> Service : texto_mejorado
+else Falla (quota / error)
+    Service -> AI : Request (proveedor 2: Groq)
+    AI --> Service : texto_mejorado
+end
+
+Service -> DB : AIUsageLog.objects.create(\n  provider="gemini",\n  tokens_total=450,\n  success=True)
+DB --> Service : OK
+Service --> API : texto_mejorado
+API --> SPA : HTTP 200\n{ improved_text: "..." }
+SPA --> User : Muestra texto mejorado en wizard
+
+== Generacion de Informe DOCX ==
+
+User -> SPA : Confirma datos del wizard\nGenera informe
+SPA -> API : POST /api/video-analysis-report/\n{ form_data: {...},\n  frames: [...] }
+API -> Service : generar_docx_informe(form_data, frames)
+
+note right of Service
+    Limites aplicados:
+    - MAX_FRAMES = 30
+    - MAX_FRAME_SIZE = 8 MB
+    - MAX_TOTAL = 80 MB
+end note
+
+Service --> API : DOCX bytes
+API --> SPA : HTTP 200\nContent-Type: application/vnd.openxmlformats...
+SPA --> User : Descarga informe_analisis.docx
+
+@enduml

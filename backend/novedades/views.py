@@ -8,7 +8,7 @@ from .serializers import NovedadSerializer
 class NovedadViewSet(viewsets.ModelViewSet):
     queryset = Novedad.objects.select_related(
         'camera', 'server', 'system', 'cameraman_gear'
-    ).order_by('-created_at')
+    )
     serializer_class = NovedadSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = {

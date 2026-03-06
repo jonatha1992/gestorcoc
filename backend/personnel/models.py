@@ -16,9 +16,10 @@ DNI_VALIDATOR = RegexValidator(
 
 class Person(TimeStampedModel):
     ROLE_CHOICES = [
-        ("OPERADOR", "Operador COC"),
-        ("SUPERVISOR", "Fiscalizador CREV"),
         ("ADMIN", "Administrador"),
+        ("OP_EXTRACTION", "Operador Basico (Extraccion/Visualizacion)"),
+        ("OP_CONTROL", "Operador de Camaras (Fijas/Domos/PTZ)"),
+        ("OP_VIEWER", "Solo Visualizacion"),
     ]
 
     RANK_CHOICES = [
@@ -43,7 +44,7 @@ class Person(TimeStampedModel):
         validators=[LEGAJO_VALIDATOR],
         help_text="Legajo (6 digitos)",
     )
-    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default="OPERADOR")
+    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default="OP_VIEWER")
     rank = models.CharField(
         max_length=40,
         choices=RANK_CHOICES,

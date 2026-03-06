@@ -110,9 +110,9 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
                 'error': f'No se encontró una persona con ID {verified_by_id}'
             }, status=status.HTTP_404_NOT_FOUND)
 
-        if verified_by.role != 'SUPERVISOR':
+        if verified_by.role != 'ADMIN':
             return Response({
-                'error': 'Solo un Fiscalizador CREV puede verificar registros.'
+                'error': 'Solo un Administrador puede verificar registros.'
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # Marcar como verificado
@@ -672,7 +672,7 @@ class DashboardPersonnelView(DashboardQueryMixin, views.APIView):
             {"id": "total", "label": "Total Personal", "value": total},
             {"id": "active", "label": "Activos", "value": rows.filter(is_active=True).count()},
             {"id": "inactive", "label": "Inactivos", "value": rows.filter(is_active=False).count()},
-            {"id": "supervisors", "label": "Supervisores", "value": rows.filter(role="SUPERVISOR").count()},
+
         ]
         return Response({
             "module": "personnel",
@@ -692,7 +692,7 @@ class DashboardPersonnelView(DashboardQueryMixin, views.APIView):
 
 class DashboardMapView(DashboardQueryMixin, views.APIView):
     def get(self, request):
-        from assets.models import Unit
+        from assets.models import Unit, Camera
 
         scope = (request.query_params.get("scope") or "").strip().lower()
         units = Unit.objects.filter(map_enabled=True)

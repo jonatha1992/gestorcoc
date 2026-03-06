@@ -1,0 +1,112 @@
+@startuml casos_uso
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam ActorBorderColor #555555
+skinparam UsecaseBorderColor #3B82F6
+skinparam UsecaseBackgroundColor #EFF6FF
+skinparam UsecaseFontSize 11
+
+title GestorCOC - Diagrama de Casos de Uso
+
+' ─── Actores ───────────────────────────────
+actor "Operador COC\n(OPERADOR)" as Op
+actor "Fiscalizador CREV\n(SUPERVISOR)" as Crev
+actor "Administrador\n(ADMIN)" as Admin
+
+' Herencia de actores
+Op <|-- Crev
+Crev <|-- Admin
+
+' ─── Sistema ───────────────────────────────
+rectangle "GestorCOC" {
+
+    ' --- Activos ---
+    package "Gestion de Activos" {
+        usecase "Ver inventario\n(Unidades, Sistemas,\nServidores, Camaras)" as UC_VerActivos
+        usecase "ABM Activos\n(crear/editar/eliminar)" as UC_ABMActivos
+        usecase "Gestionar\nequipamiento\ncamarografo" as UC_Gear
+    }
+
+    ' --- Novedades ---
+    package "Novedades Operativas" {
+        usecase "Reportar novedad\n(falla/evento)" as UC_ReportarNovedad
+        usecase "Actualizar estado\n(OPEN→IN_PROGRESS→CLOSED)" as UC_EstadoNovedad
+        usecase "Vincular ticket\nexterno DGT/CCO" as UC_TicketExterno
+    }
+
+    ' --- Registros Filmicos ---
+    package "Registros Filmicos" {
+        usecase "Crear registro\nfilmico" as UC_CrearRegistro
+        usecase "Registrar backup\ny hash de evidencia" as UC_Backup
+        usecase "Verificar registro\n(CREV)" as UC_VerificarCREV
+        usecase "Descargar certificado\nde verificacion PDF" as UC_Certificado
+    }
+
+    ' --- Integridad ---
+    package "Verificacion de Integridad" {
+        usecase "Calcular hash\nde archivo (local)" as UC_Hash
+        usecase "Generar informe\nPDF de hashes" as UC_InformePDF
+    }
+
+    ' --- Informes ---
+    package "Informes de Video" {
+        usecase "Completar wizard\nde informe" as UC_Wizard
+        usecase "Mejorar texto\ncon IA" as UC_MejorarIA
+        usecase "Generar DOCX\ndel informe" as UC_GenerarDOCX
+    }
+
+    ' --- Hechos ---
+    package "Bitacora de Hechos" {
+        usecase "Registrar hecho\noperativo" as UC_Hecho
+        usecase "Vincular camara\nal hecho" as UC_HechoCamara
+    }
+
+    ' --- Personal ---
+    package "Gestion de Personal" {
+        usecase "ABM Personal\ninterno" as UC_ABMPersonal
+        usecase "Ver personal\nexterno" as UC_PersonalExterno
+    }
+
+    ' --- Dashboard ---
+    package "Dashboard" {
+        usecase "Ver KPIs y\ngraficas" as UC_KPIs
+        usecase "Ver mapa\ngeorreferenciado" as UC_Mapa
+    }
+}
+
+' ─── Relaciones Operador ───────────────────
+Op --> UC_VerActivos
+Op --> UC_ReportarNovedad
+Op --> UC_EstadoNovedad
+Op --> UC_TicketExterno
+Op --> UC_CrearRegistro
+Op --> UC_Backup
+Op --> UC_Hash
+Op --> UC_InformePDF
+Op --> UC_Wizard
+Op --> UC_MejorarIA
+Op --> UC_GenerarDOCX
+Op --> UC_Hecho
+Op --> UC_HechoCamara
+Op --> UC_KPIs
+Op --> UC_Mapa
+
+' ─── Relaciones CREV (exclusivas) ──────────
+Crev --> UC_VerificarCREV
+Crev --> UC_Certificado
+
+' ─── Relaciones Admin (exclusivas) ─────────
+Admin --> UC_ABMActivos
+Admin --> UC_ABMPersonal
+Admin --> UC_PersonalExterno
+Admin --> UC_Gear
+
+' ─── Includes / Extends ────────────────────
+UC_Backup ..> UC_Hash : <<include>>
+UC_VerificarCREV ..> UC_Certificado : <<include>>
+UC_MejorarIA ..> UC_Wizard : <<extend>>
+
+@enduml

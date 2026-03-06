@@ -436,7 +436,8 @@ export class NovedadesComponent implements OnInit {
     this.actaTargetNovedades = novedades || null;
     const saved = localStorage.getItem('acta_responsable');
     if (saved) {
-      const p = JSON.parse(saved);
+      let p: any;
+      try { p = JSON.parse(saved); } catch { p = {}; }
       this.actaForm.grado = p.grado || '';
       this.actaForm.nombre = p.nombre || '';
       this.actaForm.aeropuerto = p.aeropuerto || '';

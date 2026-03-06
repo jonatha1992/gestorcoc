@@ -35,9 +35,9 @@ class Command(BaseCommand):
     GEAR_CONDITIONS = [value for value, _ in CameramanGear.CONDITION_CHOICES]
     HECHO_CATEGORIES = ["POLICIAL", "OPERATIVO", "INFORMATIVO", "RELEVAMIENTO"]
     ROLE_TARGETS = {
-        "low": {"OPERADOR": 8, "SUPERVISOR": 3, "ADMIN": 1},
-        "medium": {"OPERADOR": 14, "SUPERVISOR": 4, "ADMIN": 2},
-        "high": {"OPERADOR": 28, "SUPERVISOR": 8, "ADMIN": 4},
+        "low": {"ADMIN": 2, "OP_EXTRACTION": 4, "OP_CONTROL": 3, "OP_VIEWER": 3},
+        "medium": {"ADMIN": 4, "OP_EXTRACTION": 6, "OP_CONTROL": 5, "OP_VIEWER": 5},
+        "high": {"ADMIN": 8, "OP_EXTRACTION": 12, "OP_CONTROL": 10, "OP_VIEWER": 10},
     }
 
     def add_arguments(self, parser):
@@ -188,17 +188,8 @@ class Command(BaseCommand):
                 missing = max(0, role_target.get(role, 0) - current.get(role, 0))
                 role_plan.extend([role] * missing)
 
-            # Si por desbalance previo quedo sin supervisores, fuerza uno.
-            if (
-                role_target.get("SUPERVISOR", 0) > 0
-                and current.get("SUPERVISOR", 0) == 0
-                and role_plan.count("SUPERVISOR") == 0
-                and "SUPERVISOR" in roles
-            ):
-                role_plan.append("SUPERVISOR")
-
         for role in role_plan:
-            unit = root_unit if role == "SUPERVISOR" and root_unit else random.choice(coc_units)
+            unit = random.choice(coc_units)
             person = Person.objects.create(
                 first_name=self.fake.first_name(),
                 last_name=self.fake.last_name(),
@@ -209,10 +200,7 @@ class Command(BaseCommand):
                 guard_group=random.choice(["A", "B", "C", None, ""]),
                 is_active=random.choice([True, True, True, False]),
             )
-            if role == "SUPERVISOR":
-                person.assigned_systems.set(System.objects.all())
-            else:
-                person.assigned_systems.set(System.objects.filter(unit=unit))
+            person.assigned_systems.set(System.objects.filter(unit=unit))
             self.created["personnel"] += 1
         return list(Person.objects.all())
 
@@ -221,7 +209,7 @@ class Command(BaseCommand):
             return
         statuses = ["PENDIENTE", "ENTREGADO", "DERIVADO", "FINALIZADO", "ANULADO"]
         request_types = ["OFICIO", "NOTA", "EXHORTO", "OTRO"]
-        supervisors = [person for person in people if person.role == "SUPERVISOR"]
+        supervisors = [person for person in people if person.role == "ADMIN"]
         base_order = FilmRecord.objects.aggregate(max_value=Max("order_number")).get("max_value") or 0
         for i in range(self._missing(FilmRecord.objects.count(), self.TARGETS[self.volume]["film_records"])):
             camera = random.choice(cameras)
@@ -366,7 +354,7 @@ class Command(BaseCommand):
             record.save(update_fields=["entry_date"])
             self.normalized["records_entry_date"] += 1
 
-        supervisors = list(Person.objects.filter(role="SUPERVISOR"))
+        supervisors = list(Person.objects.filter(role="ADMIN"))
         if supervisors:
             for record in FilmRecord.objects.filter(is_integrity_verified=True, verified_by_crev__isnull=True):
                 record.verified_by_crev = random.choice(supervisors)

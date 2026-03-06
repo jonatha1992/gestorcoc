@@ -77,7 +77,6 @@
           <option value="PENDIENTE">Pendiente</option>
           <option value="ENTREGADO">Entregado</option>
           <option value="DERIVADO">Derivado</option>
-          <option value="FINALIZADO">Finalizado</option>
           <option value="ANULADO">Anulado</option>
         </select>
         <select [(ngModel)]="recordsFilters['is_integrity_verified']" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
@@ -99,8 +98,6 @@
         <input [(ngModel)]="personnelFilters['unit__code']" (ngModelChange)="applyFilters()" type="text" placeholder="Unidad (code)" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
         <select [(ngModel)]="personnelFilters['role']" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
           <option value="">Rol</option>
-          <option value="OPERADOR">Operador</option>
-          <option value="SUPERVISOR">Supervisor</option>
           <option value="ADMIN">Admin</option>
           <option value="TECHNICAL">Técnico</option>
         </select>

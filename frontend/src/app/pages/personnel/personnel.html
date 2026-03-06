@@ -16,7 +16,8 @@
                 class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-md shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98]">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
                 Alta de Personal
             </button>
@@ -34,7 +35,8 @@
                 </select>
             </div>
             <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Grupo de guardia</label>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Grupo de
+                    guardia</label>
                 <input type="text" [(ngModel)]="filterGuardGroup" (ngModelChange)="onFilterChange()"
                     class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
                     placeholder="Ej: A, B, C">
@@ -44,9 +46,10 @@
                 <select [(ngModel)]="filterRole" (ngModelChange)="onFilterChange()"
                     class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
                     <option value="">Todos</option>
-                    <option value="OPERADOR">Operador</option>
-                    <option value="SUPERVISOR">Fiscalizador</option>
                     <option value="ADMIN">Administrador</option>
+                    <option value="OP_EXTRACTION">Operador Extracción</option>
+                    <option value="OP_CONTROL">Operador Control</option>
+                    <option value="OP_VIEWER">Solo Visualización</option>
                 </select>
             </div>
             <div class="space-y-1">
@@ -109,7 +112,8 @@
                                         {{ person.last_name }}, {{ person.first_name }}
                                     </div>
                                     <div class="flex items-center gap-2 mt-0.5">
-                                        <span class="text-[11px] text-slate-400 font-medium uppercase tracking-tighter">{{
+                                        <span
+                                            class="text-[11px] text-slate-400 font-medium uppercase tracking-tighter">{{
                                             getRoleLabel(person.role) }}</span>
                                         <span [class]="person.is_active
                                             ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
@@ -200,7 +204,8 @@
         @if (totalPages > 1) {
         <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
             <span class="text-xs text-slate-500">
-                {{ (currentPage - 1) * pageSize + 1 }}–{{ currentPage * pageSize > totalCount ? totalCount : currentPage * pageSize }} de {{ totalCount }} personas
+                {{ (currentPage - 1) * pageSize + 1 }}–{{ currentPage * pageSize > totalCount ? totalCount : currentPage
+                * pageSize }} de {{ totalCount }} personas
             </span>
             <div class="flex items-center gap-1">
                 <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1"
@@ -210,16 +215,16 @@
                     </svg>
                 </button>
                 @for (page of pageNumbers; track $index) {
-                    @if (page === -1) {
-                    <span class="px-2 text-slate-400 text-xs">…</span>
-                    } @else {
-                    <button (click)="goToPage(page)"
-                        [class]="page === currentPage
+                @if (page === -1) {
+                <span class="px-2 text-slate-400 text-xs">…</span>
+                } @else {
+                <button (click)="goToPage(page)"
+                    [class]="page === currentPage
                             ? 'w-8 h-8 rounded-lg text-xs font-bold bg-indigo-600 text-white'
                             : 'w-8 h-8 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors'">
-                        {{ page }}
-                    </button>
-                    }
+                    {{ page }}
+                </button>
+                }
                 }
                 <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages"
                     class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
@@ -271,7 +276,8 @@
                     <div class="space-y-1.5">
                         <label
                             class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Legajo</label>
-                        <input type="text" name="badge_number" [(ngModel)]="currentPerson.badge_number" (input)="onBadgeNumberInput()" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
+                        <input type="text" name="badge_number" [(ngModel)]="currentPerson.badge_number"
+                            (input)="onBadgeNumberInput()" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
                             class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-bold font-mono">
                     </div>
                     <div class="space-y-1.5">
@@ -288,13 +294,15 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1.5">
-                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Grupo de Guardia</label>
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Grupo de
+                            Guardia</label>
                         <input type="text" name="guard_group" [(ngModel)]="currentPerson.guard_group"
                             placeholder="Ej: A, B, C, Noche"
                             class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
                     </div>
                     <div class="space-y-1.5">
-                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Estado</label>
+                        <label
+                            class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Estado</label>
                         <select name="is_active" [(ngModel)]="currentPerson.is_active"
                             class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
                             <option [ngValue]="true">Activo</option>
@@ -318,9 +326,10 @@
                         <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Rol</label>
                         <select name="role" [(ngModel)]="currentPerson.role"
                             class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
-                            <option value="OPERADOR">OPERADOR</option>
-                            <option value="SUPERVISOR">FISCALIZADOR (CREV)</option>
                             <option value="ADMIN">ADMINISTRADOR</option>
+                            <option value="OP_EXTRACTION">OPERADOR EXTRACCIÓN</option>
+                            <option value="OP_CONTROL">OPERADOR CONTROL</option>
+                            <option value="OP_VIEWER">SOLO VISUALIZACIÓN</option>
                         </select>
                     </div>
                 </div>

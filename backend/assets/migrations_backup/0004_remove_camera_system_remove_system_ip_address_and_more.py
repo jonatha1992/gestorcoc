@@ -11,6 +11,14 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+##        migrations.RemoveField(
+#            model_name='camera',
+#            name='system',
+#        ),
+##        migrations.RemoveField(
+#            model_name='system',
+#            name='ip_address',
+#        ),
         migrations.AddField(
             model_name='system',
             name='system_type',
@@ -31,4 +39,9 @@ class Migration(migrations.Migration):
                 'abstract': False,
             },
         ),
+##        migrations.AddField(
+#            model_name='camera',
+#            name='server',
+#            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='cameras', to='assets.server'),
+#        ),
     ]

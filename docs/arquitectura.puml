@@ -1,0 +1,77 @@
+@startuml arquitectura
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam roundcorner 10
+skinparam ArrowColor #555555
+skinparam shadowing false
+
+title GestorCOC - Diagrama de Arquitectura
+
+actor "Operador / CREV" as User
+
+package "Navegador" {
+    [Angular 21 SPA\n(standalone components)] as SPA
+    note right of SPA
+        Tailwind CSS v4
+        HashService (calculo local)
+        ApiService / CacheService
+    end note
+}
+
+package "Servidor Django 5.2" {
+    package "API Layer" {
+        [URL Dispatcher] as URL
+        [ViewSets / APIViews\n(DRF)] as Views
+    }
+
+    package "Business Layer" {
+        [IntegrityService\n(records/services.py)] as Service
+        note right of Service
+            - Hash de archivos
+            - PDF de integridad
+            - DOCX de analisis
+            - Mejora texto IA
+            - AIUsageLog
+        end note
+    }
+
+    package "Data Layer" {
+        [Django ORM] as ORM
+    }
+
+    package "Static Files" {
+        [WhiteNoise\n(sirve SPA compilada)] as WN
+    }
+}
+
+package "Proveedores IA" {
+    [Gemini] as Gemini
+    [OpenRouter] as OpenRouter
+    [Groq] as Groq
+    [Ollama] as Ollama
+}
+
+package "Persistencia" {
+    database "SQLite\n(desarrollo)" as SQLite
+    database "PostgreSQL\n(produccion)" as PG
+}
+
+cloud "Railway\n(Deploy)" as Railway
+
+User --> SPA : usa
+SPA -right-> URL : HTTP JSON\n/api/*
+SPA --> WN : GET /static/*\n(build Angular)
+URL --> Views
+Views --> Service
+Service --> Gemini
+Service --> OpenRouter
+Service --> Groq
+Service --> Ollama
+Service --> ORM
+ORM --> SQLite : dev
+ORM --> PG : prod
+Railway --> PG : DATABASE_URL
+
+@enduml

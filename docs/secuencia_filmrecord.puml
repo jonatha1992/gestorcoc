@@ -1,0 +1,65 @@
+@startuml secuencia_filmrecord
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam SequenceArrowThickness 1.5
+skinparam ParticipantBorderColor #3B82F6
+skinparam ActorBorderColor #555555
+
+title GestorCOC - Flujo Completo de Registro Filmico y Verificacion CREV
+
+actor "Operador\n(OPERADOR)" as Op
+actor "Fiscalizador\n(SUPERVISOR)" as Crev
+participant "Angular SPA\n/records" as SPA
+participant "FilmRecordViewSet\nDRF" as API
+participant "IntegrityService\nrecords/services.py" as Service
+participant "FilmRecord\nModel" as Model
+database "Base de datos" as DB
+
+== 1. Crear Registro Filmico ==
+
+Op -> SPA : Completa formulario\n(causa, camara, operador,\nrango horario)
+SPA -> API : POST /api/film-records/\n{ camera, operator, judicial_case_number,\n  start_time, end_time, ... }
+API -> Model : FilmRecord.objects.create(...)
+Model -> DB : INSERT filmrecord
+DB --> Model : id=42
+Model --> API : FilmRecord(id=42,\ndelivery_status=PENDIENTE,\nis_editable=True)
+API --> SPA : HTTP 201 Created\n{ id: 42, delivery_status: "PENDIENTE" }
+SPA --> Op : Registro creado #42
+
+== 2. Registrar Backup y Hash ==
+
+Op -> SPA : Edita registro #42\n(backup_path, file_hash,\nhash_algorithm=sha256)
+SPA -> API : PATCH /api/film-records/42/\n{ has_backup: true,\n  backup_path: "/storage/...",\n  file_hash: "abc123...",\n  hash_algorithm: "sha256" }
+API -> Model : filmrecord.save()
+Model -> DB : UPDATE filmrecord SET has_backup=True, file_hash=...
+DB --> Model : OK
+API --> SPA : HTTP 200 OK
+SPA --> Op : Backup registrado
+
+note over Op, DB : El operador puede usar /integrity\npara calcular el hash localmente\nantes de ingresarlo aqui
+
+== 3. Verificacion CREV ==
+
+Crev -> SPA : Accede a registros pendientes\nde verificacion
+SPA -> API : POST /api/film-records/42/verify_by_crev/\n{ verified_by_crev_id: <person_id> }
+API -> API : Valida role == SUPERVISOR
+API -> Model : filmrecord.verified_by_crev = person\nfilmrecord.verification_date = now()
+note right of Model : save() automaticamente\nsetea is_editable = False
+Model -> DB : UPDATE filmrecord SET\nverified_by_crev_id=5,\nverification_date=NOW(),\nis_editable=False
+DB --> Model : OK
+API --> SPA : HTTP 200 OK\n{ is_editable: false,\n  verification_date: "2026-03-06T..." }
+SPA --> Crev : Registro verificado y bloqueado
+
+== 4. Descargar Certificado PDF ==
+
+Crev -> SPA : Solicita certificado
+SPA -> API : GET /api/film-records/42/verification_certificate/
+API -> Service : generar_pdf_certificado(filmrecord)
+Service --> API : PDF bytes
+API --> SPA : HTTP 200\nContent-Type: application/pdf
+SPA --> Crev : Descarga certificado.pdf
+
+@enduml

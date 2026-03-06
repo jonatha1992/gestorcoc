@@ -18,9 +18,10 @@ export class PersonnelComponent implements OnInit {
   private toastService = inject(ToastService);
 
   readonly ROLE_LABELS: Record<string, string> = {
-    OPERADOR: 'Operador',
-    SUPERVISOR: 'Fiscalizador',
     ADMIN: 'Administrador',
+    OP_EXTRACTION: 'Operador Extracción',
+    OP_CONTROL: 'Operador Control',
+    OP_VIEWER: 'Solo Visualización',
   };
 
   readonly RANK_OPTIONS = [
@@ -168,7 +169,7 @@ export class PersonnelComponent implements OnInit {
       first_name: '',
       last_name: '',
       badge_number: '',
-      role: 'OPERADOR',
+      role: 'OP_VIEWER',
       rank: 'CIVIL',
       unit: availableUnits.length > 0 ? availableUnits[0].code : '',
       guard_group: '',

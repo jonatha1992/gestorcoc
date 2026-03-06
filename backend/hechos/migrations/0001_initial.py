@@ -7,9 +7,8 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     initial = True
-
     dependencies = [
-        ('assets', '0002_initial'),
+        ('assets', '0001_initial'),
         ('personnel', '0001_initial'),
     ]
 
