@@ -31,7 +31,7 @@ graph TD
     end
 
     subgraph "Persistencia (DB)"
-        DB[(Oracle Database / SQLite)]
+        DB[(PostgreSQL)]
     end
 
     Browser -- "HTTP Request (GET/POST)" --> Urls
@@ -57,10 +57,10 @@ Aunque Django promueve "Skinny Views, Fat Models", para mantener el sistema **te
 *   **HTMX**: Usado para interacciones dinámicas (ej: filtrado de tablas sin recargar, validación in-line) para dar una experiencia "App-like" sin la complejidad de una API REST separada.
 *   **Estilos**: TailwindCSS compilado.
 
-### 2.3 Persistencia y Oracle
+### 2.3 Persistencia en PostgreSQL
 Django abstrae la base de datos a través de sus `backends`.
-*   **Producción**: `django.db.backends.oracle`. Se requiere el driver `oracledb` (o `cx_Oracle`).
-*   **Migraciones**: El sistema de migraciones de Django gestionará las diferencias de esquema automáticamente entre SQLite (Dev) y Oracle (Prod).
+*   **Produccion**: `django.db.backends.postgresql`. Se requiere el driver `psycopg2`.
+*   **Migraciones**: El sistema de migraciones de Django gestiona el esquema sobre PostgreSQL.
 
 ## 3. Estructura de Proyecto (Django App)
 
@@ -81,8 +81,7 @@ Django abstrae la base de datos a través de sus `backends`.
 ## 4. Decisiones Clave
 
 1.  **Motor de Base de Datos**:
-    *   **Desarrollo**: SQLite 3.
-    *   **Prod**: Oracle Database (19c o superior).
+    *   **Unico entorno**: PostgreSQL.
 2.  **Manejo de Archivos**:
     *   Uso de `FileSystemStorage`.
     *   Las evidencias de video (GBs) **NO** se sirven vía Django en producción, sino vía **NGINX/Apache** alias por performance (`X-Accel-Redirect`).

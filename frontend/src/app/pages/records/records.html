@@ -439,12 +439,6 @@
                     @if (selectedInforme(); as inf) {
                     <!-- Datos del informe cargados -->
                     <div class="p-4 grid grid-cols-2 gap-x-4 gap-y-2.5">
-                        @if (inf.form_data?.destinatarios) {
-                        <div class="col-span-2">
-                            <div class="text-[10px] font-bold text-slate-400 uppercase">Destinatario</div>
-                            <div class="text-xs font-semibold text-slate-700">{{ inf.form_data.destinatarios }}</div>
-                        </div>
-                        }
                         @if (inf.form_data?.tipo_informe) {
                         <div class="col-span-2">
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Tipo de Informe</div>

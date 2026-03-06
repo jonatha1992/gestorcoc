@@ -70,8 +70,8 @@ class CameramanGearViewSet(viewsets.ModelViewSet):
     filterset_fields = {
         'condition': ['exact'],
         'is_active': ['exact'],
-        'assigned_to': ['exact', 'icontains'],
+        'assigned_to': ['exact'],
     }
-    search_fields = ['name', 'serial_number', 'assigned_to']
+    search_fields = ['name', 'serial_number', 'assigned_to_name', 'assigned_to__first_name', 'assigned_to__last_name']
     ordering_fields = ['name', 'condition', 'created_at']
     ordering = ['name']

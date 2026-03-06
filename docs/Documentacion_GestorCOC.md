@@ -153,8 +153,7 @@ El sistema formaliza la comunicación con áreas que **NO** usan el sistema pero
 ## 6.1 Arquitectura de Datos
 *   **Monolito de Metadatos**: El sistema **NO almacena video**. Almacena **ubicaciones (paths)**, metadatos y Hashes.
 *   **Base de Datos**: Relacional.
-    *   **Desarrollo**: SQLite.
-    *   **Producción/Testing**: **Oracle Database**.
+    *   **Desarrollo/Produccion/Testing**: **PostgreSQL**.
 
 ## 6.2 Rendimiento
 *   **Búsqueda O(1)**: Indexación eficiente para encontrar activos por IP/Nombre instantáneamente.

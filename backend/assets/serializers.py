@@ -4,7 +4,17 @@ from .models import System, Server, Camera, CameramanGear, Unit
 class UnitSerializer(serializers.ModelSerializer):
     class Meta:
         model = Unit
-        fields = ['id', 'name', 'code', 'airport', 'parent']
+        fields = [
+            'id',
+            'name',
+            'code',
+            'airport',
+            'province',
+            'latitude',
+            'longitude',
+            'map_enabled',
+            'parent',
+        ]
 
 class CameraSerializer(serializers.ModelSerializer):
     # Se usan SerializerMethodField para manejar cámaras con server=null
@@ -33,6 +43,13 @@ class CameraSerializer(serializers.ModelSerializer):
 from .models import CameramanGear
 
 class CameramanGearSerializer(serializers.ModelSerializer):
+    assigned_to_display = serializers.SerializerMethodField(read_only=True)
+
+    def get_assigned_to_display(self, obj):
+        if obj.assigned_to:
+            return f"{obj.assigned_to.last_name}, {obj.assigned_to.first_name}"
+        return obj.assigned_to_name or ''
+
     class Meta:
         model = CameramanGear
         fields = '__all__'

@@ -44,7 +44,7 @@
                 <select [(ngModel)]="filterRole" (ngModelChange)="onFilterChange()"
                     class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
                     <option value="">Todos</option>
-                    <option value="OPERATOR">Operador</option>
+                    <option value="OPERADOR">Operador</option>
                     <option value="SUPERVISOR">Fiscalizador</option>
                     <option value="ADMIN">Administrador</option>
                 </select>
@@ -110,7 +110,7 @@
                                     </div>
                                     <div class="flex items-center gap-2 mt-0.5">
                                         <span class="text-[11px] text-slate-400 font-medium uppercase tracking-tighter">{{
-                                            person.role }}</span>
+                                            getRoleLabel(person.role) }}</span>
                                         <span [class]="person.is_active
                                             ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
                                             : 'bg-slate-100 text-slate-600 border-slate-200'"
@@ -123,7 +123,7 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="text-slate-700 font-mono text-sm font-semibold">{{ person.badge_number }}</div>
-                            <div class="text-xs text-slate-400">{{ person.rank || 'Sin rango' }}</div>
+                            <div class="text-xs text-slate-400">{{ getRankLabel(person.rank) }}</div>
                         </td>
                         <td class="px-6 py-4">
                             <div class="text-sm text-slate-600 italic font-medium mb-1">{{ person.unit || 'Sin Unidad'
@@ -140,7 +140,7 @@
                         <td class="px-6 py-4">
                             <span
                                 class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 uppercase">
-                                {{ person.role }}
+                                {{ getRoleLabel(person.role) }}
                             </span>
                         </td>
                         <td class="px-6 py-4 text-center">
@@ -271,14 +271,35 @@
                     <div class="space-y-1.5">
                         <label
                             class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Legajo</label>
-                        <input type="text" name="badge_number" [(ngModel)]="currentPerson.badge_number" required
+                        <input type="text" name="badge_number" [(ngModel)]="currentPerson.badge_number" (input)="onBadgeNumberInput()" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
                             class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-bold font-mono">
                     </div>
                     <div class="space-y-1.5">
                         <label
                             class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Jerarquía</label>
-                        <input type="text" name="rank" [(ngModel)]="currentPerson.rank"
+                        <select name="rank" [(ngModel)]="currentPerson.rank" required
                             class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
+                            @for (rank of RANK_OPTIONS; track rank.value) {
+                            <option [value]="rank.value">{{ rank.label }}</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Grupo de Guardia</label>
+                        <input type="text" name="guard_group" [(ngModel)]="currentPerson.guard_group"
+                            placeholder="Ej: A, B, C, Noche"
+                            class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Estado</label>
+                        <select name="is_active" [(ngModel)]="currentPerson.is_active"
+                            class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
+                            <option [ngValue]="true">Activo</option>
+                            <option [ngValue]="false">Inactivo</option>
+                        </select>
                     </div>
                 </div>
 
@@ -297,7 +318,7 @@
                         <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Rol</label>
                         <select name="role" [(ngModel)]="currentPerson.role"
                             class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
-                            <option value="OPERATOR">OPERADOR</option>
+                            <option value="OPERADOR">OPERADOR</option>
                             <option value="SUPERVISOR">FISCALIZADOR (CREV)</option>
                             <option value="ADMIN">ADMINISTRADOR</option>
                         </select>

@@ -34,7 +34,9 @@
       "mcp__chrome-devtools__list_console_messages",
       "mcp__chrome-devtools__evaluate_script",
       "Bash(.venvScriptspython.exe:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(python:*)",
+      "Bash(\"D:/Repositorio/jonatha1992/gestorcoc/backend/.venv/Scripts/python.exe\":*)"
     ]
   }
 }

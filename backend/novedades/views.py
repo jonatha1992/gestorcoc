@@ -16,7 +16,7 @@ class NovedadViewSet(viewsets.ModelViewSet):
         'severity': ['exact'],
         'incident_type': ['exact'],
         'created_at': ['gte', 'lte'],
-        'reported_by': ['exact', 'icontains'],
+        'reported_by': ['exact'],
         'camera': ['exact'],
         'server': ['exact'],
         'system': ['exact'],
@@ -28,7 +28,9 @@ class NovedadViewSet(viewsets.ModelViewSet):
         'server__name',
         'system__name',
         'cameraman_gear__name',
-        'reported_by',
+        'reporter_name',
+        'reported_by__first_name',
+        'reported_by__last_name',
     ]
     ordering_fields = ['created_at', 'severity', 'status']
     ordering = ['-created_at']

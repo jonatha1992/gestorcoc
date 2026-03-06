@@ -126,6 +126,43 @@ class VideoAnalysisReportApiTests(TestCase):
         service_mock.assert_called_once()
 
     @patch('records.views.IntegrityService.generate_video_analysis_docx')
+    def test_derives_destinatarios_from_fiscalia_when_missing(self, service_mock):
+        service_mock.return_value = (BytesIO(b'docx-data'), 'informe.docx')
+        report_data = {**self.valid_report_data, "fiscalia": "Fiscalia Nro. 02"}
+        report_data.pop("destinatarios", None)
+        payload = {"report_data": report_data, "frames": []}
+
+        response = self.client.post(self.url, payload, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        service_mock.assert_called_once()
+        call_payload = service_mock.call_args.args[0]
+        self.assertEqual(
+            call_payload.get("report_data", {}).get("destinatarios"),
+            "Fiscalia Nro. 02"
+        )
+
+    @patch('records.views.IntegrityService.generate_video_analysis_docx')
+    def test_overrides_manual_destinatarios_with_fiscalia(self, service_mock):
+        service_mock.return_value = (BytesIO(b'docx-data'), 'informe.docx')
+        report_data = {
+            **self.valid_report_data,
+            "destinatarios": "Dato legacy manual",
+            "fiscalia": "Fiscalia Nro. 03",
+        }
+        payload = {"report_data": report_data, "frames": []}
+
+        response = self.client.post(self.url, payload, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        service_mock.assert_called_once()
+        call_payload = service_mock.call_args.args[0]
+        self.assertEqual(
+            call_payload.get("report_data", {}).get("destinatarios"),
+            "Fiscalia Nro. 03"
+        )
+
+    @patch('records.views.IntegrityService.generate_video_analysis_docx')
     def test_accepts_legacy_location_fields_without_error(self, service_mock):
         service_mock.return_value = (BytesIO(b'docx-data'), 'informe.docx')
         report_data = {
