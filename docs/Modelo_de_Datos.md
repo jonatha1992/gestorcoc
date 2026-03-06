@@ -1,7 +1,7 @@
 # Modelo de Datos - GestorCOC v2.0
 
 > **Estrategia**: Base de datos relacional estricta para garantizar la integridad referencial.
-> **Motor Sugerido**: SQLite (Dev/Small Apps) o PostgreSQL (Prod).
+> **Motor Sugerido**: PostgreSQL.
 
 ## 1. Diagrama Entidad-Relación (DER)
 

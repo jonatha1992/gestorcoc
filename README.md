@@ -46,7 +46,7 @@ gestorcoc/
 ### Backend
 
 - **Framework:** Django 5.x
-- **Base de datos:** SQLite (desarrollo) / PostgreSQL (producción)
+- **Base de datos:** PostgreSQL
 - **API:** Django REST Framework
 - **Autenticación:** Sistema personalizado basado en roles
 

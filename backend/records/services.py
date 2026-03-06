@@ -781,7 +781,6 @@ class IntegrityService:
         month_name = month_names.get(parsed.month, "enero")
         year = str(parsed.year)
 
-        destinatarios = IntegrityService._as_text(report_data.get("destinatarios"), "URSA I - Jefe")
         tipo_informe = IntegrityService._as_text(report_data.get("tipo_informe"), "IAV - Informe Analisis de Video")
         numero_informe = IntegrityService._as_text(report_data.get("numero_informe"), f"001/{parsed.year}")
         grado = IntegrityService._as_text(report_data.get("grado"), "Oficial Mayor")
@@ -805,6 +804,7 @@ class IntegrityService:
         fiscalia = IntegrityService._as_text(report_data.get("fiscalia"), "").strip()
         fiscal = IntegrityService._as_text(report_data.get("fiscal"), "").strip()
         fiscalia_doc = fiscalia or "Fiscalia / Juzgado no consignado"
+        destinatarios = fiscalia_doc
         fiscal_doc = fiscal or "Autoridad interviniente no consignada"
         denunciante = IntegrityService._as_text(report_data.get("denunciante"), "Denunciante")
         vuelo = IntegrityService._as_text(report_data.get("vuelo"), "---")

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -139,16 +140,19 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 import dj_database_url as _dj_db_url
 
-_db_url = os.environ.get('DATABASE_URL', '')
-if _db_url:
-    DATABASES = {'default': _dj_db_url.parse(_db_url, conn_max_age=600)}
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+_db_url = os.environ.get('DATABASE_URL', '').strip()
+if not _db_url:
+    raise ImproperlyConfigured(
+        'DATABASE_URL es obligatorio. Configura una conexion PostgreSQL.'
+    )
+
+_parsed_db = _dj_db_url.parse(_db_url, conn_max_age=600)
+if _parsed_db.get('ENGINE') != 'django.db.backends.postgresql':
+    raise ImproperlyConfigured(
+        'Solo se admite PostgreSQL en DATABASE_URL.'
+    )
+
+DATABASES = {'default': _parsed_db}
 
 
 # Password validation

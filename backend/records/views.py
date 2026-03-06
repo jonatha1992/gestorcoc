@@ -1,6 +1,10 @@
 from django.http import FileResponse
 from django.core.exceptions import RequestDataTooBig
 from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_datetime
+from django.db.models import Count, Q
+from django.db.models.functions import TruncDate
+from datetime import timedelta
 from rest_framework import viewsets, views, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -105,7 +109,12 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
             return Response({
                 'error': f'No se encontró una persona con ID {verified_by_id}'
             }, status=status.HTTP_404_NOT_FOUND)
-        
+
+        if verified_by.role != 'SUPERVISOR':
+            return Response({
+                'error': 'Solo un Fiscalizador CREV puede verificar registros.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         # Marcar como verificado
         film_record.verified_by_crev = verified_by
         film_record.verification_date = timezone.now()
@@ -409,4 +418,315 @@ class DashboardStatsView(views.APIView):
                 'novedades': [{'day': str(r['day'])[:10], 'count': r['count']} for r in daily_novedades if r['day']],
             }
         })
+
+
+class DashboardQueryMixin:
+    BA_CODES = {"AEP", "EZE", "FDO"}
+
+    def _to_bool(self, raw):
+        if raw is None:
+            return None
+        val = str(raw).strip().lower()
+        if val in {"true", "1", "yes", "si", "sí"}:
+            return True
+        if val in {"false", "0", "no"}:
+            return False
+        return None
+
+    def _parse_dt(self, raw, end=False):
+        if not raw:
+            return None
+        dt = parse_datetime(raw)
+        if dt:
+            return dt
+        d = parse_date(raw)
+        if not d:
+            return None
+        base = timezone.datetime.combine(d, timezone.datetime.max.time() if end else timezone.datetime.min.time())
+        if timezone.is_naive(base):
+            base = timezone.make_aware(base, timezone.get_current_timezone())
+        return base
+
+    def _trend(self, rows, field_name, days=30):
+        cutoff = timezone.now() - timedelta(days=days)
+        data = (
+            rows.filter(**{f"{field_name}__gte": cutoff})
+            .annotate(day=TruncDate(field_name))
+            .values("day")
+            .annotate(value=Count("id"))
+            .order_by("day")
+        )
+        return [{"label": str(row["day"])[:10], "value": row["value"]} for row in data if row["day"]]
+
+    def _distribution(self, rows, field_name, fallback="SIN_DATO"):
+        data = rows.values(field_name).annotate(value=Count("id")).order_by("-value")
+        return [{"label": row[field_name] or fallback, "value": row["value"]} for row in data]
+
+    def _apply_novedades_filters(self, request):
+        from novedades.models import Novedad
+
+        qs = Novedad.objects.select_related("camera__server__system__unit", "server__system__unit", "system__unit")
+        p = request.query_params
+        search = (p.get("search") or "").strip()
+        if search:
+            qs = qs.filter(
+                Q(description__icontains=search)
+                | Q(camera__name__icontains=search)
+                | Q(server__name__icontains=search)
+                | Q(system__name__icontains=search)
+                | Q(cameraman_gear__name__icontains=search)
+                | Q(reporter_name__icontains=search)
+                | Q(reported_by__first_name__icontains=search)
+                | Q(reported_by__last_name__icontains=search)
+            )
+        for field in ["status", "severity", "incident_type", "camera", "server", "system", "cameraman_gear"]:
+            value = p.get(field)
+            if value not in (None, ""):
+                qs = qs.filter(**{field: value})
+        asset_type = (p.get("asset_type") or "").strip().upper()
+        if asset_type == "CAMERA":
+            qs = qs.filter(camera__isnull=False)
+        elif asset_type == "SERVER":
+            qs = qs.filter(server__isnull=False)
+        elif asset_type == "SYSTEM":
+            qs = qs.filter(system__isnull=False)
+        elif asset_type == "GEAR":
+            qs = qs.filter(cameraman_gear__isnull=False)
+        gte = self._parse_dt(p.get("created_at__gte"))
+        lte = self._parse_dt(p.get("created_at__lte"), end=True)
+        if gte:
+            qs = qs.filter(created_at__gte=gte)
+        if lte:
+            qs = qs.filter(created_at__lte=lte)
+        return qs
+
+    def _apply_hechos_filters(self, request):
+        from hechos.models import Hecho
+
+        qs = Hecho.objects.select_related("camera__server__system__unit")
+        p = request.query_params
+        search = (p.get("search") or "").strip()
+        if search:
+            qs = qs.filter(
+                Q(description__icontains=search)
+                | Q(sector__icontains=search)
+                | Q(external_ref__icontains=search)
+                | Q(elements__icontains=search)
+            )
+        for field in ["category", "camera"]:
+            value = p.get(field)
+            if value not in (None, ""):
+                qs = qs.filter(**{field: value})
+        for bool_field in ["is_solved", "coc_intervention", "generated_cause"]:
+            parsed = self._to_bool(p.get(bool_field))
+            if parsed is not None:
+                qs = qs.filter(**{bool_field: parsed})
+        gte = self._parse_dt(p.get("timestamp__gte"))
+        lte = self._parse_dt(p.get("timestamp__lte"), end=True)
+        if gte:
+            qs = qs.filter(timestamp__gte=gte)
+        if lte:
+            qs = qs.filter(timestamp__lte=lte)
+        return qs
+
+    def _apply_records_filters(self, request):
+        qs = FilmRecord.objects.select_related("camera__server__system__unit", "operator", "received_by", "verified_by_crev")
+        p = request.query_params
+        search = (p.get("search") or "").strip()
+        if search:
+            qs = qs.filter(
+                Q(judicial_case_number__icontains=search)
+                | Q(issue_number__icontains=search)
+                | Q(request_number__icontains=search)
+                | Q(case_title__icontains=search)
+                | Q(requester__icontains=search)
+                | Q(camera__name__icontains=search)
+                | Q(operator__first_name__icontains=search)
+                | Q(operator__last_name__icontains=search)
+            )
+        for field in ["delivery_status", "camera", "operator", "received_by", "verified_by_crev"]:
+            value = p.get(field)
+            if value not in (None, ""):
+                qs = qs.filter(**{field: value})
+        for bool_field in ["is_integrity_verified", "has_backup"]:
+            parsed = self._to_bool(p.get(bool_field))
+            if parsed is not None:
+                qs = qs.filter(**{bool_field: parsed})
+        date_from = parse_date(p.get("entry_date__gte") or "")
+        date_to = parse_date(p.get("entry_date__lte") or "")
+        if date_from:
+            qs = qs.filter(entry_date__gte=date_from)
+        if date_to:
+            qs = qs.filter(entry_date__lte=date_to)
+        return qs
+
+    def _apply_personnel_filters(self, request):
+        from personnel.models import Person
+
+        qs = Person.objects.select_related("unit")
+        p = request.query_params
+        search = (p.get("search") or "").strip()
+        if search:
+            qs = qs.filter(
+                Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(badge_number__icontains=search)
+                | Q(rank__icontains=search)
+                | Q(guard_group__icontains=search)
+                | Q(unit__name__icontains=search)
+                | Q(unit__code__icontains=search)
+            )
+        for field in ["role", "guard_group"]:
+            value = p.get(field)
+            if value not in (None, ""):
+                qs = qs.filter(**{field: value})
+        unit_code = p.get("unit__code") or p.get("unit")
+        if unit_code not in (None, ""):
+            qs = qs.filter(unit__code=unit_code)
+        active = self._to_bool(p.get("is_active"))
+        if active is not None:
+            qs = qs.filter(is_active=active)
+        return qs
+
+
+class DashboardNovedadesView(DashboardQueryMixin, views.APIView):
+    def get(self, request):
+        rows = self._apply_novedades_filters(request)
+        total = rows.count()
+        cards = [
+            {"id": "total", "label": "Total Novedades", "value": total},
+            {"id": "open", "label": "Abiertas", "value": rows.filter(status="OPEN").count()},
+            {"id": "critical_high", "label": "Críticas/Altas", "value": rows.filter(severity__in=["CRITICAL", "HIGH"]).count()},
+            {"id": "closed", "label": "Cerradas", "value": rows.filter(status="CLOSED").count()},
+        ]
+        return Response({
+            "module": "novedades",
+            "cards": cards,
+            "series": {
+                "trend": self._trend(rows, "created_at"),
+                "distribution_primary": self._distribution(rows, "status"),
+                "distribution_secondary": self._distribution(rows, "severity"),
+            },
+            "totals": {"records": total},
+            "empty_state": {"is_empty": total == 0, "message": "No hay novedades para los filtros seleccionados."},
+        })
+
+
+class DashboardHechosView(DashboardQueryMixin, views.APIView):
+    def get(self, request):
+        rows = self._apply_hechos_filters(request)
+        total = rows.count()
+        cards = [
+            {"id": "total", "label": "Total Hechos", "value": total},
+            {"id": "today", "label": "Hoy", "value": rows.filter(timestamp__date=timezone.now().date()).count()},
+            {"id": "unsolved", "label": "Sin Resolver", "value": rows.filter(is_solved=False).count()},
+            {"id": "solved", "label": "Resueltos", "value": rows.filter(is_solved=True).count()},
+        ]
+        return Response({
+            "module": "hechos",
+            "cards": cards,
+            "series": {
+                "trend": self._trend(rows, "timestamp"),
+                "distribution_primary": self._distribution(rows, "category"),
+                "distribution_secondary": [
+                    {"label": "Resueltos", "value": rows.filter(is_solved=True).count()},
+                    {"label": "Pendientes", "value": rows.filter(is_solved=False).count()},
+                ],
+            },
+            "totals": {"records": total},
+            "empty_state": {"is_empty": total == 0, "message": "No hay hechos registrados. Cargá hechos para habilitar analítica."},
+        })
+
+
+class DashboardRecordsView(DashboardQueryMixin, views.APIView):
+    def get(self, request):
+        rows = self._apply_records_filters(request)
+        total = rows.count()
+        cards = [
+            {"id": "total", "label": "Total Registros", "value": total},
+            {"id": "verified", "label": "Verificados", "value": rows.filter(is_integrity_verified=True).count()},
+            {"id": "pending", "label": "Pendientes", "value": rows.filter(is_integrity_verified=False).count()},
+            {"id": "month", "label": "Mes Actual", "value": rows.filter(created_at__month=timezone.now().month, created_at__year=timezone.now().year).count()},
+        ]
+        return Response({
+            "module": "records",
+            "cards": cards,
+            "series": {
+                "trend": self._trend(rows, "created_at"),
+                "distribution_primary": self._distribution(rows, "delivery_status"),
+                "distribution_secondary": [
+                    {"label": "Verificados", "value": rows.filter(is_integrity_verified=True).count()},
+                    {"label": "No verificados", "value": rows.filter(is_integrity_verified=False).count()},
+                ],
+            },
+            "totals": {"records": total},
+            "empty_state": {"is_empty": total == 0, "message": "No hay registros fílmicos para los filtros seleccionados."},
+        })
+
+
+class DashboardPersonnelView(DashboardQueryMixin, views.APIView):
+    def get(self, request):
+        rows = self._apply_personnel_filters(request)
+        total = rows.count()
+        cards = [
+            {"id": "total", "label": "Total Personal", "value": total},
+            {"id": "active", "label": "Activos", "value": rows.filter(is_active=True).count()},
+            {"id": "inactive", "label": "Inactivos", "value": rows.filter(is_active=False).count()},
+            {"id": "supervisors", "label": "Supervisores", "value": rows.filter(role="SUPERVISOR").count()},
+        ]
+        return Response({
+            "module": "personnel",
+            "cards": cards,
+            "series": {
+                "trend": self._trend(rows, "created_at"),
+                "distribution_primary": self._distribution(rows, "role"),
+                "distribution_secondary": [
+                    {"label": "Activos", "value": rows.filter(is_active=True).count()},
+                    {"label": "Inactivos", "value": rows.filter(is_active=False).count()},
+                ],
+            },
+            "totals": {"records": total},
+            "empty_state": {"is_empty": total == 0, "message": "No hay personal para los filtros seleccionados."},
+        })
+
+
+class DashboardMapView(DashboardQueryMixin, views.APIView):
+    def get(self, request):
+        from assets.models import Unit
+
+        scope = (request.query_params.get("scope") or "").strip().lower()
+        units = Unit.objects.filter(map_enabled=True)
+        if scope == "ba":
+            units = units.filter(code__in=self.BA_CODES)
+        novedades_base = self._apply_novedades_filters(request)
+        hechos_base = self._apply_hechos_filters(request)
+        records_base = self._apply_records_filters(request)
+        points = []
+        for unit in units:
+            if unit.latitude is None or unit.longitude is None:
+                continue
+            novedades = novedades_base.filter(
+                Q(camera__server__system__unit=unit) | Q(server__system__unit=unit) | Q(system__unit=unit)
+            )
+            hechos = hechos_base.filter(camera__server__system__unit=unit)
+            records = records_base.filter(camera__server__system__unit=unit)
+            cameras = Camera.objects.filter(server__system__unit=unit)
+            last_event = max(
+                [val for val in [novedades.aggregate(v=Max("created_at"))["v"], hechos.aggregate(v=Max("timestamp"))["v"], records.aggregate(v=Max("created_at"))["v"]] if val is not None],
+                default=None,
+            )
+            points.append({
+                "unit_code": unit.code,
+                "unit_name": unit.name,
+                "airport": unit.airport,
+                "lat": float(unit.latitude),
+                "lon": float(unit.longitude),
+                "novedades_count": novedades.count(),
+                "hechos_count": hechos.count(),
+                "records_count": records.count(),
+                "cameras_online": cameras.filter(status="ONLINE").count(),
+                "cameras_offline": cameras.exclude(status="ONLINE").count(),
+                "last_event_at": last_event.isoformat() if last_event else None,
+            })
+        return Response({"scope": scope or "all", "points": points})
 

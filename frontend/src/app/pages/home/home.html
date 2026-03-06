@@ -1,617 +1,222 @@
 <div class="space-y-5">
-
-    <!-- Top bar -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div class="flex items-center gap-2">
-            <!-- Module selector -->
-            <div class="relative">
-                <select [ngModel]="selectedModule()" (ngModelChange)="selectedModule.set($event)"
-                    class="appearance-none bg-white border border-slate-200 text-slate-700 py-1.5 pl-3 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium shadow-sm transition-all cursor-pointer hover:border-indigo-300">
-                    @for (m of modules; track m.value) {
-                    <option [value]="m.value">{{ m.label }}</option>
-                    }
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </div>
-            </div>
-            <span class="text-xs text-slate-400 font-medium">Vista de módulo</span>
-        </div>
-
-        <div class="flex items-center gap-2">
-            <button (click)="refreshData()"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Actualizar
-            </button>
-            <button (click)="exportToExcel()"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Exportar Excel
-            </button>
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
-                Sistema Operativo
-            </span>
-        </div>
+  <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex items-center gap-2">
+        <label class="text-xs font-bold uppercase text-slate-500 tracking-wider">Módulo</label>
+        <select
+          [ngModel]="selectedModule()"
+          (ngModelChange)="onModuleChange($event)"
+          class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          @for (module of modules; track module.value) {
+            <option [value]="module.value">{{ module.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          (click)="refresh()"
+          class="px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700">
+          Actualizar
+        </button>
+        <button
+          (click)="clearFilters()"
+          class="px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">
+          Limpiar filtros
+        </button>
+      </div>
     </div>
 
-    <!-- Global KPI strip -->
-    <div class="grid grid-cols-2 gap-3"
-        [ngClass]="selectedModule() === 'novedades' ? 'md:grid-cols-5' : 'md:grid-cols-3'">
-        <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
-            <div class="p-2 bg-indigo-50 rounded-lg text-indigo-600 shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-            </div>
-            <div>
-                <p class="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Sistemas</p>
-                <p class="text-lg font-bold text-slate-800">{{ systems().length }}</p>
-            </div>
-        </div>
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-2">
+      @if (selectedModule() === 'novedades') {
+        <input
+          [(ngModel)]="novedadesFilters.search"
+          (ngModelChange)="applyFilters()"
+          type="text"
+          placeholder="Buscar"
+          class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <select [(ngModel)]="novedadesFilters.status" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+          <option value="">Estado</option>
+          <option value="OPEN">Abierta</option>
+          <option value="IN_PROGRESS">En progreso</option>
+          <option value="CLOSED">Cerrada</option>
+        </select>
+        <select [(ngModel)]="novedadesFilters.severity" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+          <option value="">Severidad</option>
+          <option value="LOW">Baja</option>
+          <option value="MEDIUM">Media</option>
+          <option value="HIGH">Alta</option>
+          <option value="CRITICAL">Crítica</option>
+        </select>
+        <input [(ngModel)]="novedadesFilters.incident_type" (ngModelChange)="applyFilters()" type="text" placeholder="Tipo incidente" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="novedadesFilters.created_at__gte" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="novedadesFilters.created_at__lte" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+      }
 
-        @if (selectedModule() === 'novedades') {
-        <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
-            <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600 shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-            </div>
-            <div>
-                <p class="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Cámaras Online</p>
-                <p class="text-lg font-bold text-slate-800">{{ camerasOnline() }}<span class="text-slate-400 text-sm font-normal">/{{ cameras().length }}</span></p>
-            </div>
-        </div>
-        }
+      @if (selectedModule() === 'hechos') {
+        <input [(ngModel)]="hechosFilters.search" (ngModelChange)="applyFilters()" type="text" placeholder="Buscar" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <select [(ngModel)]="hechosFilters.category" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+          <option value="">Categoría</option>
+          <option value="POLICIAL">Policial</option>
+          <option value="OPERATIVO">Operativo</option>
+          <option value="INFORMATIVO">Informativo</option>
+          <option value="RELEVAMIENTO">Relevamiento</option>
+        </select>
+        <select [(ngModel)]="hechosFilters.is_solved" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+          <option value="">Resolución</option>
+          <option value="true">Resuelto</option>
+          <option value="false">Pendiente</option>
+        </select>
+        <input [(ngModel)]="hechosFilters.timestamp__gte" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="hechosFilters.timestamp__lte" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+      }
 
-        @if (selectedModule() === 'novedades') {
-        <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
-            <div class="p-2 rounded-lg shrink-0" [class]="camerasOffline() > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-400'">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                </svg>
-            </div>
-            <div>
-                <p class="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Cámaras Offline</p>
-                <p class="text-lg font-bold" [class]="camerasOffline() > 0 ? 'text-rose-600' : 'text-slate-800'">{{ camerasOffline() }}</p>
-            </div>
-        </div>
-        }
+      @if (selectedModule() === 'records') {
+        <input [(ngModel)]="recordsFilters.search" (ngModelChange)="applyFilters()" type="text" placeholder="Buscar" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <select [(ngModel)]="recordsFilters.delivery_status" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+          <option value="">Entrega</option>
+          <option value="PENDIENTE">Pendiente</option>
+          <option value="ENTREGADO">Entregado</option>
+          <option value="DERIVADO">Derivado</option>
+          <option value="FINALIZADO">Finalizado</option>
+          <option value="ANULADO">Anulado</option>
+        </select>
+        <select [(ngModel)]="recordsFilters.is_integrity_verified" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+          <option value="">Integridad</option>
+          <option value="true">Verificado</option>
+          <option value="false">Pendiente</option>
+        </select>
+        <select [(ngModel)]="recordsFilters.has_backup" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+          <option value="">Backup</option>
+          <option value="true">Con backup</option>
+          <option value="false">Sin backup</option>
+        </select>
+        <input [(ngModel)]="recordsFilters.entry_date__gte" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="recordsFilters.entry_date__lte" (ngModelChange)="applyFilters()" type="date" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+      }
 
-        <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
-            <div class="p-2 rounded-lg shrink-0" [class]="openNovedades() > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400'">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-            </div>
-            <div>
-                <p class="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Novedades Abiertas</p>
-                <p class="text-lg font-bold" [class]="openNovedades() > 0 ? 'text-amber-600' : 'text-slate-800'">{{ openNovedades() }}</p>
-            </div>
-        </div>
+      @if (selectedModule() === 'personnel') {
+        <input [(ngModel)]="personnelFilters.search" (ngModelChange)="applyFilters()" type="text" placeholder="Buscar" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <input [(ngModel)]="personnelFilters.unit__code" (ngModelChange)="applyFilters()" type="text" placeholder="Unidad (code)" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+        <select [(ngModel)]="personnelFilters.role" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+          <option value="">Rol</option>
+          <option value="OPERADOR">Operador</option>
+          <option value="SUPERVISOR">Supervisor</option>
+          <option value="ADMIN">Admin</option>
+          <option value="TECHNICAL">Técnico</option>
+        </select>
+        <select [(ngModel)]="personnelFilters.is_active" (ngModelChange)="applyFilters()" class="text-xs border border-slate-200 rounded-lg px-3 py-2">
+          <option value="">Estado</option>
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
+        <input [(ngModel)]="personnelFilters.guard_group" (ngModelChange)="applyFilters()" type="text" placeholder="Guardia" class="text-xs border border-slate-200 rounded-lg px-3 py-2" />
+      }
+    </div>
+  </div>
 
-        <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
-            <div class="p-2 bg-violet-50 rounded-lg text-violet-600 shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-            </div>
-            <div>
-                <p class="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Personal Activo</p>
-                <p class="text-lg font-bold text-slate-800">{{ activePersonnel() }}</p>
-            </div>
+  @if (loading()) {
+    <div class="bg-white border border-slate-100 rounded-2xl p-10 text-center text-slate-500 text-sm">Cargando dashboard...</div>
+  } @else {
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      @for (card of cards(); track card.id) {
+        <div class="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+          <div class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{{ card.label }}</div>
+          <div class="text-2xl font-black text-slate-800 mt-1">{{ card.value }}</div>
         </div>
+      }
     </div>
 
-    <!-- ════════════════════════════════════════════════════ -->
-    <!-- MODULE: NOVEDADES                                   -->
-    <!-- ════════════════════════════════════════════════════ -->
-    @if (selectedModule() === 'novedades') {
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    @if (emptyState().is_empty) {
+      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
+        <p class="text-sm text-amber-800 font-semibold">{{ emptyState().message }}</p>
+        <a [routerLink]="moduleRoute()" class="inline-block mt-3 px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-lg hover:bg-amber-700">Ir a cargar datos</a>
+      </div>
+    }
 
-        <!-- Left: KPIs + table -->
-        <div class="lg:col-span-2 space-y-4">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm lg:col-span-2">
+        <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Tendencia (últimos 30 días)</div>
+        <svg class="w-full h-40 mt-3" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polyline [attr.points]="getTrendPolyline(trend())" fill="none" stroke="#3b82f6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        </svg>
+        <div class="mt-2 grid grid-cols-6 gap-1 text-[10px] text-slate-400">
+          @for (point of trend().slice(-6); track point.label) {
+            <span class="text-center">{{ point.label.slice(5) }}</span>
+          }
+        </div>
+      </div>
 
-            <!-- Module KPIs -->
-            <div class="grid grid-cols-3 gap-3">
-                <div class="bg-amber-50 border border-amber-100 rounded-xl p-4 text-center">
-                    <p class="text-2xl font-bold text-amber-700">{{ openNovedades() }}</p>
-                    <p class="text-xs font-medium text-amber-600 mt-1">Abiertas</p>
-                </div>
-                <div class="rounded-xl p-4 text-center border"
-                    [class]="novedadesCritical() > 0 ? 'bg-rose-50 border-rose-100' : 'bg-slate-50 border-slate-100'">
-                    <p class="text-2xl font-bold" [class]="novedadesCritical() > 0 ? 'text-rose-700' : 'text-slate-600'">{{ novedadesCritical() }}</p>
-                    <p class="text-xs font-medium mt-1" [class]="novedadesCritical() > 0 ? 'text-rose-600' : 'text-slate-500'">Críticas / Altas</p>
-                </div>
-                <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-center">
-                    <p class="text-2xl font-bold text-emerald-700">{{ novedadesClosed() }}</p>
-                    <p class="text-xs font-medium text-emerald-600 mt-1">Cerradas</p>
-                </div>
+      <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+        <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Distribución principal</div>
+        <div class="mt-3 space-y-3">
+          @for (item of primaryDist(); track item.label) {
+            <div>
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-medium text-slate-600">{{ item.label }}</span>
+                <span class="font-bold text-slate-700">{{ item.value }}</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-slate-100 mt-1 overflow-hidden">
+                <div class="h-2 bg-indigo-500 rounded-full" [style.width.%]="getChartWidth(item.value, getChartMax(primaryDist()))"></div>
+              </div>
             </div>
+          }
+        </div>
+      </div>
+    </div>
 
-            <!-- Module analytics -->
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100">
-                    <h3 class="text-sm font-bold text-slate-700">Analítica de Novedades</h3>
-                </div>
-                <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="rounded-lg border border-slate-100 p-3">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tendencia (6 meses)</p>
-                        <svg class="w-full h-24 mt-2" viewBox="0 0 100 100" preserveAspectRatio="none">
-                            <polyline [attr.points]="getTrendPolyline(novedadesTrend())"
-                                fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
-                        </svg>
-                        <div class="mt-2 grid grid-cols-6 gap-1 text-[10px] text-slate-400">
-                            @for (point of novedadesTrend(); track point.label) {
-                            <span class="text-center">{{ point.label }}</span>
-                            }
-                        </div>
-                    </div>
-                    <div class="rounded-lg border border-slate-100 p-3">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Torta por estado</p>
-                        <div class="mt-2 flex items-center gap-4">
-                            <div class="w-24 h-24 rounded-full border border-slate-100 shrink-0"
-                                [style.background]="getPieStyle(novedadesStatusChart(), ['#3b82f6','#f59e0b','#10b981'])"></div>
-                            <div class="space-y-1 text-xs w-full">
-                                @for (item of novedadesStatusChart(); track item.label) {
-                                <div class="flex items-center justify-between gap-2">
-                                    <span class="inline-flex items-center gap-1.5 text-slate-600">
-                                        <span class="w-2 h-2 rounded-full"
-                                            [style.background]="getPaletteColor($index, ['#3b82f6','#f59e0b','#10b981'])"></span>
-                                        {{ item.label }}
-                                    </span>
-                                    <span class="font-semibold text-slate-700">{{ item.value }}</span>
-                                </div>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+        <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Distribución secundaria</div>
+        <div class="mt-3 space-y-3">
+          @for (item of secondaryDist(); track item.label) {
+            <div>
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-medium text-slate-600">{{ item.label }}</span>
+                <span class="font-bold text-slate-700">{{ item.value }}</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-slate-100 mt-1 overflow-hidden">
+                <div class="h-2 bg-emerald-500 rounded-full" [style.width.%]="getChartWidth(item.value, getChartMax(secondaryDist()))"></div>
+              </div>
             </div>
+          }
+        </div>
+      </div>
+
+      <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm lg:col-span-2">
+        <div class="flex items-center justify-between">
+          <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Mapa operativo (BA)</div>
+          <div class="text-[10px] text-slate-400">Click en un punto para detalle</div>
+        </div>
+        <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="relative h-64 rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
+            @for (point of mapPoints(); track point.unit_code) {
+              <button
+                type="button"
+                (click)="selectPoint(point)"
+                [style.left.%]="mapLeft(point)"
+                [style.top.%]="mapTop(point)"
+                class="absolute -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow bg-rose-500 hover:scale-110 transition-transform"
+                [title]="point.unit_name + ' (' + point.unit_code + ')'">
+              </button>
             }
+          </div>
+          <div class="rounded-xl border border-slate-200 p-3 bg-slate-50">
+            @if (selectedPoint(); as p) {
+              <div class="text-xs font-bold text-slate-700">{{ p.unit_name }} ({{ p.unit_code }})</div>
+              <div class="text-[11px] text-slate-500 mt-1">{{ p.airport || 'Sin aeropuerto' }}</div>
+              <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div class="bg-white rounded-lg p-2 border border-slate-200"><span class="text-slate-400">Novedades</span><div class="font-bold text-slate-700">{{ p.novedades_count }}</div></div>
+                <div class="bg-white rounded-lg p-2 border border-slate-200"><span class="text-slate-400">Hechos</span><div class="font-bold text-slate-700">{{ p.hechos_count }}</div></div>
+                <div class="bg-white rounded-lg p-2 border border-slate-200"><span class="text-slate-400">Registros</span><div class="font-bold text-slate-700">{{ p.records_count }}</div></div>
+                <div class="bg-white rounded-lg p-2 border border-slate-200"><span class="text-slate-400">Cámaras ON/OFF</span><div class="font-bold text-slate-700">{{ p.cameras_online }}/{{ p.cameras_offline }}</div></div>
+              </div>
+              <div class="mt-3 text-[11px] text-slate-500">Último evento: {{ p.last_event_at || 'Sin datos' }}</div>
+            } @else {
+              <div class="text-xs text-slate-500">No hay puntos disponibles para el alcance BA.</div>
+            }
+          </div>
         </div>
-
-        <!-- Right: Tasks + camera status -->
-        <div class="space-y-4">
-
-            <!-- Charts panel -->
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100 bg-amber-50/50">
-                    <h3 class="text-sm font-bold text-amber-800">Gráficos del Turno — Novedades</h3>
-                </div>
-                <div class="p-4 space-y-4">
-                    <div>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Severidad</p>
-                        <div class="mt-2 space-y-2">
-                            @for (item of novedadesSeverityChart(); track item.label) {
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
-                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
-                                </div>
-                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
-                                        [style.width.%]="getChartWidth(item.value, getChartMax(novedadesSeverityChart()))"></div>
-                                </div>
-                            </div>
-                            }
-                        </div>
-                    </div>
-                    <div class="pt-2 border-t border-slate-100">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estado</p>
-                        <div class="mt-2 space-y-2">
-                            @for (item of novedadesStatusChart(); track item.label) {
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
-                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
-                                </div>
-                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
-                                        [style.width.%]="getChartWidth(item.value, getChartMax(novedadesStatusChart()))"></div>
-                                </div>
-                            </div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Camera mini status -->
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100">
-                    <h3 class="text-sm font-bold text-slate-700">Estado de Cámaras</h3>
-                </div>
-                <div class="p-4 space-y-3">
-                    @if (loadingAssets()) {
-                    <div class="animate-pulse space-y-2">
-                        @for (i of [1,2,3]; track i) {
-                        <div class="h-4 bg-slate-100 rounded w-full"></div>
-                        }
-                    </div>
-                    } @else if (systems().length === 0) {
-                    <p class="text-xs text-slate-400 text-center py-4">Sin sistemas registrados</p>
-                    } @else {
-                    @for (sys of systems(); track sys.id) {
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="font-medium text-slate-600 truncate max-w-[70%]">{{ sys.name }}</span>
-                            <span class="text-slate-400">{{ getSystemOnlineCount(sys.id) }}/{{ getSystemTotalCount(sys.id) }}</span>
-                        </div>
-                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                            <div class="bg-emerald-500 h-1.5 rounded-full transition-all"
-                                [style.width.%]="getSystemOnlinePercentage(sys.id)"></div>
-                        </div>
-                    </div>
-                    }
-                    }
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
-    }
-
-    <!-- ════════════════════════════════════════════════════ -->
-    <!-- MODULE: HECHOS                                      -->
-    <!-- ════════════════════════════════════════════════════ -->
-    @if (selectedModule() === 'hechos') {
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-        <!-- Left: KPIs + table -->
-        <div class="lg:col-span-2 space-y-4">
-
-            <!-- Module KPIs -->
-            <div class="grid grid-cols-3 gap-3">
-                <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center">
-                    <p class="text-2xl font-bold text-indigo-700">{{ hechosToday() }}</p>
-                    <p class="text-xs font-medium text-indigo-600 mt-1">Hechos Hoy</p>
-                </div>
-                <div class="rounded-xl p-4 text-center border"
-                    [class]="hechosUnsolved() > 0 ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'">
-                    <p class="text-2xl font-bold" [class]="hechosUnsolved() > 0 ? 'text-amber-700' : 'text-emerald-700'">{{ hechosUnsolved() }}</p>
-                    <p class="text-xs font-medium mt-1" [class]="hechosUnsolved() > 0 ? 'text-amber-600' : 'text-emerald-600'">Sin resolver</p>
-                </div>
-                <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
-                    <p class="text-2xl font-bold text-slate-700">{{ hechos().length }}</p>
-                    <p class="text-xs font-medium text-slate-500 mt-1">Total Registrados</p>
-                </div>
-            </div>
-
-            <!-- Module analytics -->
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100">
-                    <h3 class="text-sm font-bold text-slate-700">Analítica de Hechos</h3>
-                </div>
-                <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="rounded-lg border border-slate-100 p-3">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tendencia (6 meses)</p>
-                        <svg class="w-full h-24 mt-2" viewBox="0 0 100 100" preserveAspectRatio="none">
-                            <polyline [attr.points]="getTrendPolyline(hechosTrend())"
-                                fill="none" stroke="#6366f1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
-                        </svg>
-                        <div class="mt-2 grid grid-cols-6 gap-1 text-[10px] text-slate-400">
-                            @for (point of hechosTrend(); track point.label) {
-                            <span class="text-center">{{ point.label }}</span>
-                            }
-                        </div>
-                    </div>
-                    <div class="rounded-lg border border-slate-100 p-3">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Torta por resolución</p>
-                        <div class="mt-2 flex items-center gap-4">
-                            <div class="w-24 h-24 rounded-full border border-slate-100 shrink-0"
-                                [style.background]="getPieStyle(hechosResolutionChart(), ['#10b981','#f59e0b'])"></div>
-                            <div class="space-y-1 text-xs w-full">
-                                @for (item of hechosResolutionChart(); track item.label) {
-                                <div class="flex items-center justify-between gap-2">
-                                    <span class="inline-flex items-center gap-1.5 text-slate-600">
-                                        <span class="w-2 h-2 rounded-full"
-                                            [style.background]="getPaletteColor($index, ['#10b981','#f59e0b'])"></span>
-                                        {{ item.label }}
-                                    </span>
-                                    <span class="font-semibold text-slate-700">{{ item.value }}</span>
-                                </div>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right: Tasks + camera status -->
-        <div class="space-y-4">
-
-            <!-- Charts panel -->
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100 bg-indigo-50/50">
-                    <h3 class="text-sm font-bold text-indigo-800">Gráficos del Turno — Hechos</h3>
-                </div>
-                <div class="p-4 space-y-4">
-                    <div>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Categorías</p>
-                        <div class="mt-2 space-y-2">
-                            @for (item of hechosCategoryChart(); track item.label) {
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
-                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
-                                </div>
-                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
-                                        [style.width.%]="getChartWidth(item.value, getChartMax(hechosCategoryChart()))"></div>
-                                </div>
-                            </div>
-                            }
-                        </div>
-                    </div>
-                    <div class="pt-2 border-t border-slate-100">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Resolución</p>
-                        <div class="mt-2 space-y-2">
-                            @for (item of hechosResolutionChart(); track item.label) {
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
-                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
-                                </div>
-                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
-                                        [style.width.%]="getChartWidth(item.value, getChartMax(hechosResolutionChart()))"></div>
-                                </div>
-                            </div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-    }
-
-    <!-- ════════════════════════════════════════════════════ -->
-    <!-- MODULE: REGISTROS FÍLMICOS                          -->
-    <!-- ════════════════════════════════════════════════════ -->
-    @if (selectedModule() === 'records') {
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-        <!-- Left: KPIs + table -->
-        <div class="lg:col-span-2 space-y-4">
-
-            <!-- Module KPIs -->
-            <div class="grid grid-cols-3 gap-3">
-                <div class="bg-violet-50 border border-violet-100 rounded-xl p-4 text-center">
-                    <p class="text-2xl font-bold text-violet-700">{{ records().length }}</p>
-                    <p class="text-xs font-medium text-violet-600 mt-1">Total Registros</p>
-                </div>
-                <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center">
-                    <p class="text-2xl font-bold text-indigo-700">{{ recordsThisMonth() }}</p>
-                    <p class="text-xs font-medium text-indigo-600 mt-1">Este Mes</p>
-                </div>
-                <div class="bg-sky-50 border border-sky-100 rounded-xl p-4 text-center">
-                    <p class="text-2xl font-bold text-sky-700">{{ recordsToday() }}</p>
-                    <p class="text-xs font-medium text-sky-600 mt-1">Hoy</p>
-                </div>
-            </div>
-
-            <!-- Module analytics -->
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100">
-                    <h3 class="text-sm font-bold text-slate-700">Analítica de Registros</h3>
-                </div>
-                <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="rounded-lg border border-slate-100 p-3">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tendencia (6 meses)</p>
-                        <svg class="w-full h-24 mt-2" viewBox="0 0 100 100" preserveAspectRatio="none">
-                            <polyline [attr.points]="getTrendPolyline(recordsTrend())"
-                                fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
-                        </svg>
-                        <div class="mt-2 grid grid-cols-6 gap-1 text-[10px] text-slate-400">
-                            @for (point of recordsTrend(); track point.label) {
-                            <span class="text-center">{{ point.label }}</span>
-                            }
-                        </div>
-                    </div>
-                    <div class="rounded-lg border border-slate-100 p-3">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Torta por integridad</p>
-                        <div class="mt-2 flex items-center gap-4">
-                            <div class="w-24 h-24 rounded-full border border-slate-100 shrink-0"
-                                [style.background]="getPieStyle(recordsIntegrityChart(), ['#10b981','#64748b'])"></div>
-                            <div class="space-y-1 text-xs w-full">
-                                @for (item of recordsIntegrityChart(); track item.label) {
-                                <div class="flex items-center justify-between gap-2">
-                                    <span class="inline-flex items-center gap-1.5 text-slate-600">
-                                        <span class="w-2 h-2 rounded-full"
-                                            [style.background]="getPaletteColor($index, ['#10b981','#64748b'])"></span>
-                                        {{ item.label }}
-                                    </span>
-                                    <span class="font-semibold text-slate-700">{{ item.value }}</span>
-                                </div>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right: Tasks + camera status -->
-        <div class="space-y-4">
-
-            <!-- Charts panel -->
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100 bg-violet-50/50">
-                    <h3 class="text-sm font-bold text-violet-800">Gráficos del Turno — Registros</h3>
-                </div>
-                <div class="p-4 space-y-4">
-                    <div>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estado de entrega</p>
-                        <div class="mt-2 space-y-2">
-                            @for (item of recordsDeliveryChart(); track item.label) {
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
-                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
-                                </div>
-                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
-                                        [style.width.%]="getChartWidth(item.value, getChartMax(recordsDeliveryChart()))"></div>
-                                </div>
-                            </div>
-                            }
-                        </div>
-                    </div>
-                    <div class="pt-2 border-t border-slate-100">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Integridad</p>
-                        <div class="mt-2 space-y-2">
-                            @for (item of recordsIntegrityChart(); track item.label) {
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
-                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
-                                </div>
-                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
-                                        [style.width.%]="getChartWidth(item.value, getChartMax(recordsIntegrityChart()))"></div>
-                                </div>
-                            </div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-    }
-
-    <!-- ════════════════════════════════════════════════════ -->
-    <!-- MODULE: PERSONAL                                    -->
-    <!-- ════════════════════════════════════════════════════ -->
-    @if (selectedModule() === 'personal') {
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-        <!-- Left: KPIs + personnel grid -->
-        <div class="lg:col-span-2 space-y-4">
-
-            <!-- Module KPIs -->
-            <div class="grid grid-cols-3 gap-3">
-                <div class="bg-violet-50 border border-violet-100 rounded-xl p-4 text-center">
-                    <p class="text-2xl font-bold text-violet-700">{{ activePersonnel() }}</p>
-                    <p class="text-xs font-medium text-violet-600 mt-1">Activos</p>
-                </div>
-                <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
-                    <p class="text-2xl font-bold text-slate-500">{{ personnelInactive() }}</p>
-                    <p class="text-xs font-medium text-slate-400 mt-1">Inactivos</p>
-                </div>
-                <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center">
-                    <p class="text-2xl font-bold text-indigo-700">{{ people().length }}</p>
-                    <p class="text-xs font-medium text-indigo-600 mt-1">Total</p>
-                </div>
-            </div>
-
-            <!-- Module analytics -->
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100">
-                    <h3 class="text-sm font-bold text-slate-700">Analítica de Personal</h3>
-                </div>
-                <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="rounded-lg border border-slate-100 p-3">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tendencia (6 meses)</p>
-                        <svg class="w-full h-24 mt-2" viewBox="0 0 100 100" preserveAspectRatio="none">
-                            <polyline [attr.points]="getTrendPolyline(personnelTrend())"
-                                fill="none" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
-                        </svg>
-                        <div class="mt-2 grid grid-cols-6 gap-1 text-[10px] text-slate-400">
-                            @for (point of personnelTrend(); track point.label) {
-                            <span class="text-center">{{ point.label }}</span>
-                            }
-                        </div>
-                    </div>
-                    <div class="rounded-lg border border-slate-100 p-3">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Torta por estado</p>
-                        <div class="mt-2 flex items-center gap-4">
-                            <div class="w-24 h-24 rounded-full border border-slate-100 shrink-0"
-                                [style.background]="getPieStyle(personnelStatusChart(), ['#10b981','#64748b'])"></div>
-                            <div class="space-y-1 text-xs w-full">
-                                @for (item of personnelStatusChart(); track item.label) {
-                                <div class="flex items-center justify-between gap-2">
-                                    <span class="inline-flex items-center gap-1.5 text-slate-600">
-                                        <span class="w-2 h-2 rounded-full"
-                                            [style.background]="getPaletteColor($index, ['#10b981','#64748b'])"></span>
-                                        {{ item.label }}
-                                    </span>
-                                    <span class="font-semibold text-slate-700">{{ item.value }}</span>
-                                </div>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right: Tasks + camera status -->
-        <div class="space-y-4">
-
-            <!-- Charts panel -->
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100 bg-violet-50/50">
-                    <h3 class="text-sm font-bold text-violet-800">Gráficos del Turno — Personal</h3>
-                </div>
-                <div class="p-4 space-y-4">
-                    <div>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Roles</p>
-                        <div class="mt-2 space-y-2">
-                            @for (item of personnelRoleChart(); track item.label) {
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
-                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
-                                </div>
-                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
-                                        [style.width.%]="getChartWidth(item.value, getChartMax(personnelRoleChart()))"></div>
-                                </div>
-                            </div>
-                            }
-                        </div>
-                    </div>
-                    <div class="pt-2 border-t border-slate-100">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estado del personal</p>
-                        <div class="mt-2 space-y-2">
-                            @for (item of personnelStatusChart(); track item.label) {
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span class="font-medium text-slate-600">{{ item.label }}</span>
-                                    <span [class]="item.badgeClass + ' px-2 py-0.5 rounded-full text-[10px] font-bold'">{{ item.value }}</span>
-                                </div>
-                                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                    <div class="h-2 rounded-full transition-all" [class]="item.barClass"
-                                        [style.width.%]="getChartWidth(item.value, getChartMax(personnelStatusChart()))"></div>
-                                </div>
-                            </div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-    }
-
+  }
 </div>

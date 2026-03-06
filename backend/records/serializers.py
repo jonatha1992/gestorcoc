@@ -6,7 +6,7 @@ from .models import FilmRecord, Catalog, VideoAnalysisReport
 from assets.models import Camera
 from personnel.models import Person
 
-HASH_ALGORITHM_CHOICES = ('sha3', 'sha256', 'sha512')
+HASH_ALGORITHM_CHOICES = ('sha1', 'sha3', 'sha256', 'sha512')
 VMS_AUTHENTICITY_MODE_CHOICES = (
     'vms_propio',
     'hash_preventivo',
@@ -154,7 +154,7 @@ class VideoReportMaterialContextSerializer(serializers.Serializer):
 
 class VideoReportDataSerializer(serializers.Serializer):
     report_date = serializers.DateField(input_formats=['%Y-%m-%d'])
-    destinatarios = serializers.CharField(max_length=200)
+    destinatarios = serializers.CharField(max_length=200, required=False, allow_blank=True)
     tipo_informe = serializers.CharField(max_length=200)
     unidad = serializers.CharField(max_length=200, required=False, allow_blank=True)
     numero_informe = serializers.CharField(max_length=50)
@@ -205,6 +205,9 @@ class VideoReportDataSerializer(serializers.Serializer):
             # Legacy compatibility: accepted and ignored.
             normalized.pop('unidad_aeroportuaria', None)
             normalized.pop('asiento', None)
+            # Estandarizacion: destinatarios siempre se deriva de fiscalia/juzgado.
+            fiscalia = str(normalized.get('fiscalia') or '').strip()
+            normalized['destinatarios'] = fiscalia or 'Fiscalia / Juzgado'
             return super().to_internal_value(normalized)
         return super().to_internal_value(data)
 

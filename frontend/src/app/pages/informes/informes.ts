@@ -519,7 +519,7 @@ export class InformesComponent implements OnInit, OnDestroy {
       first_name: person.first_name || '',
       last_name: person.last_name || '',
       badge_number: lup,
-      role: person.role || 'OPERATOR',
+      role: person.role || 'OPERADOR',
       rank,
       unit: person.unit ?? null,
       guard_group: person.guard_group ?? '',
@@ -891,7 +891,7 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   form: VideoReportFormData = {
     report_date: new Date().toISOString().slice(0, 10),
-    destinatarios: 'URSA I - Jefe',
+    destinatarios: '',
     unidad: this.fallbackUnidadOptions[0],
     tipo_informe: 'Informe de análisis de videos',
     numero_informe: '',
@@ -1145,7 +1145,7 @@ export class InformesComponent implements OnInit, OnDestroy {
   };
 
   private readonly requiredFields: (keyof VideoReportFormData)[] = [
-    'operador', 'grado', 'lup', 'report_date', 'destinatarios', 'unidad', 'numero_informe',
+    'operador', 'grado', 'lup', 'report_date', 'unidad', 'numero_informe',
     'sistema', 'prevencion_sumaria', 'caratula', 'denunciante',
     'objeto_denunciado', 'vms_authenticity_mode',
   ];
@@ -1563,6 +1563,7 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   private buildPayload(): VideoReportPayload {
     const reportData: VideoReportFormData = { ...this.form };
+    reportData.destinatarios = this.getStandardDestinatarios(reportData.fiscalia);
     if (!reportData.vms_native_hash_algorithms.includes('otro')) {
       reportData.vms_native_hash_algorithm_other = '';
     }
@@ -2091,7 +2092,6 @@ export class InformesComponent implements OnInit, OnDestroy {
         <p class="muted">Generado localmente en frontend para reducir trafico.</p>
         <div class="meta">
           <p><strong>Fecha:</strong> ${this.escapeHtml(report.report_date)}</p>
-          <p><strong>Destinatarios:</strong> ${this.escapeHtml(report.destinatarios)}</p>
           <p><strong>Operador:</strong> ${this.escapeHtml(report.grado)} ${this.escapeHtml(report.operador)}, LUP: ${this.escapeHtml(report.lup)}</p>
           ${locationMeta}
           <p><strong>Sistema:</strong> ${this.escapeHtml(report.sistema)}</p>
@@ -2155,6 +2155,7 @@ export class InformesComponent implements OnInit, OnDestroy {
 
     // We update the data that we want to save
     const currentData = { ...this.form };
+    currentData.destinatarios = this.getStandardDestinatarios(currentData.fiscalia);
 
     this.informeService.saveReportDraft(this.linkedRecordId()!, currentData).subscribe({
       next: (res) => {
@@ -2177,6 +2178,11 @@ export class InformesComponent implements OnInit, OnDestroy {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  private getStandardDestinatarios(fiscaliaValue: string): string {
+    const fiscalia = (fiscaliaValue || '').trim();
+    return fiscalia || 'Fiscalia / Juzgado';
   }
 
   private escapeHtmlWithBold(value: string): string {

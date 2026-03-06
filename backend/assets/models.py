@@ -5,6 +5,10 @@ class Unit(TimeStampedModel):
     name = models.CharField(max_length=100, db_index=True)
     code = models.CharField(max_length=10, unique=True, db_index=True, help_text="e.g., AEP, EZE")
     airport = models.CharField(max_length=100, blank=True, null=True, help_text="Aeropuerto")
+    province = models.CharField(max_length=100, blank=True, null=True, help_text="Provincia")
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True, help_text="Latitud")
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True, help_text="Longitud")
+    map_enabled = models.BooleanField(default=False, db_index=True, help_text="Mostrar en mapa operacional")
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_units', help_text="Entidad Superior (e.g., CREV)")
 
     def __str__(self):
@@ -60,7 +64,11 @@ class CameramanGear(TimeStampedModel):
 
     name = models.CharField(max_length=100, db_index=True, help_text="e.g., Chaleco, Radio, Batería")
     serial_number = models.CharField(max_length=100, blank=True, null=True, db_index=True)
-    assigned_to = models.CharField(max_length=100, blank=True, null=True, db_index=True, help_text="Nombre del camarógrafo responsable")
+    assigned_to = models.ForeignKey(
+        'personnel.Person', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='assigned_gear'
+    )
+    assigned_to_name = models.CharField(max_length=100, blank=True, help_text="Nombre libre (legado)")
     condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='GOOD')
     is_active = models.BooleanField(default=True)
 

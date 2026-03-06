@@ -17,6 +17,38 @@ export class PersonnelComponent implements OnInit {
   private assetService = inject(AssetService);
   private toastService = inject(ToastService);
 
+  readonly ROLE_LABELS: Record<string, string> = {
+    OPERADOR: 'Operador',
+    SUPERVISOR: 'Fiscalizador',
+    ADMIN: 'Administrador',
+  };
+
+  readonly RANK_OPTIONS = [
+    { value: 'JEFE', label: 'Jefe' },
+    { value: 'OFICIAL_AYUDANTE_PRINCIPAL', label: 'Oficial Ayudante Principal' },
+    { value: 'OFICIAL_PRINCIPAL', label: 'Oficial Principal' },
+    { value: 'OFICIAL', label: 'Oficial' },
+    { value: 'MAYOR', label: 'Mayor' },
+    { value: 'OFICIAL_JEFE', label: 'Oficial Jefe' },
+    { value: 'SUBINSPECTOR', label: 'Subinspector' },
+    { value: 'INSPECTOR', label: 'Inspector' },
+    { value: 'COMISIONADO_MAYOR', label: 'Comisionado Mayor' },
+    { value: 'COMISIONADO_GENERAL', label: 'Comisionado General' },
+    { value: 'CIVIL', label: 'Civil' },
+  ];
+  readonly RANK_LABELS: Record<string, string> = this.RANK_OPTIONS.reduce(
+    (acc, option) => ({ ...acc, [option.value]: option.label }),
+    {} as Record<string, string>
+  );
+
+  getRoleLabel(role: string): string {
+    return this.ROLE_LABELS[role] ?? role;
+  }
+
+  getRankLabel(rank: string): string {
+    return this.RANK_LABELS[rank] ?? rank;
+  }
+
   people = signal<any[]>([]);
   systems = signal<any[]>([]);
   units = signal<Unit[]>([]);
@@ -136,8 +168,8 @@ export class PersonnelComponent implements OnInit {
       first_name: '',
       last_name: '',
       badge_number: '',
-      role: 'OPERATOR',
-      rank: '',
+      role: 'OPERADOR',
+      rank: 'CIVIL',
       unit: availableUnits.length > 0 ? availableUnits[0].code : '',
       guard_group: '',
       is_active: true,
@@ -156,6 +188,7 @@ export class PersonnelComponent implements OnInit {
     // Copy object to avoid reference issues, map assigned_systems IDs
     this.currentPerson = {
       ...person,
+      rank: person.rank || 'CIVIL',
       assigned_systems: person.assigned_systems_details ? person.assigned_systems_details.map((s: any) => s.id) : []
     };
     this.showForm.set(true);
@@ -202,7 +235,14 @@ export class PersonnelComponent implements OnInit {
     }
   }
 
+  onBadgeNumberInput() {
+    const raw = String(this.currentPerson.badge_number ?? '');
+    this.currentPerson.badge_number = raw.replace(/\D/g, '').slice(0, 6);
+  }
+
   savePerson() {
+    this.onBadgeNumberInput();
+
     const request = this.isEditing
       ? this.personnelService.updatePerson(this.currentPerson.id, this.currentPerson)
       : this.personnelService.createPerson(this.currentPerson);

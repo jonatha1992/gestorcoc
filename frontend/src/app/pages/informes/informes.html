@@ -89,18 +89,6 @@
                         [attr.data-invalid]="isFieldInvalid('numero_informe') ? 'true' : null"
                         class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
-                <div class="col-span-2 lg:col-span-12">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Destinatarios *</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('destinatarios', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Destinatarios">?</button>
-                    </div>
-                    <input [(ngModel)]="form.destinatarios" (ngModelChange)="markDirty('destinatarios')"
-                        name="destinatarios" type="text" placeholder="Ej: URSA I - Jefe"
-                        [attr.data-invalid]="isFieldInvalid('destinatarios') ? 'true' : null"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                </div>
                 <div class="col-span-2 lg:col-span-4">
                     <div class="flex items-center gap-1 mb-1">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Unidad *</label>

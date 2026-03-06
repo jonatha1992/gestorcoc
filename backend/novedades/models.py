@@ -26,7 +26,11 @@ class Novedad(TimeStampedModel):
     severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default='MEDIUM', db_index=True)
     incident_type = models.CharField(max_length=50, blank=True, db_index=True) # e.g., 'CONECTIVIDAD', 'DAÑO_FISICO', 'EVENTO'
     
-    reported_by = models.CharField(max_length=100) # User name or ID
+    reported_by = models.ForeignKey(
+        'personnel.Person', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='novedades_reportadas'
+    )
+    reporter_name = models.CharField(max_length=100, blank=True, help_text="Nombre libre (legado)")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN', db_index=True)
     external_ticket_id = models.CharField(max_length=50, blank=True, null=True, help_text="ID del ticket en DGT/CCO")
 
