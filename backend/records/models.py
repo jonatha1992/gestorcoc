@@ -1,27 +1,22 @@
 from django.db import models
 from core.models import TimeStampedModel
-from assets.models import Camera
 from personnel.models import Person
 
 class FilmRecord(TimeStampedModel):
     """
-    Modelo completo de Registro Fílmico según estructura del Excel LIBRO DE REGISTROS FILMICOS.
-    Incluye información de solicitud, causa judicial, backup y verificación CREV.
+    Registro Fílmico — fiel al LIBRO DE REGISTROS FILMICOS (Excel).
+    Cubre todos los campos que el operador llena en el libro real.
     """
-    
-    RECORD_TYPE_CHOICES = [
-        ('VD', 'VD - Video'),
-        ('IM', 'Imagen'),
-        ('OT', 'Otro'),
-    ]
-    
+
     REQUEST_TYPE_CHOICES = [
-        ('OFICIO', 'Oficio'),
+        ('FORMULARIO', 'Formulario'),
+        ('MEMORANDO', 'Memorando'),
         ('NOTA', 'Nota'),
+        ('OFICIO', 'Oficio'),
         ('EXHORTO', 'Exhorto'),
         ('OTRO', 'Otro'),
     ]
-    
+
     DELIVERY_STATUS_CHOICES = [
         ('PENDIENTE', 'Pendiente'),
         ('ENTREGADO', 'Entregado'),
@@ -30,64 +25,73 @@ class FilmRecord(TimeStampedModel):
         ('ANULADO', 'Anulado'),
     ]
 
-    # ========== Información de Solicitud ==========
-    issue_number = models.CharField(max_length=50, blank=True, null=True, verbose_name="Nro Asunto", help_text="Número de asunto administrativo")
-    order_number = models.IntegerField(blank=True, null=True, verbose_name="Nº Orden", help_text="Número de orden secuencial")
-    entry_date = models.DateField(blank=True, null=True, verbose_name="Fecha Ingreso", help_text="Fecha de ingreso de la solicitud")
+    # ========== Información de Solicitud (cols A-F del Excel) ==========
+    issue_number = models.CharField(max_length=50, blank=True, null=True, verbose_name="Nro Asunto")
+    order_number = models.IntegerField(blank=True, null=True, verbose_name="Nº Orden")
+    entry_date = models.DateField(blank=True, null=True, verbose_name="Fecha Ingreso")
     request_type = models.CharField(max_length=20, choices=REQUEST_TYPE_CHOICES, blank=True, null=True, verbose_name="Tipo Solicitud")
     request_number = models.CharField(max_length=100, blank=True, null=True, verbose_name="Número Solicitud")
-    requester = models.CharField(max_length=200, blank=True, null=True, verbose_name="Solicitante", help_text="Juzgado, Fiscalía u organismo solicitante")
-    
-    # ========== Información Judicial ==========
-    judicial_case_number = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nº Causa Judicial", help_text="Número de causa o prevención sumaria", db_index=True)
-    case_title = models.TextField(blank=True, null=True, verbose_name="Carátula", help_text="Carátula de la causa")
+    requester = models.CharField(max_length=200, blank=True, null=True, verbose_name="Solicitante")
+
+    # ========== Información Judicial (cols G-K del Excel) ==========
+    judicial_case_number = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nº Causa Judicial / Prevención Sumaria", db_index=True)
+    case_title = models.TextField(blank=True, null=True, verbose_name="Carátula")
     incident_date = models.DateField(blank=True, null=True, verbose_name="Fecha del Hecho")
     crime_type = models.CharField(max_length=200, blank=True, null=True, verbose_name="Tipo de Delito")
     intervening_department = models.CharField(max_length=200, blank=True, null=True, verbose_name="Dependencia Interviniente")
-    
-    # ========== Referencias a Equipos y Personal ==========
-    camera = models.ForeignKey(Camera, on_delete=models.CASCADE, related_name='records', verbose_name="Cámara")
-    operator = models.ForeignKey(Person, on_delete=models.PROTECT, related_name='operated_records', verbose_name="Operador")
+
+    # ========== Sistema CCTV / VMS (fuente del material) ==========
+    sistema = models.CharField(max_length=200, blank=True, null=True, verbose_name="Sistema CCTV / VMS", help_text="Sistema o dispositivo del que proviene el material (ej: MILESTONE, VIPRO, DAHUA, NVR HIKVISION)")
+
+    # ========== Personal (cols L-M del Excel) ==========
     received_by = models.ForeignKey(Person, on_delete=models.PROTECT, related_name='received_records', blank=True, null=True, verbose_name="Recepcionado por")
-    
-    # ========== Información Temporal del Registro ==========
-    start_time = models.DateTimeField(verbose_name="Hora Inicio")
-    end_time = models.DateTimeField(verbose_name="Hora Fin")
-    record_type = models.CharField(max_length=2, choices=RECORD_TYPE_CHOICES, default='VD', verbose_name="Tipo de Registro")
-    description = models.TextField(blank=True, null=True, verbose_name="Descripción")
-    
-    # ========== Gestión de Archivos y Backup ==========
+    operator = models.ForeignKey(Person, on_delete=models.PROTECT, related_name='operated_records', blank=True, null=True, verbose_name="Confeccionado por")
+
+    # ========== Detalle y soporte físico (cols N-R del Excel) ==========
+    description = models.TextField(blank=True, null=True, verbose_name="Detalle")
+    dvd_number = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nº de DVD")
+    report_number = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nº de Informe")
+    ifgra_number = models.CharField(max_length=100, blank=True, null=True, verbose_name="IFGRA")
+    expediente_number = models.CharField(max_length=100, blank=True, null=True, verbose_name="Expediente")
+
+    # ========== Entrega (cols S-V del Excel) ==========
+    delivery_act_number = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nº Acta Entrega / Elevación")
+    delivery_date = models.DateField(blank=True, null=True, verbose_name="Fecha de Salida")
+    retrieved_by = models.CharField(max_length=200, blank=True, null=True, verbose_name="Retirado por")
+    organism = models.CharField(max_length=200, blank=True, null=True, verbose_name="Organismo")
+
+    # ========== Estado y observaciones (cols W-X del Excel) ==========
+    delivery_status = models.CharField(max_length=20, choices=DELIVERY_STATUS_CHOICES, default='PENDIENTE', verbose_name="Estado")
+    observations = models.TextField(blank=True, null=True, verbose_name="Observaciones")
+
+    # ========== Integridad y backup ==========
     has_backup = models.BooleanField(default=False, verbose_name="¿Tiene Backup?")
-    backup_path = models.CharField(max_length=500, blank=True, null=True, verbose_name="Ruta del Backup", help_text="Ubicación física o lógica del backup")
-    file_hash = models.CharField(max_length=128, blank=True, null=True, verbose_name="Hash del Archivo", help_text="Hash para verificación de integridad", db_index=True)
+    backup_path = models.CharField(max_length=500, blank=True, null=True, verbose_name="Ruta del Backup")
+    file_hash = models.CharField(max_length=128, blank=True, null=True, verbose_name="Hash del Archivo", db_index=True)
     hash_algorithm = models.CharField(
         max_length=10, blank=True, null=True,
         choices=[('sha256', 'SHA-256'), ('sha512', 'SHA-512'), ('sha3', 'SHA-3'), ('sha1', 'SHA-1')],
         verbose_name="Algoritmo de Hash",
-        help_text="Algoritmo utilizado para calcular el hash"
     )
-    file_size = models.BigIntegerField(blank=True, null=True, verbose_name="Tamaño del Archivo", help_text="Tamaño en bytes")
-    
-    # ========== Control de Integridad ==========
-    is_integrity_verified = models.BooleanField(default=False, verbose_name="¿Integridad Verificada?", help_text="Verificación técnica automática del hash")
-    
-    # ========== Verificación CREV (Control de Calidad) ==========
+    file_size = models.BigIntegerField(blank=True, null=True, verbose_name="Tamaño del Archivo (bytes)")
+    is_integrity_verified = models.BooleanField(default=False, verbose_name="¿Integridad Verificada?")
+
+    # ========== Verificación CREV ==========
     verified_by_crev = models.ForeignKey(
-        Person, 
-        on_delete=models.PROTECT, 
-        related_name='verified_records', 
-        blank=True, 
-        null=True, 
+        Person,
+        on_delete=models.PROTECT,
+        related_name='verified_records',
+        blank=True,
+        null=True,
         verbose_name="Verificado por CREV",
-        help_text="Fiscalizador CREV que certificó el registro"
     )
     verification_date = models.DateTimeField(blank=True, null=True, verbose_name="Fecha de Verificación CREV")
-    is_editable = models.BooleanField(default=True, verbose_name="¿Es Editable?", help_text="False si ya fue verificado por CREV")
-    
-    # ========== Estado y Entrega ==========
-    delivery_status = models.CharField(max_length=20, choices=DELIVERY_STATUS_CHOICES, default='PENDIENTE', verbose_name="Estado de Entrega")
-    observations = models.TextField(blank=True, null=True, verbose_name="Observaciones")
+    is_editable = models.BooleanField(default=True, verbose_name="¿Es Editable?")
 
+    # ========== Referencia temporal (opcional) ==========
+    start_time = models.DateTimeField(blank=True, null=True, verbose_name="Hora Inicio")
+    end_time = models.DateTimeField(blank=True, null=True, verbose_name="Hora Fin")
+    
     class Meta:
         verbose_name = "Registro Fílmico"
         verbose_name_plural = "Registros Fílmicos"
@@ -101,15 +105,11 @@ class FilmRecord(TimeStampedModel):
         ]
 
     def __str__(self):
-        if self.judicial_case_number:
-            return f"Registro #{self.id} - Causa {self.judicial_case_number}"
-        return f"Registro #{self.id} - {self.camera} - {self.start_time}"
-    
+        if self.order_number:
+            return f"Registro {self.order_number} — {self.judicial_case_number or 'S/N'}"
+        return f"Registro #{self.id}"
+
     def save(self, *args, **kwargs):
-        """
-        Validación automática: Si un registro es verificado por CREV, 
-        automáticamente se marca como no editable.
-        """
         if self.verified_by_crev and self.verification_date:
             self.is_editable = False
         super().save(*args, **kwargs)

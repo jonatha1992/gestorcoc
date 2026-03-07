@@ -131,6 +131,7 @@ export class InformesComponent implements OnInit, OnDestroy {
   selectedOperatorId: number | null = null;
   isSavingOperatorData = false;
   private pendingOperatorSave = false;
+  private pendingOperatorId: number | null = null;
   invalidFields = new Set<keyof VideoReportFormData>();
   validationMessage = '';
   private lastSuggestedReportNumber = '';
@@ -253,14 +254,37 @@ export class InformesComponent implements OnInit, OnDestroy {
         if (record.incident_date) {
           this.form.fecha_hecho = record.incident_date;
         }
-        if (record.operator_full_name) {
-          this.form.operador = record.operator_full_name;
+        if (record.operator) {
+          if (this.personnelOptions.length > 0) {
+            this.selectedOperatorId = record.operator;
+            this.onOperatorChange(record.operator);
+          } else {
+            this.pendingOperatorId = record.operator;
+          }
         }
-        if (record.camera_name) {
-          this.form.sistema = record.camera_name;
+        if (record.sistema) {
+          this.form.sistema = record.sistema;
         }
-        if (record.description) {
+        if (record.crime_type) {
+          this.form.objeto_denunciado = record.crime_type;
+        } else if (record.description) {
           this.form.objeto_denunciado = record.description;
+        }
+        if (record.requester) {
+          this.form.fiscalia = record.requester;
+        }
+        if (record.report_number) {
+          this.form.numero_informe = record.report_number;
+        }
+        if (record.intervening_department) {
+          this.form.unidad = record.intervening_department;
+        }
+        if (record.start_time && record.end_time) {
+          const s = new Date(record.start_time);
+          const e = new Date(record.end_time);
+          const pad = (n: number) => n.toString().padStart(2, '0');
+          this.form.franja_horaria_analizada =
+            `${pad(s.getHours())}:${pad(s.getMinutes())} a ${pad(e.getHours())}:${pad(e.getMinutes())}`;
         }
 
         // Auto-detectar hash y algoritmo del registro
@@ -400,6 +424,11 @@ export class InformesComponent implements OnInit, OnDestroy {
           this.personnelOptions = people;
           for (const person of this.personnelOptions) {
             this.registerGradeOption((person?.rank || '').trim());
+          }
+          if (this.pendingOperatorId !== null) {
+            this.selectedOperatorId = this.pendingOperatorId;
+            this.onOperatorChange(this.pendingOperatorId);
+            this.pendingOperatorId = null;
           }
         }, 50);
       },

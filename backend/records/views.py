@@ -28,9 +28,8 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
     Incluye búsqueda, filtrado y acción de verificación CREV.
     """
     queryset = FilmRecord.objects.select_related(
-        'camera', 
-        'operator', 
-        'received_by', 
+        'operator',
+        'received_by',
         'verified_by_crev'
     ).all()
     serializer_class = FilmRecordSerializer
@@ -44,9 +43,9 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
         'is_editable': ['exact'],
         'entry_date': ['gte', 'lte', 'exact'],
         'verified_by_crev': ['exact', 'isnull'],
-        'camera': ['exact'],
         'operator': ['exact'],
         'received_by': ['exact'],
+        'request_type': ['exact'],
     }
     
     # Búsqueda
@@ -56,7 +55,10 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
         'request_number',
         'case_title',
         'requester',
-        'camera__name',
+        'dvd_number',
+        'report_number',
+        'expediente_number',
+        'retrieved_by',
         'operator__first_name',
         'operator__last_name',
     ]

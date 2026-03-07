@@ -7,37 +7,38 @@ class FilmRecordAdmin(admin.ModelAdmin):
     Administración completa de Registros Fílmicos con organización por secciones.
     """
     list_display = (
-        'id', 
+        'id',
+        'order_number',
         'issue_number',
-        'judicial_case_number', 
-        'camera', 
+        'judicial_case_number',
+        'sistema',
         'entry_date',
         'delivery_status',
-        'has_backup', 
+        'has_backup',
         'is_integrity_verified',
         'verified_by_crev_display',
         'is_editable'
     )
     
     list_filter = (
-        'record_type', 
         'delivery_status',
         'has_backup',
-        'is_integrity_verified', 
+        'is_integrity_verified',
         'is_editable',
         'request_type',
         'entry_date',
-        'camera__server__system'
     )
-    
+
     search_fields = (
         'issue_number',
         'judicial_case_number',
         'request_number',
         'case_title',
         'requester',
-        'description', 
-        'camera__name', 
+        'dvd_number',
+        'report_number',
+        'expediente_number',
+        'description',
         'operator__last_name',
     )
     
@@ -65,16 +66,29 @@ class FilmRecordAdmin(admin.ModelAdmin):
                 'intervening_department',
             )
         }),
-        ('Datos del Registro', {
+        ('Sistema y Personal', {
             'fields': (
-                'camera',
-                'operator',
+                'sistema',
                 'received_by',
-                'start_time',
-                'end_time',
-                'record_type',
+                'operator',
                 'description',
+                'dvd_number',
+                'report_number',
+                'ifgra_number',
+                'expediente_number',
             )
+        }),
+        ('Entrega', {
+            'fields': (
+                'delivery_act_number',
+                'delivery_date',
+                'retrieved_by',
+                'organism',
+            )
+        }),
+        ('Referencia temporal (opcional)', {
+            'fields': ('start_time', 'end_time'),
+            'classes': ('collapse',)
         }),
         ('Gestión de Archivos y Backup', {
             'fields': (

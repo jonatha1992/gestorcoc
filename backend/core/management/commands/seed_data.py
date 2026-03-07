@@ -205,14 +205,28 @@ class Command(BaseCommand):
         return list(Person.objects.all())
 
     def _ensure_records(self, cameras, people):
-        if not cameras or not people:
+        if not people:
             return
         statuses = ["PENDIENTE", "ENTREGADO", "DERIVADO", "FINALIZADO", "ANULADO"]
-        request_types = ["OFICIO", "NOTA", "EXHORTO", "OTRO"]
+        request_types = ["FORMULARIO", "MEMORANDO", "NOTA", "OFICIO", "EXHORTO", "OTRO"]
+        requesters = [
+            "Juzgado Federal Nro 1",
+            "Juzgado Federal Nro 3",
+            "Fiscalia Federal Nro 2",
+            "Fiscalia Federal Nro 5",
+            "Policia de Seguridad Aeroportuaria",
+            "Ministerio Publico Fiscal",
+            "Prefectura Naval Argentina",
+            "Gendarmeria Nacional",
+        ]
+        organisms = ["PSA", "PFA", "GNA", "PNA", "INTERPOL", "MPF", "CSJN"]
         supervisors = [person for person in people if person.role == "ADMIN"]
         base_order = FilmRecord.objects.aggregate(max_value=Max("order_number")).get("max_value") or 0
+        sistemas_cctv = [
+            "MILESTONE", "VIPRO", "DAHUA", "HIKVISION", "AVIGILON",
+            "AXIS", "BOSCH VIDEOJET", "NVR DAHUA", "DVR HIKVISION", "GENETEC",
+        ]
         for i in range(self._missing(FilmRecord.objects.count(), self.TARGETS[self.volume]["film_records"])):
-            camera = random.choice(cameras)
             operator = random.choice(people)
             start = self.fake.date_time_between(start_date="-365d", end_date="now", tzinfo=timezone.get_current_timezone())
             end = start + timedelta(minutes=random.randint(15, 240))
@@ -221,30 +235,39 @@ class Command(BaseCommand):
             if verified:
                 has_backup = True
             verifier = random.choice(supervisors) if verified else None
+            delivered = random.choice(statuses)
+            dvd_num = f"DVD-{start.year}-{self.fake.random_int(min=100, max=999)}" if random.random() > 0.40 else None
+            report_num = f"{self.fake.random_int(min=100, max=999)}CREV-{str(start.year)[2:]}" if random.random() > 0.50 else None
+            exp_num = f"EXP-{self.fake.random_int(min=10000, max=99999)}/{start.year}" if random.random() > 0.60 else None
+            act_num = f"ACTA-{self.fake.random_int(min=100, max=999)}/{start.year}" if delivered in ("ENTREGADO", "FINALIZADO") else None
+            delivery_date = (start + timedelta(days=random.randint(1, 90))).date() if act_num else None
+            retrieved = self.fake.last_name() if act_num else None
             FilmRecord.objects.create(
                 issue_number=f"AS-{start.year}-{1000 + base_order + i}",
                 order_number=base_order + i + 1,
                 entry_date=start.date(),
                 request_type=random.choice(request_types),
                 request_number=f"{self.fake.random_int(min=1000, max=9999)}/{start.year}",
-                requester=random.choice([
-                    "Juzgado Federal Nro 1",
-                    "Fiscalia Federal",
-                    "Policia de Seguridad Aeroportuaria",
-                    "Ministerio Publico Fiscal",
-                ]),
+                requester=random.choice(requesters),
                 judicial_case_number=f"C-{self.fake.random_int(min=10000, max=99999)}/{start.year}",
                 case_title=self.fake.sentence(nb_words=6),
                 incident_date=start.date(),
-                crime_type=random.choice(["Hurto", "Robo", "Amenaza", "Daños", "Averiguación de ilícito"]),
-                intervening_department=f"COC {camera.server.system.unit.code}",
-                camera=camera,
+                crime_type=random.choice(["Hurto", "Robo", "Amenaza", "Daños", "Averiguacion de ilicito", "Estafa"]),
+                intervening_department=random.choice(["COC AER", "COC EZE", "COC IGU", "COC COR", "COC MDZ"]),
+                sistema=random.choice(sistemas_cctv),
                 operator=operator,
                 received_by=random.choice(people) if random.random() > 0.30 else None,
                 start_time=start,
                 end_time=end,
-                record_type=random.choice(["VD", "VD", "IM", "OT"]),
                 description=f"Oficio Judicial Nro {self.fake.random_int(min=1000, max=9999)}/{start.year}",
+                dvd_number=dvd_num,
+                report_number=report_num,
+                ifgra_number=f"IFGRA-{self.fake.random_int(min=1000, max=9999)}" if random.random() > 0.70 else None,
+                expediente_number=exp_num,
+                delivery_act_number=act_num,
+                delivery_date=delivery_date,
+                retrieved_by=retrieved,
+                organism=random.choice(organisms) if act_num else None,
                 has_backup=has_backup,
                 backup_path=f"/mnt/backups/coc/{start.strftime('%Y/%m/%d')}/record_{base_order + i + 1:03d}.mp4" if has_backup else None,
                 file_hash=self.fake.sha256() if verified or random.random() > 0.70 else None,
@@ -252,7 +275,7 @@ class Command(BaseCommand):
                 is_integrity_verified=verified,
                 verified_by_crev=verifier,
                 verification_date=end if verifier else None,
-                delivery_status=random.choice(statuses),
+                delivery_status=delivered,
                 observations=self.fake.sentence(nb_words=10) if random.random() > 0.55 else "",
             )
             self.created["film_records"] += 1

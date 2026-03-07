@@ -3,7 +3,6 @@ from django.conf import settings
 import base64
 import binascii
 from .models import FilmRecord, Catalog, VideoAnalysisReport
-from assets.models import Camera
 from personnel.models import Person
 
 HASH_ALGORITHM_CHOICES = ('sha1', 'sha3', 'sha256', 'sha512')
@@ -39,8 +38,7 @@ class FilmRecordSerializer(serializers.ModelSerializer):
     Serializer completo para FilmRecord con todos los campos del Excel.
     Incluye campos read-only para nombres de personas relacionadas.
     """
-    # Campos read-only para mostrar nombres en lugar de solo IDs
-    camera_name = serializers.CharField(source='camera.name', read_only=True)
+    # Campos read-only para mostrar nombres de personas relacionadas
     operator_full_name = serializers.SerializerMethodField(read_only=True)
     received_by_full_name = serializers.SerializerMethodField(read_only=True)
     verified_by_crev_full_name = serializers.SerializerMethodField(read_only=True)

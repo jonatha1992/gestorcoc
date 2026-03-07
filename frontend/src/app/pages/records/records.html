@@ -39,16 +39,6 @@
                     title="Hasta">
             </div>
             <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cámara</label>
-                <select [(ngModel)]="filterCamera" (ngModelChange)="onFilterChange()"
-                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
-                    <option value="">Todas</option>
-                    @for (cam of cameras(); track cam.id) {
-                    <option [value]="cam.id">{{ cam.name }}</option>
-                    }
-                </select>
-            </div>
-            <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Operador</label>
                 <select [(ngModel)]="filterOperator" (ngModelChange)="onFilterChange()"
                     class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
@@ -146,7 +136,7 @@
                 <thead>
                     <tr class="bg-slate-50/50 border-b border-slate-100">
                         <th class="table-head-cell">Causa / Oficio</th>
-                        <th class="table-head-cell">Cámara</th>
+                        <th class="table-head-cell">Sistema</th>
                         <th class="table-head-cell">Rango Horario</th>
                         <th class="table-head-cell">Integridad</th>
                         <th class="table-head-cell">Operador</th>
@@ -167,7 +157,7 @@
                             </div>
                         </td>
                         <td class="table-body-cell">
-                            <div class="font-semibold text-slate-700">{{ record.camera_name || '-' }}</div>
+                            <div class="font-semibold text-slate-700">{{ record.sistema || '-' }}</div>
                         </td>
                         <td class="table-body-cell">
                             <div class="font-medium text-slate-700">{{ record.start_time | date:'dd/MM/yy HH:mm' }}
@@ -284,92 +274,239 @@
     <div
         class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
         <div
-            class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300">
-            <div class="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50">
-                <h3 class="text-lg font-bold text-slate-900">{{ isEditing() ? 'Editar Registro de Evidencia' : 'Nuevo
-                    Registro de Evidencia' }}</h3>
+            class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
+                <h3 class="text-base font-bold text-slate-900">{{ isEditing() ? 'Editar Registro Fílmico' : 'Nuevo Registro Fílmico' }}</h3>
                 <button (click)="showForm.set(false); resetForm()"
                     class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12" />
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
 
-            <form (ngSubmit)="saveRecord()" #recordForm="ngForm" class="p-6 space-y-4">
-                <div class="space-y-1.5">
-                    <label class="field-label-compact">Descripción / Oficio</label>
-                    <input type="text" name="description" [(ngModel)]="newRecord.description" required
-                        class="field-control-compact" placeholder="Ej: Oficio Nro 2026/123 - Juzgado Federal 1">
+            <form (ngSubmit)="saveRecord()" #recordForm="ngForm" class="overflow-y-auto flex-1 px-6 py-5 space-y-6">
+
+                <!-- SECCIÓN 1: Datos de la Solicitud -->
+                <div>
+                    <h4 class="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3 pb-1 border-b border-indigo-100">Datos de la Solicitud</h4>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Nro. Asunto</label>
+                            <input type="text" name="issue_number" [(ngModel)]="newRecord.issue_number"
+                                class="field-control-compact" placeholder="Ej: 2026/0123">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Nº Orden</label>
+                            <input type="number" name="order_number" [(ngModel)]="newRecord.order_number"
+                                class="field-control-compact" placeholder="Ej: 42">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Fecha de Ingreso</label>
+                            <input type="date" name="entry_date" [(ngModel)]="newRecord.entry_date"
+                                class="field-control-compact">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Tipo de Solicitud</label>
+                            <select name="request_type" [(ngModel)]="newRecord.request_type" class="field-control-compact">
+                                <option value="">— Sin especificar —</option>
+                                <option value="FORMULARIO">Formulario</option>
+                                <option value="MEMORANDO">Memorando</option>
+                                <option value="NOTA">Nota</option>
+                                <option value="OFICIO">Oficio</option>
+                                <option value="EXHORTO">Exhorto</option>
+                                <option value="OTRO">Otro</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Número de Solicitud</label>
+                            <input type="text" name="request_number" [(ngModel)]="newRecord.request_number"
+                                class="field-control-compact" placeholder="Ej: OF-2026/100">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Solicitante / Fiscalía</label>
+                            <input type="text" name="requester" [(ngModel)]="newRecord.requester"
+                                class="field-control-compact" placeholder="Ej: Juzgado Federal 1">
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-1.5">
+                        <label class="field-label-compact">Descripción / Observaciones de Solicitud</label>
+                        <input type="text" name="description" [(ngModel)]="newRecord.description"
+                            class="field-control-compact" placeholder="Ej: Solicitud de imágenes de cámara 3 el día 15/03">
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1.5">
-                        <label class="field-label-compact">Cámara</label>
-                        <select name="camera" [(ngModel)]="newRecord.camera" required class="field-control-compact">
-                            <option [ngValue]="''" disabled>Seleccione cámara...</option>
-                            @for (cam of cameras(); track cam.id) {
-                            <option [ngValue]="cam.id">{{ cam.name }}</option>
+                <!-- SECCIÓN 2: Causa Judicial -->
+                <div>
+                    <h4 class="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3 pb-1 border-b border-indigo-100">Causa Judicial</h4>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Nº Causa / Prev. Sumaria</label>
+                            <input type="text" name="judicial_case_number" [(ngModel)]="newRecord.judicial_case_number"
+                                class="field-control-compact" placeholder="Ej: CFP 12345/2026">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Fecha del Hecho</label>
+                            <input type="date" name="incident_date" [(ngModel)]="newRecord.incident_date"
+                                class="field-control-compact">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Tipo de Delito</label>
+                            <input type="text" name="crime_type" [(ngModel)]="newRecord.crime_type"
+                                class="field-control-compact" placeholder="Ej: Robo agravado">
+                        </div>
+                        <div class="col-span-2 space-y-1.5">
+                            <label class="field-label-compact">Carátula</label>
+                            <input type="text" name="case_title" [(ngModel)]="newRecord.case_title"
+                                class="field-control-compact" placeholder="Ej: FULANO s/ infracción...">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Dependencia Interviniente</label>
+                            <input type="text" name="intervening_department" [(ngModel)]="newRecord.intervening_department"
+                                class="field-control-compact" placeholder="Ej: Div. Delitos Económicos">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 3: Personal y Sistema -->
+                <div>
+                    <h4 class="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3 pb-1 border-b border-indigo-100">Personal y Sistema</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Recepcionado por</label>
+                            <select name="received_by" [(ngModel)]="newRecord.received_by" class="field-control-compact">
+                                <option [ngValue]="''">— Sin especificar —</option>
+                                @for (person of people(); track person.id) {
+                                <option [ngValue]="person.id">{{ person.last_name }}, {{ person.first_name }}</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Operador Responsable <span class="text-red-500">*</span></label>
+                            <select name="operator" [(ngModel)]="newRecord.operator" (ngModelChange)="onOperatorChange($event)" required class="field-control-compact">
+                                <option [ngValue]="''" disabled>Seleccione operador...</option>
+                                @for (person of people(); track person.id) {
+                                <option [ngValue]="person.id">{{ person.last_name }}, {{ person.first_name }}</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-span-2 space-y-1.5">
+                            <label class="field-label-compact">Sistema CCTV / VMS</label>
+                            @if (operatorSystems().length > 0 && !sistemaIsCustom()) {
+                            <select name="sistema" [(ngModel)]="newRecord.sistema" (ngModelChange)="onSistemaSelectChange($event)" class="field-control-compact">
+                                <option value="" disabled>Seleccione sistema...</option>
+                                @for (sys of operatorSystems(); track sys.id) {
+                                <option [value]="sys.name">{{ sys.name }}</option>
+                                }
+                                <option value="__otro__">Otro (especificar)</option>
+                            </select>
+                            } @else {
+                            <div class="flex gap-2 items-center">
+                                <input type="text" name="sistema" [(ngModel)]="newRecord.sistema"
+                                    class="field-control-compact flex-1" placeholder="Ej: MILESTONE AEP, VIPRO, DAHUA...">
+                                @if (operatorSystems().length > 0) {
+                                <button type="button" (click)="sistemaIsCustom.set(false); newRecord.sistema = operatorSystems()[0]?.name ?? ''"
+                                    class="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 whitespace-nowrap">
+                                    ← asignado
+                                </button>
+                                }
+                            </div>
                             }
-                        </select>
-                    </div>
-                    <div class="space-y-1.5">
-                        <label class="field-label-compact">Tipo de Registro</label>
-                        <select name="record_type" [(ngModel)]="newRecord.record_type" class="field-control-compact">
-                            <option value="VD">VIDEO (VD)</option>
-                            <option value="IM">IMAGEN</option>
-                            <option value="OT">OTRO</option>
-                        </select>
+                        </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1.5">
-                        <label class="field-label-compact">Inicio Rango</label>
-                        <input type="datetime-local" name="start_time" [(ngModel)]="newRecord.start_time" required
-                            class="field-control-compact">
-                    </div>
-                    <div class="space-y-1.5">
-                        <label class="field-label-compact">Fin Rango</label>
-                        <input type="datetime-local" name="end_time" [(ngModel)]="newRecord.end_time" required
-                            class="field-control-compact">
+                <!-- SECCIÓN 4: Soporte Físico y Rango Horario -->
+                <div>
+                    <h4 class="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3 pb-1 border-b border-indigo-100">Soporte Físico y Rango Horario</h4>
+                    <div class="grid grid-cols-4 gap-3">
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Nº DVD</label>
+                            <input type="text" name="dvd_number" [(ngModel)]="newRecord.dvd_number"
+                                class="field-control-compact" placeholder="Ej: DVD-001">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Nº Informe</label>
+                            <input type="text" name="report_number" [(ngModel)]="newRecord.report_number"
+                                class="field-control-compact" placeholder="Ej: 0042AEP/2026">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">IFGRA</label>
+                            <input type="text" name="ifgra_number" [(ngModel)]="newRecord.ifgra_number"
+                                class="field-control-compact" placeholder="Ej: IF-2026-000123">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Expediente</label>
+                            <input type="text" name="expediente_number" [(ngModel)]="newRecord.expediente_number"
+                                class="field-control-compact" placeholder="Ej: EX-2026-000456">
+                        </div>
+                        <div class="col-span-2 space-y-1.5">
+                            <label class="field-label-compact">Inicio Rango</label>
+                            <input type="datetime-local" name="start_time" [(ngModel)]="newRecord.start_time"
+                                class="field-control-compact">
+                        </div>
+                        <div class="col-span-2 space-y-1.5">
+                            <label class="field-label-compact">Fin Rango</label>
+                            <input type="datetime-local" name="end_time" [(ngModel)]="newRecord.end_time"
+                                class="field-control-compact">
+                        </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1.5">
-                        <label class="field-label-compact">Operador Responsable</label>
-                        <select name="operator" [(ngModel)]="newRecord.operator" required class="field-control-compact">
-                            <option [ngValue]="''" disabled>Seleccione operador...</option>
-                            @for (person of people(); track person.id) {
-                            <option [ngValue]="person.id">{{ person.last_name }}, {{ person.first_name }}</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="space-y-1.5">
-                        <label class="field-label-compact">Estado de Entrega</label>
-                        <select name="delivery_status" [(ngModel)]="newRecord.delivery_status" required
-                            class="field-control-compact">
-                            <option value="PENDIENTE">PENDIENTE</option>
-                            <option value="ENTREGADO">ENTREGADO</option>
-                            <option value="DERIVADO">DERIVADO</option>
-                            <option value="FINALIZADO">FINALIZADO</option>
-                            <option value="ANULADO">ANULADO</option>
-                        </select>
+                <!-- SECCIÓN 5: Entrega y Estado -->
+                <div>
+                    <h4 class="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3 pb-1 border-b border-indigo-100">Entrega y Estado</h4>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Nº Acta de Entrega</label>
+                            <input type="text" name="delivery_act_number" [(ngModel)]="newRecord.delivery_act_number"
+                                class="field-control-compact" placeholder="Ej: ACTA-2026/005">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Fecha de Entrega</label>
+                            <input type="date" name="delivery_date" [(ngModel)]="newRecord.delivery_date"
+                                class="field-control-compact">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Estado de Entrega</label>
+                            <select name="delivery_status" [(ngModel)]="newRecord.delivery_status" required class="field-control-compact">
+                                <option value="PENDIENTE">PENDIENTE</option>
+                                <option value="ENTREGADO">ENTREGADO</option>
+                                <option value="DERIVADO">DERIVADO</option>
+                                <option value="FINALIZADO">FINALIZADO</option>
+                                <option value="ANULADO">ANULADO</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="field-label-compact">Retirado por</label>
+                            <input type="text" name="retrieved_by" [(ngModel)]="newRecord.retrieved_by"
+                                class="field-control-compact" placeholder="Ej: Oficial Pérez">
+                        </div>
+                        <div class="col-span-2 space-y-1.5">
+                            <label class="field-label-compact">Organismo Destinatario</label>
+                            <input type="text" name="organism" [(ngModel)]="newRecord.organism"
+                                class="field-control-compact" placeholder="Ej: Juzgado Federal Nro. 3">
+                        </div>
+                        <div class="col-span-3 space-y-1.5">
+                            <label class="field-label-compact">Observaciones</label>
+                            <textarea name="observations" [(ngModel)]="newRecord.observations" rows="2"
+                                class="field-control-compact resize-none" placeholder="Observaciones adicionales..."></textarea>
+                        </div>
                     </div>
                 </div>
 
-                <div class="pt-2 flex gap-3">
-                    <button type="button" (click)="showForm.set(false); resetForm()" class="btn-secondary-compact">
-                        Cancelar
-                    </button>
-                    <button type="submit" [disabled]="!recordForm.form.valid" class="btn-primary-compact">
-                        {{ isEditing() ? 'Guardar cambios' : 'Registrar Evidencia' }}
-                    </button>
-                </div>
             </form>
+
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0 flex gap-3 justify-end">
+                <button type="button" (click)="showForm.set(false); resetForm()" class="btn-secondary-compact">
+                    Cancelar
+                </button>
+                <button type="button" (click)="saveRecord()" class="btn-primary-compact">
+                    {{ isEditing() ? 'Guardar cambios' : 'Registrar Evidencia' }}
+                </button>
+            </div>
         </div>
     </div>
     }

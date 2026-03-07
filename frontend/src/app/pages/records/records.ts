@@ -5,7 +5,6 @@ import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { RecordsService } from '../../services/records.service';
 import { ToastService } from '../../services/toast.service';
-import { AssetService } from '../../services/asset.service';
 import { PersonnelService } from '../../services/personnel.service';
 import { InformeService } from '../../services/informe.service';
 
@@ -14,20 +13,20 @@ import { InformeService } from '../../services/informe.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './records.html',
-  providers: [RecordsService, AssetService, PersonnelService, InformeService]
+  providers: [RecordsService, PersonnelService, InformeService]
 })
 export class RecordsComponent implements OnInit {
   private recordsService = inject(RecordsService);
-  private assetService = inject(AssetService);
   private personnelService = inject(PersonnelService);
   private toastService = inject(ToastService);
   private informeService = inject(InformeService);
   private router = inject(Router);
 
   records = signal<any[]>([]);
-  cameras = signal<any[]>([]);
   people = signal<any[]>([]);
   informesMap = signal<Record<number, any>>({});
+  operatorSystems = signal<{ id: number; name: string }[]>([]);
+  sistemaIsCustom = signal(false);
   showForm = signal(false);
   isEditing = signal(false);
   private editingRecordId: number | null = null;
@@ -50,7 +49,6 @@ export class RecordsComponent implements OnInit {
   filterDeliveryStatus = '';
   filterVerified = '';
   filterHasBackup = '';
-  filterCamera = '';
   filterOperator = '';
   filterDateFrom = '';
   filterDateTo = '';
@@ -69,7 +67,6 @@ export class RecordsComponent implements OnInit {
       delivery_status: this.filterDeliveryStatus || undefined,
       is_integrity_verified: this.filterVerified,
       has_backup: this.filterHasBackup,
-      camera: this.filterCamera || undefined,
       operator: this.filterOperator || undefined,
       entry_date__gte: this.filterDateFrom || undefined,
       entry_date__lte: this.filterDateTo || undefined,
@@ -101,7 +98,6 @@ export class RecordsComponent implements OnInit {
   clearFilters() {
     this.filterDateFrom = '';
     this.filterDateTo = '';
-    this.filterCamera = '';
     this.filterOperator = '';
     this.filterVerified = '';
     this.filterHasBackup = '';
@@ -178,16 +174,9 @@ export class RecordsComponent implements OnInit {
   }
 
   loadMetadata() {
-    this.assetService.getCameras().subscribe({
-      next: (data) => {
-        this.cameras.set((data as any)?.results ?? data);
-        this.ensureDefaultSelections();
-      }
-    });
     this.personnelService.getPeople().subscribe({
       next: (data) => {
         this.people.set((data as any)?.results ?? data);
-        this.ensureDefaultSelections();
       }
     });
   }
@@ -207,24 +196,46 @@ export class RecordsComponent implements OnInit {
 
   editRecord(record: any) {
     this.newRecord = {
-      description: record?.description || '',
-      camera: record?.camera ?? '',
-      record_type: record?.record_type || 'VD',
+      issue_number: record?.issue_number || '',
+      order_number: record?.order_number ?? '',
+      entry_date: record?.entry_date || '',
+      request_type: record?.request_type || '',
+      request_number: record?.request_number || '',
+      requester: record?.requester || '',
+      judicial_case_number: record?.judicial_case_number || '',
+      case_title: record?.case_title || '',
+      incident_date: record?.incident_date || '',
+      crime_type: record?.crime_type || '',
+      intervening_department: record?.intervening_department || '',
+      received_by: record?.received_by ?? '',
+      operator: record?.operator ?? '',
+      sistema: record?.sistema || '',
+      dvd_number: record?.dvd_number || '',
+      report_number: record?.report_number || '',
+      ifgra_number: record?.ifgra_number || '',
+      expediente_number: record?.expediente_number || '',
       start_time: this.toDateTimeLocal(record?.start_time),
       end_time: this.toDateTimeLocal(record?.end_time),
-      operator: record?.operator ?? '',
+      delivery_act_number: record?.delivery_act_number || '',
+      delivery_date: record?.delivery_date || '',
+      retrieved_by: record?.retrieved_by || '',
+      organism: record?.organism || '',
       delivery_status: record?.delivery_status || 'PENDIENTE',
+      description: record?.description || '',
+      observations: record?.observations || '',
       is_integrity_verified: !!record?.is_integrity_verified
     };
     this.isEditing.set(true);
     this.editingRecordId = record?.id ?? null;
     this.showForm.set(true);
-    this.ensureDefaultSelections();
+    if (record?.operator) {
+      this.onOperatorChange(record.operator);
+    }
   }
 
   saveRecord() {
-    if (!this.newRecord.camera || !this.newRecord.operator) {
-      this.toastService.show('Debe seleccionar cámara y operador.', 'warning');
+    if (!this.newRecord.operator) {
+      this.toastService.show('Debe seleccionar un operador.', 'warning');
       return;
     }
 
@@ -269,6 +280,31 @@ export class RecordsComponent implements OnInit {
     });
   }
 
+  onOperatorChange(operatorId: number | string) {
+    const person = this.people().find(p => p.id === +operatorId);
+    const systems: { id: number; name: string }[] = person?.assigned_systems_details ?? [];
+    this.operatorSystems.set(systems);
+    if (!this.isEditing()) {
+      if (systems.length === 1) {
+        this.newRecord.sistema = systems[0].name;
+        this.sistemaIsCustom.set(false);
+      } else {
+        this.sistemaIsCustom.set(true);
+      }
+    } else {
+      const currentSistema = this.newRecord.sistema || '';
+      const isKnown = systems.some(s => s.name === currentSistema);
+      this.sistemaIsCustom.set(!isKnown || systems.length === 0);
+    }
+  }
+
+  onSistemaSelectChange(value: string) {
+    if (value === '__otro__') {
+      this.sistemaIsCustom.set(true);
+      this.newRecord.sistema = '';
+    }
+  }
+
   getOperatorName(record: any): string {
     return record?.operator_full_name || record?.operator_name || '-';
   }
@@ -294,14 +330,6 @@ export class RecordsComponent implements OnInit {
     });
   }
 
-  private ensureDefaultSelections() {
-    if (!this.newRecord.camera && this.cameras().length > 0) {
-      this.newRecord.camera = this.cameras()[0].id;
-    }
-    if (!this.newRecord.operator && this.people().length > 0) {
-      this.newRecord.operator = this.people()[0].id;
-    }
-  }
 
   private toDateTimeLocal(value: string | null | undefined): string {
     if (!value) {
@@ -318,20 +346,41 @@ export class RecordsComponent implements OnInit {
 
   private createEmptyRecord() {
     return {
-      description: '',
-      camera: '',
-      record_type: 'VD',
+      issue_number: '',
+      order_number: '',
+      entry_date: '',
+      request_type: '',
+      request_number: '',
+      requester: '',
+      judicial_case_number: '',
+      case_title: '',
+      incident_date: '',
+      crime_type: '',
+      intervening_department: '',
+      received_by: '',
+      operator: '',
+      sistema: '',
+      dvd_number: '',
+      report_number: '',
+      ifgra_number: '',
+      expediente_number: '',
       start_time: '',
       end_time: '',
-      operator: '',
+      delivery_act_number: '',
+      delivery_date: '',
+      retrieved_by: '',
+      organism: '',
       delivery_status: 'PENDIENTE',
+      description: '',
+      observations: '',
       is_integrity_verified: false
     };
   }
 
   resetForm() {
     this.newRecord = this.createEmptyRecord();
-    this.ensureDefaultSelections();
+    this.operatorSystems.set([]);
+    this.sistemaIsCustom.set(false);
     this.isEditing.set(false);
     this.editingRecordId = null;
   }
