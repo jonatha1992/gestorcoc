@@ -11,6 +11,16 @@ export type VideoReportVmsAuthenticityMode =
     | 'sin_autenticacion'
     | 'otro';
 
+export interface VideoReportInvolvedPerson {
+    role?: string;
+    full_name?: string;
+    document_type?: string;
+    document_number?: string;
+    nationality?: string;
+    birth_date?: string;
+    age?: number | null;
+}
+
 export interface MaterialSpeechContext {
     sistema?: string;
     aeropuerto?: string;
@@ -35,6 +45,8 @@ export interface MaterialSpeechContext {
     vms_authenticity_mode?: VideoReportVmsAuthenticityMode | '';
     vms_authenticity_detail?: string;
     motivo_sin_hash?: string;
+    involved_people_summary?: string;
+    involved_people?: VideoReportInvolvedPerson[];
 }
 
 export interface VideoReportFormData {
@@ -66,6 +78,8 @@ export interface VideoReportFormData {
     fiscalia: string;
     fiscal: string;
     denunciante: string;
+    involved_people_summary: string;
+    involved_people: VideoReportInvolvedPerson[];
     vuelo: string;
     empresa_aerea: string;
     destino: string;

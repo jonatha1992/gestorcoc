@@ -4,8 +4,121 @@ from unittest.mock import Mock, patch
 from django.conf import settings
 from django.core.exceptions import RequestDataTooBig
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from rest_framework.test import APIClient
+from assets.models import Unit
+from personnel.models import Person
+from .models import FilmRecord
 from .services import IntegrityService
+
+
+class FilmRecordApiPeopleTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.records_url = '/api/film-records/'
+        self.operator = Person.objects.create(
+            first_name='Juan',
+            last_name='Operador',
+            badge_number='123456',
+        )
+        self.receiver = Person.objects.create(
+            first_name='Maria',
+            last_name='Recepcion',
+            badge_number='123457',
+        )
+        self.unit = Unit.objects.create(name='Unidad Test', code='UTT')
+
+    def _build_payload(self):
+        return {
+            "request_number": "SOL-2026-0001",
+            "request_kind": "DENUNCIA",
+            "request_type": "OFICIO",
+            "judicial_case_number": "C-123/2026",
+            "judicial_office": "Fiscalia Nro. 1",
+            "judicial_secretary": "",
+            "judicial_holder": "",
+            "generator_unit": self.unit.id,
+            "operator": self.operator.id,
+            "received_by": self.receiver.id,
+            "involved_people": [
+                {
+                    "role": "DENUNCIANTE",
+                    "last_name": "Perez",
+                    "first_name": "Ana",
+                    "document_type": "DNI",
+                    "document_number": "30111222",
+                    "nationality": "Argentina",
+                    "birth_date": "1990-06-10",
+                },
+                {
+                    "role": "DETENIDO",
+                    "last_name": "Gomez",
+                    "first_name": "Luis",
+                    "document_type": "DNI",
+                    "document_number": "29888777",
+                    "nationality": "Argentina",
+                    "birth_date": "1988-01-05",
+                },
+            ],
+        }
+
+    def test_create_record_with_multiple_involved_people(self):
+        payload = self._build_payload()
+        response = self.client.post(self.records_url, payload, format='json')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('involved_people', response.data)
+        self.assertEqual(len(response.data['involved_people']), 2)
+        self.assertEqual(response.data['requester'], "Fiscalia Nro. 1")
+        self.assertEqual(str(response.data['entry_date']), str(timezone.localdate()))
+
+        record = FilmRecord.objects.get(pk=response.data['id'])
+        self.assertEqual(record.involved_people.count(), 2)
+        self.assertEqual(record.judicial_secretary, "N/C")
+        self.assertEqual(record.judicial_holder, "N/C")
+
+    def test_update_replaces_involved_people_without_orphans(self):
+        create_response = self.client.post(self.records_url, self._build_payload(), format='json')
+        self.assertEqual(create_response.status_code, 201)
+        record_id = create_response.data['id']
+
+        patch_payload = {
+            "involved_people": [
+                {
+                    "role": "DENUNCIANTE",
+                    "last_name": "Sosa",
+                    "first_name": "Carla",
+                    "document_type": "DNI",
+                    "document_number": "33222444",
+                    "nationality": "Argentina",
+                    "birth_date": "1993-07-01",
+                }
+            ]
+        }
+        patch_response = self.client.patch(f'{self.records_url}{record_id}/', patch_payload, format='json')
+
+        self.assertEqual(patch_response.status_code, 200)
+        self.assertEqual(len(patch_response.data['involved_people']), 1)
+        self.assertEqual(patch_response.data['involved_people'][0]['last_name'], 'Sosa')
+
+        record = FilmRecord.objects.get(pk=record_id)
+        self.assertEqual(record.involved_people.count(), 1)
+        self.assertEqual(record.involved_people.first().last_name, 'Sosa')
+
+    def test_missing_judicial_fields_are_normalized_to_nc(self):
+        payload = self._build_payload()
+        payload.pop('judicial_office', None)
+        payload.pop('judicial_secretary', None)
+        payload.pop('judicial_holder', None)
+        payload['requester'] = ''
+
+        response = self.client.post(self.records_url, payload, format='json')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['judicial_office'], 'N/C')
+        self.assertEqual(response.data['judicial_secretary'], 'N/C')
+        self.assertEqual(response.data['judicial_holder'], 'N/C')
+        self.assertEqual(response.data['requester'], 'N/C')
 
 
 class VideoAnalysisReportApiTests(TestCase):
@@ -118,6 +231,40 @@ class VideoAnalysisReportApiTests(TestCase):
     def test_allows_empty_fiscalia_and_fiscal(self, service_mock):
         service_mock.return_value = (BytesIO(b'docx-data'), 'informe.docx')
         report_data = {**self.valid_report_data, "fiscalia": "", "fiscal": ""}
+        payload = {"report_data": report_data, "frames": []}
+
+        response = self.client.post(self.url, payload, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        service_mock.assert_called_once()
+
+    @patch('records.views.IntegrityService.generate_video_analysis_docx')
+    def test_accepts_involved_people_in_report_payload(self, service_mock):
+        service_mock.return_value = (BytesIO(b'docx-data'), 'informe.docx')
+        report_data = {
+            **self.valid_report_data,
+            "involved_people_summary": "DENUNCIANTE: Perez Ana (DNI 30111222) | DETENIDO: Gomez Luis (DNI 29888777)",
+            "involved_people": [
+                {
+                    "role": "DENUNCIANTE",
+                    "full_name": "Perez, Ana",
+                    "document_type": "DNI",
+                    "document_number": "30111222",
+                    "nationality": "Argentina",
+                    "birth_date": "1990-06-10",
+                    "age": 35,
+                },
+                {
+                    "role": "DETENIDO",
+                    "full_name": "Gomez, Luis",
+                    "document_type": "DNI",
+                    "document_number": "29888777",
+                    "nationality": "Argentina",
+                    "birth_date": "1988-01-05",
+                    "age": 38,
+                },
+            ],
+        }
         payload = {"report_data": report_data, "frames": []}
 
         response = self.client.post(self.url, payload, format='json')

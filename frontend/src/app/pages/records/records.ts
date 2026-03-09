@@ -3,27 +3,31 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
+
+import { AssetService } from '../../services/asset.service';
+import { InformeService } from '../../services/informe.service';
+import { PersonnelService } from '../../services/personnel.service';
 import { RecordsService } from '../../services/records.service';
 import { ToastService } from '../../services/toast.service';
-import { PersonnelService } from '../../services/personnel.service';
-import { InformeService } from '../../services/informe.service';
 
 @Component({
   selector: 'app-records',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './records.html',
-  providers: [RecordsService, PersonnelService, InformeService]
+  providers: [RecordsService, PersonnelService, InformeService, AssetService]
 })
 export class RecordsComponent implements OnInit {
   private recordsService = inject(RecordsService);
   private personnelService = inject(PersonnelService);
+  private assetService = inject(AssetService);
   private toastService = inject(ToastService);
   private informeService = inject(InformeService);
   private router = inject(Router);
 
   records = signal<any[]>([]);
   people = signal<any[]>([]);
+  units = signal<any[]>([]);
   informesMap = signal<Record<number, any>>({});
   operatorSystems = signal<{ id: number; name: string }[]>([]);
   sistemaIsCustom = signal(false);
@@ -179,6 +183,14 @@ export class RecordsComponent implements OnInit {
         this.people.set((data as any)?.results ?? data);
       }
     });
+
+    this.assetService.getUnits().subscribe({
+      next: (data) => {
+        const units = (data as any)?.results ?? data;
+        this.units.set(Array.isArray(units) ? units : []);
+      },
+      error: () => this.units.set([])
+    });
   }
 
   updateStats() {
@@ -195,18 +207,40 @@ export class RecordsComponent implements OnInit {
   }
 
   editRecord(record: any) {
+    const involvedPeople = Array.isArray(record?.involved_people)
+      ? record.involved_people.map((person: any) => ({
+        role: person?.role || 'OTRO',
+        last_name: person?.last_name || '',
+        first_name: person?.first_name || '',
+        document_type: person?.document_type || '',
+        document_number: person?.document_number || '',
+        nationality: person?.nationality || '',
+        birth_date: person?.birth_date || ''
+      }))
+      : [];
+
     this.newRecord = {
       issue_number: record?.issue_number || '',
       order_number: record?.order_number ?? '',
-      entry_date: record?.entry_date || '',
+      entry_date: record?.entry_date || this.getTodayDate(),
       request_type: record?.request_type || '',
+      request_kind: record?.request_kind || '',
       request_number: record?.request_number || '',
       requester: record?.requester || '',
       judicial_case_number: record?.judicial_case_number || '',
       case_title: record?.case_title || '',
       incident_date: record?.incident_date || '',
+      incident_time: this.toTimeInput(record?.incident_time),
+      incident_place: record?.incident_place || '',
+      incident_sector: record?.incident_sector || '',
       crime_type: record?.crime_type || '',
+      criminal_problematic: record?.criminal_problematic || '',
+      incident_modality: record?.incident_modality || '',
       intervening_department: record?.intervening_department || '',
+      judicial_office: record?.judicial_office || record?.requester || '',
+      judicial_secretary: record?.judicial_secretary || '',
+      judicial_holder: record?.judicial_holder || '',
+      generator_unit: record?.generator_unit ?? '',
       received_by: record?.received_by ?? '',
       operator: record?.operator ?? '',
       sistema: record?.sistema || '',
@@ -223,7 +257,8 @@ export class RecordsComponent implements OnInit {
       delivery_status: record?.delivery_status || 'PENDIENTE',
       description: record?.description || '',
       observations: record?.observations || '',
-      is_integrity_verified: !!record?.is_integrity_verified
+      is_integrity_verified: !!record?.is_integrity_verified,
+      involved_people: involvedPeople.length > 0 ? involvedPeople : [this.createEmptyInvolvedPerson()]
     };
     this.isEditing.set(true);
     this.editingRecordId = record?.id ?? null;
@@ -239,10 +274,19 @@ export class RecordsComponent implements OnInit {
       return;
     }
 
+    const involvedPeople = this.normalizeInvolvedPeople();
+    if (involvedPeople === null) {
+      return;
+    }
+
     const payload = {
       ...this.newRecord,
-      is_integrity_verified: !!this.newRecord.is_integrity_verified
+      is_integrity_verified: !!this.newRecord.is_integrity_verified,
+      entry_date: this.newRecord.entry_date || this.getTodayDate(),
+      involved_people: involvedPeople,
     };
+
+    this.normalizeJudicialFields(payload);
 
     if (this.isEditing() && this.editingRecordId) {
       this.persistRecord(
@@ -278,6 +322,42 @@ export class RecordsComponent implements OnInit {
       },
       error: () => this.toastService.show('Error al eliminar registro', 'error')
     });
+  }
+
+  addInvolvedPerson() {
+    this.newRecord.involved_people = [...(this.newRecord.involved_people || []), this.createEmptyInvolvedPerson()];
+  }
+
+  removeInvolvedPerson(index: number) {
+    const people: any[] = [...(this.newRecord.involved_people || [])];
+    if (people.length <= 1) {
+      this.newRecord.involved_people = [this.createEmptyInvolvedPerson()];
+      return;
+    }
+    people.splice(index, 1);
+    this.newRecord.involved_people = people;
+  }
+
+  getInvolvedPersonAge(person: any): number | null {
+    if (!person?.birth_date) {
+      return null;
+    }
+    const birthDate = new Date(person.birth_date);
+    if (Number.isNaN(birthDate.getTime())) {
+      return null;
+    }
+
+    const now = new Date();
+    let age = now.getFullYear() - birthDate.getFullYear();
+    const hasNotHadBirthday =
+      now.getMonth() < birthDate.getMonth() ||
+      (now.getMonth() === birthDate.getMonth() && now.getDate() < birthDate.getDate());
+
+    if (hasNotHadBirthday) {
+      age -= 1;
+    }
+
+    return age >= 0 ? age : null;
   }
 
   onOperatorChange(operatorId: number | string) {
@@ -330,6 +410,53 @@ export class RecordsComponent implements OnInit {
     });
   }
 
+  private normalizeInvolvedPeople(): any[] | null {
+    const rawPeople: any[] = Array.isArray(this.newRecord.involved_people) ? this.newRecord.involved_people : [];
+    const normalized = rawPeople.map((person) => ({
+      role: (person?.role || 'OTRO').trim() || 'OTRO',
+      last_name: (person?.last_name || '').trim(),
+      first_name: (person?.first_name || '').trim(),
+      document_type: (person?.document_type || '').trim(),
+      document_number: (person?.document_number || '').trim(),
+      nationality: (person?.nationality || '').trim(),
+      birth_date: person?.birth_date || null,
+    }));
+
+    const hasPartialRow = normalized.some((person) => {
+      const hasAny = !!(
+        person.last_name ||
+        person.first_name ||
+        person.document_type ||
+        person.document_number ||
+        person.nationality ||
+        person.birth_date
+      );
+      const missingIdentity = !person.last_name || !person.first_name;
+      return hasAny && missingIdentity;
+    });
+
+    if (hasPartialRow) {
+      this.toastService.show('Cada persona involucrada debe tener apellido y nombre.', 'warning');
+      return null;
+    }
+
+    return normalized.filter((person) => person.last_name && person.first_name);
+  }
+
+  private normalizeJudicialFields(payload: any) {
+    const toNC = (value: any) => {
+      const text = (value ?? '').toString().trim();
+      return text ? text : 'N/C';
+    };
+
+    payload.judicial_office = toNC(payload.judicial_office);
+    payload.judicial_secretary = toNC(payload.judicial_secretary);
+    payload.judicial_holder = toNC(payload.judicial_holder);
+
+    const requester = (payload.requester || '').toString().trim();
+    payload.requester = requester || payload.judicial_office;
+    payload.judicial_office = payload.judicial_office || payload.requester;
+  }
 
   private toDateTimeLocal(value: string | null | undefined): string {
     if (!value) {
@@ -344,19 +471,57 @@ export class RecordsComponent implements OnInit {
     return local.toISOString().slice(0, 16);
   }
 
+  private toTimeInput(value: string | null | undefined): string {
+    if (!value) {
+      return '';
+    }
+    if (value.includes(':')) {
+      return value.slice(0, 5);
+    }
+    return '';
+  }
+
+  private getTodayDate(): string {
+    const now = new Date();
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+    return local.toISOString().slice(0, 10);
+  }
+
+  private createEmptyInvolvedPerson() {
+    return {
+      role: 'OTRO',
+      last_name: '',
+      first_name: '',
+      document_type: 'DNI',
+      document_number: '',
+      nationality: '',
+      birth_date: '',
+    };
+  }
+
   private createEmptyRecord() {
     return {
       issue_number: '',
       order_number: '',
-      entry_date: '',
+      entry_date: this.getTodayDate(),
       request_type: '',
+      request_kind: '',
       request_number: '',
       requester: '',
       judicial_case_number: '',
       case_title: '',
       incident_date: '',
+      incident_time: '',
+      incident_place: '',
+      incident_sector: '',
       crime_type: '',
+      criminal_problematic: '',
+      incident_modality: '',
       intervening_department: '',
+      judicial_office: '',
+      judicial_secretary: '',
+      judicial_holder: '',
+      generator_unit: '',
       received_by: '',
       operator: '',
       sistema: '',
@@ -373,7 +538,8 @@ export class RecordsComponent implements OnInit {
       delivery_status: 'PENDIENTE',
       description: '',
       observations: '',
-      is_integrity_verified: false
+      is_integrity_verified: false,
+      involved_people: [this.createEmptyInvolvedPerson()],
     };
   }
 
@@ -385,3 +551,4 @@ export class RecordsComponent implements OnInit {
     this.editingRecordId = null;
   }
 }
+

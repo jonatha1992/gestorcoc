@@ -23,16 +23,14 @@ class Person(TimeStampedModel):
     ]
 
     RANK_CHOICES = [
-        ("JEFE", "Jefe"),
-        ("OFICIAL_AYUDANTE_PRINCIPAL", "Oficial Ayudante Principal"),
-        ("OFICIAL_PRINCIPAL", "Oficial Principal"),
-        ("OFICIAL", "Oficial"),
-        ("MAYOR", "Mayor"),
-        ("OFICIAL_JEFE", "Oficial Jefe"),
+        ("OFICIAL_AYUDANTE", "Of. Ayte. "),
+        ("OFICIAL_PRINCIPAL", "Of. Ppal."),
+        ("OFICIAL_MAYOR", "Of. Mayor"),
+        ("OFICIAL_JEFE", "Of. Jefe"),
         ("SUBINSPECTOR", "Subinspector"),
         ("INSPECTOR", "Inspector"),
-        ("COMISIONADO_MAYOR", "Comisionado Mayor"),
-        ("COMISIONADO_GENERAL", "Comisionado General"),
+        ("COMISIONADO_MAYOR", "Com. Mayor"),
+        ("COMISIONADO_GENERAL", "Com. Gral."),
         ("CIVIL", "Civil"),
     ]
 

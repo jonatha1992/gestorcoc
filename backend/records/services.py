@@ -749,6 +749,21 @@ class IntegrityService:
         raise RuntimeError("No se encontro un proveedor de IA utilizable.")
 
     @staticmethod
+    def _resolve_video_report_template_path() -> Path:
+        current_file = Path(__file__).resolve()
+        candidates = [
+            current_file.parents[3] / "data" / "Modelo Informe.docx",
+            current_file.parents[2] / "data" / "Modelo Informe.docx",
+            current_file.parents[2] / "docs" / "data" / "Modelo Informe.docx",
+            Path.cwd() / "docs" / "data" / "Modelo Informe.docx",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        paths_text = " | ".join(str(candidate) for candidate in candidates)
+        raise FileNotFoundError(f"No se encontro plantilla en: {paths_text}")
+
+    @staticmethod
     def generate_video_analysis_docx(payload):
         """
         Genera un informe DOCX usando data/Modelo Informe.docx como base.
@@ -758,9 +773,7 @@ class IntegrityService:
         except ImportError as exc:
             raise RuntimeError("python-docx no esta instalado") from exc
 
-        template_path = Path(__file__).resolve().parents[3] / "data" / "Modelo Informe.docx"
-        if not template_path.exists():
-            raise FileNotFoundError(f"No se encontro plantilla: {template_path}")
+        template_path = IntegrityService._resolve_video_report_template_path()
 
         report_data, frames = IntegrityService._normalize_video_payload(payload or {})
 
@@ -807,6 +820,8 @@ class IntegrityService:
         destinatarios = fiscalia_doc
         fiscal_doc = fiscal or "Autoridad interviniente no consignada"
         denunciante = IntegrityService._as_text(report_data.get("denunciante"), "Denunciante")
+        involved_people_summary = IntegrityService._as_text(report_data.get("involved_people_summary"), "").strip()
+        involved_people = report_data.get("involved_people") if isinstance(report_data.get("involved_people"), list) else []
         vuelo = IntegrityService._as_text(report_data.get("vuelo"), "---")
         empresa_aerea = IntegrityService._as_text(report_data.get("empresa_aerea"), "---")
         destino = IntegrityService._as_text(report_data.get("destino"), "---")
@@ -845,6 +860,22 @@ class IntegrityService:
                 "sintesis_conclusion": sintesis_conclusion,
                 "cantidad_observada": cantidad_observada,
             })
+
+        if not involved_people_summary and involved_people:
+            summary_parts = []
+            for person in involved_people:
+                if not isinstance(person, dict):
+                    continue
+                role = IntegrityService._as_text(person.get("role"), "OTRO").strip()
+                full_name = IntegrityService._as_text(person.get("full_name"), "").strip()
+                document_type = IntegrityService._as_text(person.get("document_type"), "").strip()
+                document_number = IntegrityService._as_text(person.get("document_number"), "").strip()
+                document_label = " ".join(item for item in [document_type, document_number] if item).strip()
+                line = f"{role}: {full_name or 'Sin nombre'}"
+                if document_label:
+                    line = f"{line} ({document_label})"
+                summary_parts.append(line)
+            involved_people_summary = " | ".join(summary_parts)
 
         op_info = f"{grado} {operador}, LUP: {lup}"
 
@@ -918,6 +949,10 @@ class IntegrityService:
         if len(tables) > 2:
             row = tables[2].add_row()
             row.cells[0].paragraphs[0].add_run(conclusion)
+
+        if involved_people_summary:
+            document.add_paragraph("")
+            document.add_paragraph(f"Personas involucradas: {involved_people_summary}")
 
         IntegrityService._append_frames_annex(document, frames)
 

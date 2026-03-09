@@ -1,5 +1,19 @@
 from django.contrib import admin
-from .models import FilmRecord, Catalog, AIUsageLog
+from .models import AIUsageLog, Catalog, FilmRecord, FilmRecordInvolvedPerson
+
+
+class FilmRecordInvolvedPersonInline(admin.TabularInline):
+    model = FilmRecordInvolvedPerson
+    extra = 0
+    fields = (
+        'role',
+        'last_name',
+        'first_name',
+        'document_type',
+        'document_number',
+        'nationality',
+        'birth_date',
+    )
 
 @admin.register(FilmRecord)
 class FilmRecordAdmin(admin.ModelAdmin):
@@ -10,7 +24,9 @@ class FilmRecordAdmin(admin.ModelAdmin):
         'id',
         'order_number',
         'issue_number',
+        'request_kind',
         'judicial_case_number',
+        'judicial_office',
         'sistema',
         'entry_date',
         'delivery_status',
@@ -26,6 +42,7 @@ class FilmRecordAdmin(admin.ModelAdmin):
         'is_integrity_verified',
         'is_editable',
         'request_type',
+        'request_kind',
         'entry_date',
     )
 
@@ -35,12 +52,16 @@ class FilmRecordAdmin(admin.ModelAdmin):
         'request_number',
         'case_title',
         'requester',
+        'judicial_office',
+        'judicial_holder',
         'dvd_number',
         'report_number',
         'expediente_number',
         'description',
         'operator__last_name',
     )
+
+    inlines = [FilmRecordInvolvedPersonInline]
     
     date_hierarchy = 'entry_date'
     
@@ -52,6 +73,7 @@ class FilmRecordAdmin(admin.ModelAdmin):
                 'issue_number',
                 'order_number',
                 'entry_date',
+                'request_kind',
                 'request_type',
                 'request_number',
                 'requester',
@@ -62,8 +84,17 @@ class FilmRecordAdmin(admin.ModelAdmin):
                 'judicial_case_number',
                 'case_title',
                 'incident_date',
+                'incident_time',
+                'incident_place',
+                'incident_sector',
                 'crime_type',
+                'criminal_problematic',
+                'incident_modality',
                 'intervening_department',
+                'generator_unit',
+                'judicial_office',
+                'judicial_secretary',
+                'judicial_holder',
             )
         }),
         ('Sistema y Personal', {

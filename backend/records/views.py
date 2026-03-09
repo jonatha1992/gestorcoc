@@ -30,8 +30,9 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
     queryset = FilmRecord.objects.select_related(
         'operator',
         'received_by',
-        'verified_by_crev'
-    ).all()
+        'verified_by_crev',
+        'generator_unit',
+    ).prefetch_related('involved_people').all()
     serializer_class = FilmRecordSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     
@@ -46,6 +47,8 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
         'operator': ['exact'],
         'received_by': ['exact'],
         'request_type': ['exact'],
+        'request_kind': ['exact'],
+        'generator_unit': ['exact'],
     }
     
     # Búsqueda
@@ -55,10 +58,20 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
         'request_number',
         'case_title',
         'requester',
+        'judicial_office',
+        'judicial_secretary',
+        'judicial_holder',
+        'incident_place',
+        'incident_sector',
+        'criminal_problematic',
+        'incident_modality',
         'dvd_number',
         'report_number',
         'expediente_number',
         'retrieved_by',
+        'involved_people__first_name',
+        'involved_people__last_name',
+        'involved_people__document_number',
         'operator__first_name',
         'operator__last_name',
     ]

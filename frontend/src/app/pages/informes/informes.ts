@@ -12,6 +12,7 @@ import {
   VideoReportFormData,
   VideoReportFrame,
   VideoReportHashAlgorithm,
+  VideoReportInvolvedPerson,
   VideoReportPayload,
   VideoReportVmsAuthenticityMode,
 } from '../../services/informe.service';
@@ -245,6 +246,13 @@ export class InformesComponent implements OnInit, OnDestroy {
     if (!http) return;
     (http.get(`${baseUrl}/api/film-records/${recordId}/`) as import('rxjs').Observable<any>).subscribe({
       next: (record: any) => {
+        const involvedPeople = this.mapRecordInvolvedPeople(record?.involved_people);
+        const involvedPeopleSummary = this.buildInvolvedPeopleSummary(involvedPeople);
+        const mainComplainant = this.pickMainComplainant(involvedPeople);
+        const judicialOffice = this.normalizeText(record?.judicial_office || record?.requester);
+        const judicialHolder = this.normalizeText(record?.judicial_holder);
+        const judicialSecretary = this.normalizeText(record?.judicial_secretary);
+
         if (record.judicial_case_number) {
           this.form.prevencion_sumaria = record.judicial_case_number;
         }
@@ -265,26 +273,64 @@ export class InformesComponent implements OnInit, OnDestroy {
         if (record.sistema) {
           this.form.sistema = record.sistema;
         }
-        if (record.crime_type) {
+        if (record.criminal_problematic) {
+          this.form.objeto_denunciado = record.criminal_problematic;
+        } else if (record.crime_type) {
           this.form.objeto_denunciado = record.crime_type;
+        } else if (record.incident_modality) {
+          this.form.objeto_denunciado = record.incident_modality;
         } else if (record.description) {
           this.form.objeto_denunciado = record.description;
         }
-        if (record.requester) {
-          this.form.fiscalia = record.requester;
+        if (record.incident_sector) {
+          this.form.sectores_analizados = record.incident_sector;
+        }
+        if (judicialOffice && judicialOffice !== 'N/C') {
+          this.form.fiscalia = judicialOffice;
+        }
+        if (judicialHolder && judicialHolder !== 'N/C') {
+          this.form.fiscal = judicialHolder;
+        } else if (judicialSecretary && judicialSecretary !== 'N/C') {
+          this.form.fiscal = judicialSecretary;
         }
         if (record.report_number) {
           this.form.numero_informe = record.report_number;
         }
-        if (record.intervening_department) {
+        if (record.generator_unit_name) {
+          this.form.unidad = record.generator_unit_name;
+        } else if (record.intervening_department) {
           this.form.unidad = record.intervening_department;
         }
+        if (mainComplainant) {
+          this.form.denunciante = mainComplainant;
+        }
+        if (involvedPeopleSummary) {
+          this.form.involved_people_summary = involvedPeopleSummary;
+        }
+        this.form.involved_people = involvedPeople;
+        if (!this.form.cantidad_observada && involvedPeople.length > 0) {
+          const label = involvedPeople.length === 1 ? '1 persona' : `${involvedPeople.length} personas`;
+          this.form.cantidad_observada = label;
+        }
+
+        const place = this.normalizeText(record?.incident_place);
+        const sector = this.normalizeText(record?.incident_sector);
+        const locationParts = [place, sector].filter((value) => !!value && value !== 'N/C');
+        if (!this.form.aeropuerto && locationParts.length > 0) {
+          this.form.aeropuerto = locationParts.join(' - ');
+        }
+
         if (record.start_time && record.end_time) {
           const s = new Date(record.start_time);
           const e = new Date(record.end_time);
           const pad = (n: number) => n.toString().padStart(2, '0');
           this.form.franja_horaria_analizada =
             `${pad(s.getHours())}:${pad(s.getMinutes())} a ${pad(e.getHours())}:${pad(e.getMinutes())}`;
+        } else {
+          const incidentTime = this.normalizeTimeLabel(record?.incident_time);
+          if (incidentTime) {
+            this.form.franja_horaria_analizada = incidentTime;
+          }
         }
 
         // Auto-detectar hash y algoritmo del registro
@@ -294,6 +340,112 @@ export class InformesComponent implements OnInit, OnDestroy {
       },
       error: () => { }
     });
+  }
+
+  private normalizeText(value: unknown): string {
+    return String(value ?? '').trim();
+  }
+
+  private normalizeTimeLabel(value: unknown): string {
+    const text = this.normalizeText(value);
+    if (!text) {
+      return '';
+    }
+    if (text.includes(':')) {
+      return text.slice(0, 5);
+    }
+    return '';
+  }
+
+  private mapRecordInvolvedPeople(input: unknown): VideoReportInvolvedPerson[] {
+    if (!Array.isArray(input)) {
+      return [];
+    }
+
+    const mapped: VideoReportInvolvedPerson[] = [];
+    for (const rawPerson of input) {
+      if (!rawPerson || typeof rawPerson !== 'object') {
+        continue;
+      }
+
+      const person = rawPerson as Record<string, unknown>;
+      const lastName = this.normalizeText(person['last_name']);
+      const firstName = this.normalizeText(person['first_name']);
+      const fullName = [lastName, firstName].filter((item) => !!item).join(', ');
+      if (!fullName) {
+        continue;
+      }
+
+      const role = this.normalizeText(person['role']).toUpperCase() || 'OTRO';
+      const birthDate = this.normalizeText(person['birth_date']);
+      mapped.push({
+        role,
+        full_name: fullName,
+        document_type: this.normalizeText(person['document_type']),
+        document_number: this.normalizeText(person['document_number']),
+        nationality: this.normalizeText(person['nationality']),
+        birth_date: birthDate,
+        age: this.calculateAgeFromBirthDate(birthDate),
+      });
+    }
+
+    return mapped;
+  }
+
+  private calculateAgeFromBirthDate(birthDate: string): number | null {
+    if (!birthDate) {
+      return null;
+    }
+
+    const parsed = new Date(birthDate);
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+
+    const now = new Date();
+    let age = now.getFullYear() - parsed.getFullYear();
+    const hasNotHadBirthday =
+      now.getMonth() < parsed.getMonth() ||
+      (now.getMonth() === parsed.getMonth() && now.getDate() < parsed.getDate());
+    if (hasNotHadBirthday) {
+      age -= 1;
+    }
+
+    return age >= 0 ? age : null;
+  }
+
+  private buildInvolvedPeopleSummary(people: VideoReportInvolvedPerson[]): string {
+    if (!Array.isArray(people) || people.length === 0) {
+      return '';
+    }
+
+    const chunks: string[] = [];
+    for (const person of people) {
+      const role = this.normalizeText(person.role).toUpperCase() || 'OTRO';
+      const fullName = this.normalizeText(person.full_name) || 'Sin nombre';
+      const documentType = this.normalizeText(person.document_type);
+      const documentNumber = this.normalizeText(person.document_number);
+      const documentLabel = [documentType, documentNumber].filter((item) => !!item).join(' ');
+      const base = `${role}: ${fullName}`;
+      chunks.push(documentLabel ? `${base} (${documentLabel})` : base);
+    }
+    return chunks.join(' | ');
+  }
+
+  private pickMainComplainant(people: VideoReportInvolvedPerson[]): string {
+    if (!Array.isArray(people) || people.length === 0) {
+      return '';
+    }
+
+    const preferred = people.find((person) => this.normalizeText(person.role).toUpperCase() === 'DENUNCIANTE');
+    if (preferred?.full_name) {
+      return preferred.full_name;
+    }
+    const fallback = people.find((person) => this.normalizeText(person.role).toUpperCase() === 'DAMNIFICADO');
+    if (fallback?.full_name) {
+      return fallback.full_name;
+    }
+    return this.normalizeText(people[0]?.full_name);
   }
 
   /**
@@ -949,6 +1101,8 @@ export class InformesComponent implements OnInit, OnDestroy {
     fiscalia: '',
     fiscal: '',
     denunciante: '',
+    involved_people_summary: '',
+    involved_people: [],
     vuelo: '',
     empresa_aerea: '',
     destino: '',
@@ -991,6 +1145,8 @@ export class InformesComponent implements OnInit, OnDestroy {
     fiscalia: 'Fiscalia / Juzgado',
     fiscal: 'Fiscal / Juez / Secretario',
     denunciante: 'Denunciante',
+    involved_people_summary: 'Resumen de Personas Involucradas',
+    involved_people: 'Personas Involucradas',
     vuelo: 'Vuelo',
     empresa_aerea: 'Empresa Aérea',
     destino: 'Destino',
@@ -1118,6 +1274,14 @@ export class InformesComponent implements OnInit, OnDestroy {
     denunciante: {
       quePoner: 'Persona que realiza la denuncia.',
       ejemplo: 'PONZO Osvaldo',
+    },
+    involved_people_summary: {
+      quePoner: 'Resumen consolidado de todas las personas involucradas en el requerimiento.',
+      ejemplo: 'DENUNCIANTE: Perez, Ana (DNI 30111222) | DETENIDO: Gomez, Luis (DNI 29888777)',
+    },
+    involved_people: {
+      quePoner: 'Listado estructurado de involucrados precargado desde Registros Filmicos.',
+      ejemplo: 'DENUNCIANTE Perez, Ana; DETENIDO Gomez, Luis',
     },
     fecha_hecho: {
       quePoner: 'Fecha en la que ocurrio el hecho investigado.',
@@ -1621,6 +1785,16 @@ export class InformesComponent implements OnInit, OnDestroy {
       reportData.empresa_aerea = '';
       reportData.destino = '';
     }
+    reportData.involved_people = this.normalizeReportInvolvedPeople(reportData.involved_people);
+    if (!(reportData.involved_people_summary || '').trim()) {
+      reportData.involved_people_summary = this.buildInvolvedPeopleSummary(reportData.involved_people);
+    }
+    if (!(reportData.denunciante || '').trim()) {
+      const mainComplainant = this.pickMainComplainant(reportData.involved_people);
+      if (mainComplainant) {
+        reportData.denunciante = mainComplainant;
+      }
+    }
     return {
       report_data: reportData,
       frames: this.orderedFrames().map((frame) => ({
@@ -1632,6 +1806,36 @@ export class InformesComponent implements OnInit, OnDestroy {
         order: frame.order,
       })),
     };
+  }
+
+  private normalizeReportInvolvedPeople(people: VideoReportInvolvedPerson[]): VideoReportInvolvedPerson[] {
+    if (!Array.isArray(people)) {
+      return [];
+    }
+
+    const normalized: VideoReportInvolvedPerson[] = [];
+    for (const item of people) {
+      const fullName = this.normalizeText(item?.full_name);
+      if (!fullName) {
+        continue;
+      }
+
+      const role = this.normalizeText(item?.role).toUpperCase() || 'OTRO';
+      const birthDate = this.normalizeText(item?.birth_date);
+      const computedAge = this.calculateAgeFromBirthDate(birthDate);
+      const age = typeof item?.age === 'number' ? item.age : computedAge;
+
+      normalized.push({
+        role,
+        full_name: fullName,
+        document_type: this.normalizeText(item?.document_type),
+        document_number: this.normalizeText(item?.document_number),
+        nationality: this.normalizeText(item?.nationality),
+        birth_date: birthDate,
+        age,
+      });
+    }
+    return normalized;
   }
 
   private getSelectedHashAlgorithmLabels(): string[] {
@@ -1666,6 +1870,8 @@ export class InformesComponent implements OnInit, OnDestroy {
       vms_authenticity_mode: this.form.vms_authenticity_mode,
       vms_authenticity_detail: this.form.vms_authenticity_detail,
       motivo_sin_hash: this.form.motivo_sin_hash,
+      involved_people_summary: this.form.involved_people_summary,
+      involved_people: this.form.involved_people,
     };
   }
 
@@ -2050,6 +2256,12 @@ export class InformesComponent implements OnInit, OnDestroy {
     const fiscalMeta = fiscal
       ? `<p><strong>Fiscal / Juez / Secretario:</strong> ${this.escapeHtml(fiscal)}</p>`
       : '';
+    const involvedSummary =
+      (report.involved_people_summary || '').trim() ||
+      this.buildInvolvedPeopleSummary(this.normalizeReportInvolvedPeople(report.involved_people || []));
+    const involvedPeopleMeta = involvedSummary
+      ? `<p><strong>Personas involucradas:</strong> ${this.escapeHtml(involvedSummary)}</p>`
+      : '';
     const unidad = (report.unidad || '').trim();
     const aeropuerto = (report.aeropuerto || '').trim();
     const locationMeta =
@@ -2138,6 +2350,7 @@ export class InformesComponent implements OnInit, OnDestroy {
           ${fiscaliaMeta}
           ${fiscalMeta}
           <p><strong>Denunciante:</strong> ${this.escapeHtml(report.denunciante)}</p>
+          ${involvedPeopleMeta}
           ${report.vuelo ? `<p><strong>Vuelo:</strong> ${this.escapeHtml(report.vuelo)}</p>` : ''}
           ${report.empresa_aerea ? `<p><strong>Empresa Aerea:</strong> ${this.escapeHtml(report.empresa_aerea)}</p>` : ''}
           ${report.destino ? `<p><strong>Destino:</strong> ${this.escapeHtml(report.destino)}</p>` : ''}
@@ -2185,6 +2398,16 @@ export class InformesComponent implements OnInit, OnDestroy {
     // We update the data that we want to save
     const currentData = { ...this.form };
     currentData.destinatarios = this.getStandardDestinatarios(currentData.fiscalia);
+    currentData.involved_people = this.normalizeReportInvolvedPeople(currentData.involved_people);
+    if (!(currentData.involved_people_summary || '').trim()) {
+      currentData.involved_people_summary = this.buildInvolvedPeopleSummary(currentData.involved_people);
+    }
+    if (!(currentData.denunciante || '').trim()) {
+      const mainComplainant = this.pickMainComplainant(currentData.involved_people);
+      if (mainComplainant) {
+        currentData.denunciante = mainComplainant;
+      }
+    }
 
     this.informeService.saveReportDraft(this.linkedRecordId()!, currentData).subscribe({
       next: (res) => {
