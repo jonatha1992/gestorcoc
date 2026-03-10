@@ -132,7 +132,6 @@ export class InformesComponent implements OnInit, OnDestroy {
   selectedOperatorId: number | null = null;
   isSavingOperatorData = false;
   private pendingOperatorSave = false;
-  private pendingOperatorId: number | null = null;
   invalidFields = new Set<keyof VideoReportFormData>();
   validationMessage = '';
   private lastSuggestedReportNumber = '';
@@ -262,14 +261,6 @@ export class InformesComponent implements OnInit, OnDestroy {
         if (record.incident_date) {
           this.form.fecha_hecho = record.incident_date;
         }
-        if (record.operator) {
-          if (this.personnelOptions.length > 0) {
-            this.selectedOperatorId = record.operator;
-            this.onOperatorChange(record.operator);
-          } else {
-            this.pendingOperatorId = record.operator;
-          }
-        }
         if (record.sistema) {
           this.form.sistema = record.sistema;
         }
@@ -281,9 +272,6 @@ export class InformesComponent implements OnInit, OnDestroy {
           this.form.objeto_denunciado = record.incident_modality;
         } else if (record.description) {
           this.form.objeto_denunciado = record.description;
-        }
-        if (record.incident_sector) {
-          this.form.sectores_analizados = record.incident_sector;
         }
         if (judicialOffice && judicialOffice !== 'N/C') {
           this.form.fiscalia = judicialOffice;
@@ -315,9 +303,17 @@ export class InformesComponent implements OnInit, OnDestroy {
 
         const place = this.normalizeText(record?.incident_place);
         const sector = this.normalizeText(record?.incident_sector);
-        const locationParts = [place, sector].filter((value) => !!value && value !== 'N/C');
-        if (!this.form.aeropuerto && locationParts.length > 0) {
-          this.form.aeropuerto = locationParts.join(' - ');
+        const locationCandidates = [place, sector].filter((value) => !!value && value !== 'N/C');
+        const locationParts = locationCandidates.filter(
+          (value, index) =>
+            locationCandidates.findIndex((candidate) => candidate.toUpperCase() === value.toUpperCase()) === index
+        );
+        const unifiedLocation = locationParts.join(' / ');
+        if (unifiedLocation) {
+          this.form.sectores_analizados = unifiedLocation;
+        }
+        if (!this.form.aeropuerto && unifiedLocation) {
+          this.form.aeropuerto = unifiedLocation;
         }
 
         if (record.start_time && record.end_time) {
@@ -576,11 +572,6 @@ export class InformesComponent implements OnInit, OnDestroy {
           this.personnelOptions = people;
           for (const person of this.personnelOptions) {
             this.registerGradeOption((person?.rank || '').trim());
-          }
-          if (this.pendingOperatorId !== null) {
-            this.selectedOperatorId = this.pendingOperatorId;
-            this.onOperatorChange(this.pendingOperatorId);
-            this.pendingOperatorId = null;
           }
         }, 50);
       },
@@ -2154,24 +2145,76 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   private async generateReportLocally(payload: VideoReportPayload): Promise<void> {
     try {
-      const logoBase64 = await this.getLogoBase64();
-      const html = this.buildLocalWordHtml(payload, logoBase64);
-      const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
+      const response = await firstValueFrom(this.informeService.generateVideoAnalysisReport(payload));
+      const blob = response.body;
+      if (!(blob instanceof Blob)) {
+        throw new Error('Respuesta vacia al generar informe.');
+      }
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `informe_analisis_video_${this.form.report_date || 'hoy'}_local.doc`;
+      link.download = this.resolveGeneratedFilename(response, this.form.report_date || 'hoy');
       link.click();
       window.URL.revokeObjectURL(url);
-      this.toastService.success('Informe local generado.');
+      this.toastService.success('Informe DOCX generado.');
       this.isDirty = false;
       this.persistReportToDB(payload);
-    } catch {
-      this.toastService.error('No se pudo generar el informe local.');
+    } catch (error) {
+      const message = await this.getReportGenerationErrorMessage(error);
+      this.toastService.error(message);
     } finally {
       this.isGenerating = false;
       this.loadingService.hide();
     }
+  }
+
+  private resolveGeneratedFilename(response: import('@angular/common/http').HttpResponse<Blob>, fallbackDate: string): string {
+    const contentDisposition = response.headers.get('content-disposition') || '';
+    const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+    if (utf8Match?.[1]) {
+      return decodeURIComponent(utf8Match[1]).replace(/["']/g, '');
+    }
+
+    const plainMatch = /filename=\"?([^\";]+)\"?/i.exec(contentDisposition);
+    if (plainMatch?.[1]) {
+      return plainMatch[1].replace(/["']/g, '');
+    }
+
+    return `informe_analisis_video_${fallbackDate}.docx`;
+  }
+
+  private async getReportGenerationErrorMessage(error: unknown): Promise<string> {
+    const defaultMessage = 'No se pudo generar el informe.';
+    if (!(error instanceof HttpErrorResponse)) {
+      return defaultMessage;
+    }
+
+    if (error.error instanceof Blob) {
+      try {
+        const rawText = await error.error.text();
+        const parsed = JSON.parse(rawText);
+        if (parsed?.error) {
+          return String(parsed.error);
+        }
+        if (parsed?.errors) {
+          return `No se pudo generar el informe: ${JSON.stringify(parsed.errors)}`;
+        }
+      } catch {
+        return defaultMessage;
+      }
+      return defaultMessage;
+    }
+
+    if (typeof error.error === 'object' && error.error !== null) {
+      if ('error' in error.error) {
+        return String((error.error as any).error);
+      }
+      if ('errors' in error.error) {
+        return `No se pudo generar el informe: ${JSON.stringify((error.error as any).errors)}`;
+      }
+    }
+
+    return defaultMessage;
   }
 
   private persistReportToDB(payload: VideoReportPayload): void {

@@ -4,6 +4,7 @@ import base64
 import binascii
 import json
 import re
+import unicodedata
 from threading import Lock
 from io import BytesIO
 from datetime import datetime
@@ -61,6 +62,27 @@ class IntegrityService:
             'otro': 'autenticación declarada por método alternativo',
         }
         return labels.get(str(mode or '').strip().lower(), 'autenticación no consignada')
+
+    @staticmethod
+    def _build_verification_reference(context):
+        ctx = context or {}
+        hash_program = IntegrityService._as_text(ctx.get('hash_program'), '').strip() or 'programa no consignado'
+        hash_algorithms = IntegrityService._normalize_hash_algorithms(ctx.get('hash_algorithms'))
+        hash_labels = [IntegrityService._hash_algorithm_label(item) for item in hash_algorithms]
+        if hash_labels:
+            algorithms_text = ', '.join(hash_labels)
+        else:
+            algorithms_text = 'sin algoritmos declarados'
+
+        mode = IntegrityService._as_text(ctx.get('vms_authenticity_mode'), '').strip()
+        mode_text = IntegrityService._vms_authenticity_label(mode)
+        detail = IntegrityService._as_text(ctx.get('vms_authenticity_detail'), '').strip()
+        detail_text = f" ({detail})" if detail and mode == 'otro' else ''
+
+        return (
+            f"Programa: {hash_program}; Algoritmos: {algorithms_text}; "
+            f"Autenticidad: {mode_text}{detail_text}"
+        )
 
     @staticmethod
     def _build_material_filmico_fallback(context):
@@ -289,6 +311,118 @@ class IntegrityService:
                 replace_in_paragraph(paragraph)
             for paragraph in section.footer.paragraphs:
                 replace_in_paragraph(paragraph)
+
+    @staticmethod
+    def _set_paragraph_text(paragraph, value):
+        text = str(value or '')
+        if paragraph.runs:
+            paragraph.runs[0].text = text
+            for run in paragraph.runs[1:]:
+                run.text = ''
+        else:
+            paragraph.add_run(text)
+
+    @staticmethod
+    def _normalize_match_text(value):
+        text = str(value or '').strip().lower()
+        text = unicodedata.normalize('NFKD', text)
+        return ''.join(char for char in text if not unicodedata.combining(char))
+
+    @staticmethod
+    def _format_fecha_hecho_doc(value):
+        raw = str(value or '').strip()
+        if not raw or raw == "---":
+            return "N/C"
+
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
+            try:
+                parsed = datetime.strptime(raw, fmt)
+                break
+            except ValueError:
+                parsed = None
+
+        if parsed is None:
+            return raw.upper()
+
+        month_names = {
+            1: "ENERO",
+            2: "FEBRERO",
+            3: "MARZO",
+            4: "ABRIL",
+            5: "MAYO",
+            6: "JUNIO",
+            7: "JULIO",
+            8: "AGOSTO",
+            9: "SEPTIEMBRE",
+            10: "OCTUBRE",
+            11: "NOVIEMBRE",
+            12: "DICIEMBRE",
+        }
+        month_name = month_names.get(parsed.month, "ENERO")
+        return f"{parsed.day:02d} DE {month_name} DEL {parsed.year}"
+
+    @staticmethod
+    def _replace_section_body(document, section_marker, next_marker, body_text):
+        if not str(body_text or '').strip():
+            return False
+
+        paragraphs = list(document.paragraphs)
+        section_norm = IntegrityService._normalize_match_text(section_marker)
+        next_norm = IntegrityService._normalize_match_text(next_marker) if next_marker else ''
+
+        start_index = -1
+        for idx, paragraph in enumerate(paragraphs):
+            if section_norm in IntegrityService._normalize_match_text(paragraph.text):
+                start_index = idx
+                break
+        if start_index < 0:
+            return False
+
+        end_index = len(paragraphs)
+        if next_norm:
+            for idx in range(start_index + 1, len(paragraphs)):
+                if next_norm in IntegrityService._normalize_match_text(paragraphs[idx].text):
+                    end_index = idx
+                    break
+
+        body_index = start_index + 1
+        if body_index >= len(paragraphs):
+            return False
+
+        IntegrityService._set_paragraph_text(paragraphs[body_index], body_text)
+        for idx in range(body_index + 1, end_index):
+            IntegrityService._set_paragraph_text(paragraphs[idx], '')
+        return True
+
+    @staticmethod
+    def _populate_informe_corto_sections(document, material_filmico, desarrollo, conclusion):
+        has_informe_corto_heading = any(
+            'informe visualizacion de video imagen' in IntegrityService._normalize_match_text(paragraph.text)
+            for paragraph in document.paragraphs
+        )
+        if not has_informe_corto_heading:
+            return False
+
+        applied = False
+        applied = IntegrityService._replace_section_body(
+            document,
+            "MATERIAL FILMICO A EXAMINAR",
+            "DESARROLLO",
+            material_filmico,
+        ) or applied
+        applied = IntegrityService._replace_section_body(
+            document,
+            "DESARROLLO",
+            "CONCLUSION",
+            desarrollo,
+        ) or applied
+        applied = IntegrityService._replace_section_body(
+            document,
+            "CONCLUSION",
+            "FOTOGRAMA INFORME",
+            conclusion,
+        ) or applied
+        return applied
 
     @staticmethod
     def _extract_json_object(raw_text):
@@ -752,6 +886,10 @@ class IntegrityService:
     def _resolve_video_report_template_path() -> Path:
         current_file = Path(__file__).resolve()
         candidates = [
+            current_file.parents[3] / "data" / "INFORME CORTO 0010CREV-26 PS 003BAR-26.docx",
+            current_file.parents[2] / "data" / "INFORME CORTO 0010CREV-26 PS 003BAR-26.docx",
+            current_file.parents[2] / "docs" / "data" / "INFORME CORTO 0010CREV-26 PS 003BAR-26.docx",
+            Path.cwd() / "docs" / "data" / "INFORME CORTO 0010CREV-26 PS 003BAR-26.docx",
             current_file.parents[3] / "data" / "Modelo Informe.docx",
             current_file.parents[2] / "data" / "Modelo Informe.docx",
             current_file.parents[2] / "docs" / "data" / "Modelo Informe.docx",
@@ -766,7 +904,7 @@ class IntegrityService:
     @staticmethod
     def generate_video_analysis_docx(payload):
         """
-        Genera un informe DOCX usando data/Modelo Informe.docx como base.
+        Genera un informe DOCX usando la plantilla oficial de Informe Corto.
         """
         try:
             from docx import Document
@@ -810,6 +948,12 @@ class IntegrityService:
         medida_seguridad_interna = IntegrityService._as_text(report_data.get("medida_seguridad_interna"), "").strip()
         vms_authenticity_mode = IntegrityService._as_text(report_data.get("vms_authenticity_mode"), "").strip()
         vms_authenticity_detail = IntegrityService._as_text(report_data.get("vms_authenticity_detail"), "").strip()
+        verification_reference = IntegrityService._build_verification_reference({
+            "hash_program": hash_program,
+            "hash_algorithms": hash_algorithms,
+            "vms_authenticity_mode": vms_authenticity_mode,
+            "vms_authenticity_detail": vms_authenticity_detail,
+        })
         prevencion_sumaria = IntegrityService._as_text(report_data.get("prevencion_sumaria"), "000BAR/2026")
         caratula = IntegrityService._as_text(report_data.get("caratula"), "DENUNCIA S/ PRESUNTO HURTO")
         unidad = IntegrityService._as_text(report_data.get("unidad"), "Coordinación Regional de Video Seguridad I del Este")
@@ -878,6 +1022,8 @@ class IntegrityService:
             involved_people_summary = " | ".join(summary_parts)
 
         op_info = f"{grado} {operador}, LUP: {lup}"
+        fiscalia_table_line = f"FISCALIA: {fiscalia_doc.upper()}, A CARGO DEL {fiscal_doc.upper()}. -"
+        fecha_hecho_doc = IntegrityService._format_fecha_hecho_doc(fecha_hecho)
 
         # Curly-quote characters used by Word as default punctuation
         LQ = "\u201c"  # “ left double quotation mark
@@ -909,12 +1055,20 @@ class IntegrityService:
             (f"denominado {LQ}MILESTONE{RQ}", f"denominado {LQ}{sistema}{RQ}"),
             ('denominado \"MILESTONE\"', f'denominado \"{sistema}\"'),
             ("Prevención Sumaria 003BAR/2026", f"Prevencion Sumaria {prevencion_sumaria}"),
+            ("Prevencion Sumaria 003BAR/2026", f"Prevencion Sumaria {prevencion_sumaria}"),
+            ("PREVENCION SUMARIA: 003BAR/2026", f"PREVENCION SUMARIA: {prevencion_sumaria}"),
             # Caratula: template has "xxxxxxx" placeholder (not the form default value)
             (f"caratulada {LQ}xxxxxxx{RQ}", f"caratulada {LQ}{caratula}{RQ}"),
             ('caratulada \"xxxxxxx\"', f'caratulada \"{caratula}\"'),
+            (f"caratulada {LQ}DENUNCIA S/ PRESUNTO HURTO{RQ}", f"caratulada {LQ}{caratula}{RQ}"),
+            ('caratulada \"DENUNCIA S/ PRESUNTO HURTO\"', f'caratulada \"{caratula}\"'),
+            (f"CARATULA: {LQ}DENUNCIA S/ PRESUNTO HURTO{RQ}", f"CARATULA: {LQ}{caratula}{RQ}"),
             ("Fiscalía Nro. 02 de San Carlos de Bariloche, Provincia de Rio Negro", fiscalia_doc),
+            ("FISCALIA NRO. 02 DE SAN CARLOS DE BARILOCHE, RIO NEGRO, A CARGO DEL DR. INTI ISLA. -", fiscalia_table_line),
             ("Dr. INTI ISLA", fiscal_doc),
+            ("DR. INTI ISLA", fiscal_doc.upper()),
             ("Sr. PONZO Osvaldo", f"Sr. {denunciante}"),
+            ("DAMNIFICADO: PONZO OSVALDO. -", f"DAMNIFICADO: {denunciante.upper()}. -"),
             ("vuelo WJ 3045", f"vuelo {vuelo}"),
             # empresa_aerea: match the specific airline name used in the template
             ("empresa aerocomercial Jet Smart", empresa_aerea if empresa_aerea and empresa_aerea != "---" else "empresa aerocomercial Jet Smart"),
@@ -922,15 +1076,24 @@ class IntegrityService:
             # Use full context strings to avoid replacing common words mid-sentence
             ("con destino a la ciudad de San Carlos de Bariloche", f"con destino a {destino}" if destino and destino != "---" else "con destino a la ciudad de San Carlos de Bariloche"),
             ("el día cuatro de enero del año en curso", f"el día {fecha_hecho}" if fecha_hecho and fecha_hecho != "---" else "el día cuatro de enero del año en curso"),
+            ("el día 04 de enero del año 2026", f"el día {fecha_hecho}" if fecha_hecho and fecha_hecho != "---" else "el día 04 de enero del año 2026"),
+            ("día cuatro de enero del corriente año", f"día {fecha_hecho}" if fecha_hecho and fecha_hecho != "---" else "día cuatro de enero del corriente año"),
             # Jurisdiction / unit -- paragraph [6]
             ("Coordinación Regional de Video Seguridad I del Este", unidad),
             ("asiento de la Coordinación Regional de Video Seguridad I del Este", f"de la {unidad}"),
             ("Aeropuerto Internacional Mtro. Pistarini", aeropuerto),
             ("Aeroparque Jorge Newbery", aeropuerto),
+            ("AEROPUERTO: AEROPARQUE JORGE NEWBERY. -", f"AEROPUERTO: {aeropuerto.upper()}. -"),
+            ("FECHA DEL HECHO:  04 DE ENERO DEL 2026", f"FECHA DEL HECHO: {fecha_hecho_doc}"),
+            ("FECHA DEL HECHO: 04 DE ENERO DEL 2026", f"FECHA DEL HECHO: {fecha_hecho_doc}"),
             # Paragraph [9]: security measure, hash program and algorithms
             ("medida de seguridad Interna xxxxxxx,", f"medida de seguridad Interna {medida_doc},"),
             ("HASH MI FYLE", hash_program if hash_program else "programa no consignado"),
             ("SHA - 256 y SHA - 512 respectivamente", hash_algo_text),
+            (
+                "incluyendo el cifrado AES-256 y la firma digital SHA-2 para garantizar su integridad.",
+                "incluyendo controles de integridad para garantizar su preservacion.",
+            ),
             # Signature
             ("Coordinador CReV I DEL ESTE", firma),
         ]
@@ -938,17 +1101,42 @@ class IntegrityService:
         document = Document(str(template_path))
         IntegrityService._replace_text_in_docx(document, replacements)
 
-        # Populate content tables (T0=Material Filmico, T1=Desarrollo, T2=Conclusion)
-        tables = document.tables
-        if len(tables) > 0:
-            row = tables[0].add_row()
-            row.cells[0].paragraphs[0].add_run(material_filmico)
-        if len(tables) > 1:
-            row = tables[1].add_row()
-            row.cells[0].paragraphs[0].add_run(desarrollo)
-        if len(tables) > 2:
-            row = tables[2].add_row()
-            row.cells[0].paragraphs[0].add_run(conclusion)
+        # Referencia de verificacion en caratula (solo en documento exportado)
+        reference_inserted = False
+        for paragraph in document.paragraphs:
+            text = (paragraph.text or "").lower()
+            if (
+                "caratulada" in text
+                or "caratula" in text
+                or "carátula" in text
+                or "prevencion" in text
+                or "prevención" in text
+            ):
+                paragraph.add_run(f" Referencia de verificacion: {verification_reference}.")
+                reference_inserted = True
+                break
+
+        if not reference_inserted:
+            document.add_paragraph(f"Referencia de verificacion: {verification_reference}.")
+
+        # Populate analysis body according to template layout.
+        populated_informe_corto = IntegrityService._populate_informe_corto_sections(
+            document,
+            material_filmico,
+            desarrollo,
+            conclusion,
+        )
+        if not populated_informe_corto:
+            tables = document.tables
+            if len(tables) > 0:
+                row = tables[0].add_row()
+                row.cells[0].paragraphs[0].add_run(material_filmico)
+            if len(tables) > 1:
+                row = tables[1].add_row()
+                row.cells[0].paragraphs[0].add_run(desarrollo)
+            if len(tables) > 2:
+                row = tables[2].add_row()
+                row.cells[0].paragraphs[0].add_run(conclusion)
 
         if involved_people_summary:
             document.add_paragraph("")

@@ -153,7 +153,7 @@
                             </div>
                             <div class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">
                                 {{ record.request_kind || record.request_type || record.record_type || 'VD' }}
-                                @if (record.request_number) { Â· {{ record.request_number }} }
+                                @if (record.request_number) { - {{ record.request_number }} }
                             </div>
                         </td>
                         <td class="table-body-cell">
@@ -227,7 +227,7 @@
                     </tr>
                     } @empty {
                     <tr>
-                        <td colspan="7" class="px-6 py-12 text-center text-slate-400 italic">No hay registros fÃ­lmicos
+                        <td colspan="7" class="px-6 py-12 text-center text-slate-400 italic">No hay registros filmicos
                             para mostrar.</td>
                     </tr>
                     }
@@ -238,7 +238,7 @@
         @if (totalPages > 1) {
         <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
             <span class="text-xs text-slate-500">
-                {{ (currentPage - 1) * pageSize + 1 }}â€“{{ currentPage * pageSize > totalCount ? totalCount :
+                {{ (currentPage - 1) * pageSize + 1 }} - {{ currentPage * pageSize > totalCount ? totalCount :
                 currentPage
                 * pageSize }} de {{ totalCount }} registros
             </span>
@@ -251,7 +251,7 @@
                 </button>
                 @for (page of pageNumbers; track $index) {
                 @if (page === -1) {
-                <span class="px-2 text-slate-400 text-xs">â€¦</span>
+                <span class="px-2 text-slate-400 text-xs">...</span>
                 } @else {
                 <button (click)="goToPage(page)"
                     [class]="page === currentPage
@@ -279,8 +279,8 @@
             class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
             <!-- Header -->
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
-                <h3 class="text-base font-bold text-slate-900">{{ isEditing() ? 'Editar Registro FÃ­lmico' : 'Formulario
-                    de solicitud de IntervenciÃ²n' }}</h3>
+                <h3 class="text-base font-bold text-slate-900">{{ isEditing() ? 'Editar Solicitud Filmica' : 'Formulario
+                    de solicitud de Intervencion' }}</h3>
                 <button (click)="showForm.set(false); resetForm()"
                     class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
@@ -292,6 +292,12 @@
             </div>
 
             <form (ngSubmit)="saveRecord()" #recordForm="ngForm" class="overflow-y-auto flex-1 px-6 py-5 space-y-6">
+
+                <div
+                    class="rounded-xl border border-red-200 bg-red-50/80 px-3 py-2 text-[11px] text-red-700 font-semibold">
+                    Datos minimos obligatorios para registrar solicitud: Motivo, Nro. Asunto, Caratula, Nro. Causa
+                    Judicial, Juzgado/Fiscalia, Unidad Generadora y Responsable.
+                </div>
 
                 <div>
                     <h4
@@ -310,31 +316,33 @@
                                 class="field-control-compact">
                         </div>
                         <div class="space-y-1.5">
-                            <label class="field-label-compact">Denuncia / Procedimiento</label>
+                            <label class="field-label-compact">Denuncia / Procedimiento <span
+                                    class="text-red-500">*</span></label>
                             <select name="request_kind" [(ngModel)]="newRecord.request_kind"
-                                class="field-control-compact">
-                                <option value="">— Seleccione —</option>
+                                class="field-control-compact" required>
+                                <option value="">- Seleccione -</option>
                                 <option value="DENUNCIA">DENUNCIA</option>
                                 <option value="PROCEDIMIENTO">PROCEDIMIENTO</option>
+                                <option value="OTRO">OTRO</option>
                             </select>
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Tipo Documento</label>
                             <select name="request_type" [(ngModel)]="newRecord.request_type"
                                 class="field-control-compact">
-                                <option value="">— Sin especificar —</option>
+                                <option value="">- Sin especificar -</option>
                                 <option value="FORMULARIO">Formulario</option>
                                 <option value="MEMORANDO">Memorando</option>
                                 <option value="NOTA">Nota</option>
                                 <option value="OFICIO">Oficio</option>
                                 <option value="EXHORTO">Exhorto</option>
-                                <option value="OTRO">Otro</option>
+                                <option value="OTRO">OTRO</option>
                             </select>
                         </div>
                         <div class="space-y-1.5">
-                            <label class="field-label-compact">Nro. Causa Interna</label>
+                            <label class="field-label-compact">Nro. Asunto <span class="text-red-500">*</span></label>
                             <input type="text" name="issue_number" [(ngModel)]="newRecord.issue_number"
-                                class="field-control-compact" placeholder="Ej: INT-2026/032">
+                                class="field-control-compact" placeholder="Ej: INT-2026/032" required>
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Nro. Orden</label>
@@ -369,16 +377,6 @@
                             <label class="field-label-compact">Hora del Hecho</label>
                             <input type="time" name="incident_time" [(ngModel)]="newRecord.incident_time"
                                 class="field-control-compact">
-                        </div>
-                        <div class="space-y-1.5">
-                            <label class="field-label-compact">Lugar</label>
-                            <input type="text" name="incident_place" [(ngModel)]="newRecord.incident_place"
-                                class="field-control-compact" placeholder="Ej: Hall Arribos">
-                        </div>
-                        <div class="space-y-1.5">
-                            <label class="field-label-compact">Sector</label>
-                            <input type="text" name="incident_sector" [(ngModel)]="newRecord.incident_sector"
-                                class="field-control-compact" placeholder="Ej: Cinta 3">
                         </div>
                         <div class="space-y-1.5 col-span-4">
                             <label class="field-label-compact">Descripción del Hecho</label>
@@ -454,7 +452,7 @@
                                 <div class="space-y-1.5">
                                     <label class="field-label-compact">Edad</label>
                                     <div class="field-control-compact flex items-center bg-slate-100 text-slate-600">
-                                        {{ getInvolvedPersonAge(person) ?? '—' }}
+                                        {{ getInvolvedPersonAge(person) ?? '-' }}
                                     </div>
                                 </div>
                             </div>
@@ -477,14 +475,16 @@
                     </h4>
                     <div class="grid grid-cols-3 gap-3">
                         <div class="space-y-1.5">
-                            <label class="field-label-compact">Nro. Causa Judicial</label>
+                            <label class="field-label-compact">Nro. Causa Judicial <span
+                                    class="text-red-500">*</span></label>
                             <input type="text" name="judicial_case_number" [(ngModel)]="newRecord.judicial_case_number"
-                                class="field-control-compact" placeholder="Ej: C-12345/2026">
+                                class="field-control-compact" placeholder="Ej: C-12345/2026" required>
                         </div>
                         <div class="space-y-1.5">
-                            <label class="field-label-compact">Juzgado / Fiscalía</label>
+                            <label class="field-label-compact">Juzgado / Fiscalía <span
+                                    class="text-red-500">*</span></label>
                             <input type="text" name="judicial_office" [(ngModel)]="newRecord.judicial_office"
-                                class="field-control-compact" placeholder="Si falta, se guarda N/C">
+                                class="field-control-compact" placeholder="Si falta, se guarda N/C" required>
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Titular</label>
@@ -497,9 +497,9 @@
                                 class="field-control-compact" placeholder="Si falta, se guarda N/C">
                         </div>
                         <div class="space-y-1.5 col-span-2">
-                            <label class="field-label-compact">Carátula</label>
+                            <label class="field-label-compact">Carátula <span class="text-red-500">*</span></label>
                             <input type="text" name="case_title" [(ngModel)]="newRecord.case_title"
-                                class="field-control-compact" placeholder="Ej: DENUNCIA S/ HURTO">
+                                class="field-control-compact" placeholder="Ej: DENUNCIA S/ HURTO" required>
                         </div>
                     </div>
                 </div>
@@ -511,26 +511,21 @@
                     </h4>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-1.5">
-                            <label class="field-label-compact">Unidad Generador</label>
+                            <label class="field-label-compact">Unidad Generadora <span
+                                    class="text-red-500">*</span></label>
                             <select name="generator_unit" [(ngModel)]="newRecord.generator_unit"
-                                class="field-control-compact">
-                                <option [ngValue]="''">— Sin especificar —</option>
+                                class="field-control-compact" required>
+                                <option [ngValue]="''">- Sin especificar -</option>
                                 @for (unit of units(); track unit.id) {
                                 <option [ngValue]="unit.id">{{ unit.name }} ({{ unit.code }})</option>
                                 }
                             </select>
                         </div>
                         <div class="space-y-1.5">
-                            <label class="field-label-compact">Dependencia Interviniente</label>
-                            <input type="text" name="intervening_department"
-                                [(ngModel)]="newRecord.intervening_department" class="field-control-compact"
-                                placeholder="Ej: Coordinación CReV I">
-                        </div>
-                        <div class="space-y-1.5">
                             <label class="field-label-compact">Recepcionado por</label>
                             <select name="received_by" [(ngModel)]="newRecord.received_by"
                                 class="field-control-compact">
-                                <option [ngValue]="''">— Sin especificar —</option>
+                                <option [ngValue]="''">- Sin especificar -</option>
                                 @for (person of people(); track person.id) {
                                 <option [ngValue]="person.id">{{ person.last_name }}, {{ person.first_name }}</option>
                                 }
@@ -539,38 +534,12 @@
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Responsable a Cargo <span
                                     class="text-red-500">*</span></label>
-                            <select name="operator" [(ngModel)]="newRecord.operator"
-                                (ngModelChange)="onOperatorChange($event)" required class="field-control-compact">
+                            <select name="operator" [(ngModel)]="newRecord.operator" required class="field-control-compact">
                                 <option [ngValue]="''" disabled>Seleccione operador...</option>
                                 @for (person of people(); track person.id) {
                                 <option [ngValue]="person.id">{{ person.last_name }}, {{ person.first_name }}</option>
                                 }
                             </select>
-                        </div>
-                        <div class="col-span-2 space-y-1.5">
-                            <label class="field-label-compact">Sistema CCTV / VMS</label>
-                            @if (operatorSystems().length > 0 && !sistemaIsCustom()) {
-                            <select name="sistema" [(ngModel)]="newRecord.sistema"
-                                (ngModelChange)="onSistemaSelectChange($event)" class="field-control-compact">
-                                <option value="" disabled>Seleccione sistema...</option>
-                                @for (sys of operatorSystems(); track sys.id) {
-                                <option [value]="sys.name">{{ sys.name }}</option>
-                                }
-                                <option value="__otro__">Otro (especificar)</option>
-                            </select>
-                            } @else {
-                            <div class="flex gap-2 items-center">
-                                <input type="text" name="sistema" [(ngModel)]="newRecord.sistema"
-                                    class="field-control-compact flex-1" placeholder="Ej: MILESTONE, VIPRO, DAHUA...">
-                                @if (operatorSystems().length > 0) {
-                                <button type="button"
-                                    (click)="sistemaIsCustom.set(false); newRecord.sistema = operatorSystems()[0]?.name ?? ''"
-                                    class="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 whitespace-nowrap">
-                                    &larr; asignado
-                                </button>
-                                }
-                            </div>
-                            }
                         </div>
                     </div>
                 </div>
@@ -578,7 +547,7 @@
                 <div>
                     <h4
                         class="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3 pb-1 border-b border-indigo-100">
-                        Soporte Físico y Rango Horario
+                        Soporte Físico
                     </h4>
                     <div class="grid grid-cols-4 gap-3">
                         <div class="space-y-1.5">
@@ -600,16 +569,6 @@
                             <label class="field-label-compact">Expediente</label>
                             <input type="text" name="expediente_number" [(ngModel)]="newRecord.expediente_number"
                                 class="field-control-compact" placeholder="Ej: EX-2026-000456">
-                        </div>
-                        <div class="col-span-2 space-y-1.5">
-                            <label class="field-label-compact">Inicio Rango</label>
-                            <input type="datetime-local" name="start_time" [(ngModel)]="newRecord.start_time"
-                                class="field-control-compact">
-                        </div>
-                        <div class="col-span-2 space-y-1.5">
-                            <label class="field-label-compact">Fin Rango</label>
-                            <input type="datetime-local" name="end_time" [(ngModel)]="newRecord.end_time"
-                                class="field-control-compact">
                         </div>
                     </div>
                 </div>
@@ -668,7 +627,7 @@
                     Cancelar
                 </button>
                 <button type="button" (click)="saveRecord()" class="btn-primary-compact">
-                    {{ isEditing() ? 'Guardar cambios' : 'Registrar Evidencia' }}
+                    {{ isEditing() ? 'Guardar cambios' : 'Registrar Solicitud' }}
                 </button>
             </div>
         </div>
@@ -685,7 +644,7 @@
                 <div>
                     <h3 class="text-sm font-bold text-slate-800">Detalle del Registro</h3>
                     <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                        #{{ selectedRecord().id }} Â· {{ selectedRecord().record_type || 'VD' }}
+                        #{{ selectedRecord().id }} - {{ selectedRecord().record_type || 'VD' }}
                     </p>
                 </div>
                 <button (click)="closeDetail()"
@@ -706,7 +665,7 @@
                 <div
                     class="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 flex items-center justify-between">
                     <div>
-                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Informe de AnÃ¡lisis
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Informe de Analisis
                         </div>
                         <div class="text-xs font-semibold text-slate-500 mt-0.5">Sin informe vinculado</div>
                     </div>
@@ -816,7 +775,7 @@
                         }
                         @if (inf.form_data?.sintesis_conclusion) {
                         <div class="col-span-2">
-                            <div class="text-[10px] font-bold text-slate-400 uppercase">SÃ­ntesis / ConclusiÃ³n</div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase">Sintesis / Conclusion</div>
                             <div class="text-xs text-slate-600 italic leading-relaxed">{{
                                 inf.form_data.sintesis_conclusion }}</div>
                         </div>
@@ -833,7 +792,7 @@
                 </div>
                 }
 
-                <!-- SecciÃ³n Solicitud -->
+                <!-- Seccion Solicitud -->
                 <div>
                     <div
                         class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -844,32 +803,32 @@
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Nro. Solicitud</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{
-                                selectedRecord().request_number || 'â€”' }}</div>
+                                selectedRecord().request_number || '-' }}</div>
                         </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Fecha del Requerimiento</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{ (selectedRecord().entry_date |
-                                date:'dd/MM/yyyy') || 'â€”' }}</div>
+                                date:'dd/MM/yyyy') || '-' }}</div>
                         </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Tipo Requerimiento</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{
-                                selectedRecord().request_kind || 'â€”' }}</div>
+                                selectedRecord().request_kind || '-' }}</div>
                         </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Tipo Documento</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{
-                                selectedRecord().request_type || 'â€”' }}</div>
+                                selectedRecord().request_type || '-' }}</div>
                         </div>
                         <div>
-                            <div class="text-[10px] font-bold text-slate-400 uppercase">Nro. Causa Interna</div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase">Nro. Asunto</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{
-                                selectedRecord().issue_number || 'â€”' }}</div>
+                                selectedRecord().issue_number || '-' }}</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- SecciÃ³n Causa Judicial -->
+                <!-- Seccion Causa Judicial -->
                 <div>
                     <div
                         class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -878,80 +837,68 @@
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="col-span-2">
-                            <div class="text-[10px] font-bold text-slate-400 uppercase">CarÃ¡tula</div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase">Caratula</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{ selectedRecord().case_title ||
-                                'â€”' }}</div>
+                                '-' }}</div>
                         </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Nro. Causa Judicial</div>
                             <div class="text-xs font-bold text-indigo-700 mt-0.5">{{
-                                selectedRecord().judicial_case_number || 'â€”' }}</div>
+                                selectedRecord().judicial_case_number || '-' }}</div>
                         </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Juzgado / Fiscalia</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{
-                                selectedRecord().judicial_office || selectedRecord().requester || 'â€”' }}</div>
+                                selectedRecord().judicial_office || selectedRecord().requester || '-' }}</div>
                         </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Secretaria</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{
                                 selectedRecord().judicial_secretary
-                                || 'â€”' }}</div>
+                                || '-' }}</div>
                         </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Titular</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{ selectedRecord().judicial_holder
                                 ||
-                                'â€”' }}</div>
+                                '-' }}</div>
                         </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Fecha del Hecho</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{ (selectedRecord().incident_date
-                                | date:'dd/MM/yyyy') || 'â€”' }}</div>
+                                | date:'dd/MM/yyyy') || '-' }}</div>
                         </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Hora del Hecho</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{ selectedRecord().incident_time
                                 ||
-                                'â€”' }}</div>
+                                '-' }}</div>
                         </div>
                         <div>
-                            <div class="text-[10px] font-bold text-slate-400 uppercase">Lugar</div>
-                            <div class="text-xs font-semibold text-slate-700 mt-0.5">{{ selectedRecord().incident_place
-                                ||
-                                'â€”' }}</div>
-                        </div>
-                        <div>
-                            <div class="text-[10px] font-bold text-slate-400 uppercase">Sector</div>
-                            <div class="text-xs font-semibold text-slate-700 mt-0.5">{{ selectedRecord().incident_sector
-                                ||
-                                'â€”' }}</div>
-                        </div>
-                        <div>
-                            <div class="text-[10px] font-bold text-slate-400 uppercase">ProblemÃ¡tica</div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase">Lugar / Sector</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{
-                                selectedRecord().criminal_problematic || selectedRecord().crime_type || 'â€”' }}</div>
+                                selectedRecord().incident_place || selectedRecord().incident_sector || '-' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase">Problematica</div>
+                            <div class="text-xs font-semibold text-slate-700 mt-0.5">{{
+                                selectedRecord().criminal_problematic || selectedRecord().crime_type || '-' }}</div>
                         </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Modalidad</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{
                                 selectedRecord().incident_modality
-                                || 'â€”' }}</div>
+                                || '-' }}</div>
                         </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Unidad Generador</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{
-                                selectedRecord().generator_unit_name || 'â€”' }}</div>
-                        </div>
-                        <div>
-                            <div class="text-[10px] font-bold text-slate-400 uppercase">Dependencia Interviniente</div>
-                            <div class="text-xs font-semibold text-slate-700 mt-0.5">{{
-                                selectedRecord().intervening_department || 'â€”' }}</div>
+                                selectedRecord().generator_unit_name || '-' }}</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- SecciÃ³n Personas Involucradas -->
+                <!-- Seccion Personas Involucradas -->
                 <div>
                     <div
                         class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -968,8 +915,8 @@
                                 {{ (person.last_name || '') + ', ' + (person.first_name || '') }}
                             </div>
                             <div class="text-[10px] text-slate-500 mt-1">
-                                {{ person.document_type || 'DOC' }} {{ person.document_number || 'S/D' }} ·
-                                {{ person.nationality || 'N/C' }} ·
+                                {{ person.document_type || 'DOC' }} {{ person.document_number || 'S/D' }} -
+                                {{ person.nationality || 'N/C' }} -
                                 @if (person.birth_date) {
                                 Nac. {{ person.birth_date | date:'dd/MM/yyyy' }}
                                 } @else {
@@ -984,7 +931,7 @@
                     }
                 </div>
 
-                <!-- SecciÃ³n Personal y Estado -->
+                <!-- Seccion Personal y Estado -->
                 <div>
                     <div
                         class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -995,7 +942,7 @@
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Recepcionado Por</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{
-                                selectedRecord().received_by_full_name || 'â€”' }}</div>
+                                selectedRecord().received_by_full_name || '-' }}</div>
                         </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Responsable a Cargo</div>

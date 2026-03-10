@@ -29,8 +29,6 @@ export class RecordsComponent implements OnInit {
   people = signal<any[]>([]);
   units = signal<any[]>([]);
   informesMap = signal<Record<number, any>>({});
-  operatorSystems = signal<{ id: number; name: string }[]>([]);
-  sistemaIsCustom = signal(false);
   showForm = signal(false);
   isEditing = signal(false);
   private editingRecordId: number | null = null;
@@ -231,8 +229,8 @@ export class RecordsComponent implements OnInit {
       case_title: record?.case_title || '',
       incident_date: record?.incident_date || '',
       incident_time: this.toTimeInput(record?.incident_time),
-      incident_place: record?.incident_place || '',
-      incident_sector: record?.incident_sector || '',
+      incident_place: record?.incident_place || record?.incident_sector || '',
+      incident_sector: record?.incident_sector || record?.incident_place || '',
       crime_type: record?.crime_type || '',
       criminal_problematic: record?.criminal_problematic || '',
       incident_modality: record?.incident_modality || '',
@@ -263,14 +261,12 @@ export class RecordsComponent implements OnInit {
     this.isEditing.set(true);
     this.editingRecordId = record?.id ?? null;
     this.showForm.set(true);
-    if (record?.operator) {
-      this.onOperatorChange(record.operator);
-    }
   }
 
   saveRecord() {
-    if (!this.newRecord.operator) {
-      this.toastService.show('Debe seleccionar un operador.', 'warning');
+    const missingMinimumFields = this.getMissingMinimumFields();
+    if (missingMinimumFields.length > 0) {
+      this.toastService.show(`Completa los datos minimos: ${missingMinimumFields.join(', ')}.`, 'warning');
       return;
     }
 
@@ -279,8 +275,12 @@ export class RecordsComponent implements OnInit {
       return;
     }
 
+    const unifiedLocation = (this.newRecord.incident_place || this.newRecord.incident_sector || '').trim();
+
     const payload = {
       ...this.newRecord,
+      incident_place: unifiedLocation,
+      incident_sector: unifiedLocation,
       is_integrity_verified: !!this.newRecord.is_integrity_verified,
       entry_date: this.newRecord.entry_date || this.getTodayDate(),
       involved_people: involvedPeople,
@@ -302,6 +302,35 @@ export class RecordsComponent implements OnInit {
       'Requerimiento registrado',
       'Error al registrar evidencia'
     );
+  }
+
+  private getMissingMinimumFields(): string[] {
+    const textValue = (value: unknown) => String(value ?? '').trim();
+    const missing: string[] = [];
+
+    if (!textValue(this.newRecord.request_kind)) {
+      missing.push('Denuncia / Procedimiento');
+    }
+    if (!textValue(this.newRecord.issue_number)) {
+      missing.push('Nro. Asunto');
+    }
+    if (!textValue(this.newRecord.case_title)) {
+      missing.push('Caratula');
+    }
+    if (!textValue(this.newRecord.judicial_case_number)) {
+      missing.push('Nro. Causa Judicial');
+    }
+    if (!textValue(this.newRecord.judicial_office)) {
+      missing.push('Juzgado / Fiscalia');
+    }
+    if (!this.newRecord.generator_unit) {
+      missing.push('Unidad Generadora');
+    }
+    if (!this.newRecord.operator) {
+      missing.push('Responsable a Cargo');
+    }
+
+    return missing;
   }
 
   deleteRecord(record: any) {
@@ -358,31 +387,6 @@ export class RecordsComponent implements OnInit {
     }
 
     return age >= 0 ? age : null;
-  }
-
-  onOperatorChange(operatorId: number | string) {
-    const person = this.people().find(p => p.id === +operatorId);
-    const systems: { id: number; name: string }[] = person?.assigned_systems_details ?? [];
-    this.operatorSystems.set(systems);
-    if (!this.isEditing()) {
-      if (systems.length === 1) {
-        this.newRecord.sistema = systems[0].name;
-        this.sistemaIsCustom.set(false);
-      } else {
-        this.sistemaIsCustom.set(true);
-      }
-    } else {
-      const currentSistema = this.newRecord.sistema || '';
-      const isKnown = systems.some(s => s.name === currentSistema);
-      this.sistemaIsCustom.set(!isKnown || systems.length === 0);
-    }
-  }
-
-  onSistemaSelectChange(value: string) {
-    if (value === '__otro__') {
-      this.sistemaIsCustom.set(true);
-      this.newRecord.sistema = '';
-    }
   }
 
   getOperatorName(record: any): string {
@@ -545,8 +549,6 @@ export class RecordsComponent implements OnInit {
 
   resetForm() {
     this.newRecord = this.createEmptyRecord();
-    this.operatorSystems.set([]);
-    this.sistemaIsCustom.set(false);
     this.isEditing.set(false);
     this.editingRecordId = null;
   }

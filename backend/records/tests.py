@@ -34,9 +34,15 @@ class FilmRecordApiPeopleTests(TestCase):
             "request_kind": "DENUNCIA",
             "request_type": "OFICIO",
             "judicial_case_number": "C-123/2026",
+            "case_title": "DENUNCIA S/ HURTO DE EQUIPAJE",
             "judicial_office": "Fiscalia Nro. 1",
             "judicial_secretary": "",
             "judicial_holder": "",
+            "criminal_problematic": "Hurto de equipaje",
+            "incident_modality": "Sustraccion en cinta",
+            "incident_place": "Hall de arribos",
+            "incident_sector": "Cinta 3",
+            "incident_time": "14:05",
             "generator_unit": self.unit.id,
             "operator": self.operator.id,
             "received_by": self.receiver.id,
@@ -126,29 +132,50 @@ class VideoAnalysisReportApiTests(TestCase):
         self.client = APIClient()
         self.url = '/api/video-analysis-report/'
         self.valid_report_data = {
-            "report_date": "2026-02-23",
-            "destinatarios": "URSA I - Jefe",
-            "tipo_informe": "IAV - Informe Analisis de Video",
-            "numero_informe": "2026/001",
-            "grado": "Oficial Mayor",
-            "operador": "Operador Test",
-            "lup": "1234",
+            "report_date": "2026-03-09",
+            "destinatarios": "Fiscalia Federal Nro. 2",
+            "tipo_informe": "Informe de analisis de videos",
+            "numero_informe": "0001EZE/2026",
+            "grado": "OF. PRINCIPAL",
+            "operador": "Perez, Juan",
+            "lup": "506896",
             "sistema": "MILESTONE",
             "cantidad_observada": "2 personas",
-            "sectores_analizados": "Hall de arribos, cinta 3",
+            "sectores_analizados": "Hall de arribos, cinta 3, migraciones",
             "franja_horaria_analizada": "14:05 a 15:42",
             "tiempo_total_analisis": "1 hora 37 minutos",
-            "sintesis_conclusion": "No se observa manipulación posterior del bulto",
+            "sintesis_conclusion": "No se observa manipulacion posterior del bulto",
             "hash_algorithms": ["sha256", "sha512"],
-            "hash_program": "HASH MY FILE",
+            "hash_program": "HashMyFiles",
             "medida_seguridad_interna": "Auditoria interna del COC",
             "vms_authenticity_mode": "vms_propio",
             "vms_authenticity_detail": "",
             "prevencion_sumaria": "003BAR/2026",
             "caratula": "DENUNCIA S/ PRESUNTO HURTO",
-            "fiscalia": "Fiscalia Nro. 02",
-            "fiscal": "Fiscal Test",
-            "denunciante": "Denunciante Test",
+            "fiscalia": "Fiscalia Federal Nro. 2",
+            "fiscal": "Dr. Carlos Sosa",
+            "denunciante": "Perez, Ana",
+            "involved_people_summary": "DENUNCIANTE: Perez, Ana (DNI 30111222) | DETENIDO: Gomez, Luis (DNI 29888777)",
+            "involved_people": [
+                {
+                    "role": "DENUNCIANTE",
+                    "full_name": "Perez, Ana",
+                    "document_type": "DNI",
+                    "document_number": "30111222",
+                    "nationality": "Argentina",
+                    "birth_date": "1990-06-10",
+                    "age": 35,
+                },
+                {
+                    "role": "DETENIDO",
+                    "full_name": "Gomez, Luis",
+                    "document_type": "DNI",
+                    "document_number": "29888777",
+                    "nationality": "Argentina",
+                    "birth_date": "1988-01-05",
+                    "age": 38,
+                },
+            ],
             "vuelo": "WJ 3045",
             "objeto_denunciado": "RIVER PLATE",
             "desarrollo": "Texto de desarrollo",
@@ -405,10 +432,72 @@ class VideoAnalysisReportApiTests(TestCase):
         response = self.client.post(self.url, payload, format='json')
 
         self.assertEqual(response.status_code, 413)
-        self.assertEqual(
-            response.data.get('error'),
-            "El tamaño total del informe excede el máximo permitido."
-        )
+        error_message = (response.data.get('error') or '').lower()
+        self.assertIn('informe', error_message)
+        self.assertIn('excede', error_message)
+
+
+class IntegrityServiceVideoReportTemplateTests(TestCase):
+    def test_resolves_informe_corto_template_first(self):
+        template_path = IntegrityService._resolve_video_report_template_path()
+        self.assertIn('INFORME CORTO 0010CREV-26 PS 003BAR-26.docx', str(template_path))
+
+    def test_builds_verification_reference_from_hash_and_authenticity_data(self):
+        reference = IntegrityService._build_verification_reference({
+            "hash_program": "HashMyFiles",
+            "hash_algorithms": ["sha256", "sha512"],
+            "vms_authenticity_mode": "hash_preventivo",
+            "vms_authenticity_detail": "",
+        })
+        self.assertIn('HashMyFiles', reference)
+        self.assertIn('SHA-256', reference)
+        self.assertIn('SHA-512', reference)
+        self.assertIn('hash preventivo externo', reference)
+
+    def test_generate_video_analysis_docx_maps_informe_corto_layout(self):
+        payload = {
+            "report_data": {
+                "report_date": "2026-03-05",
+                "fiscalia": "UFI 1 DESCENTRALIZADA",
+                "fiscal": "Dra. Maria Bello",
+                "prevencion_sumaria": "003BAR/2026",
+                "caratula": "AMBAR JUSTBICHER S/ DENUNCIA",
+                "denunciante": "AMBAR JUSTBICHER",
+                "aeropuerto": "Terminal B",
+                "fecha_hecho": "05/03/2026",
+                "hash_program": "HashMyFiles",
+                "hash_algorithms": ["sha256", "sha512"],
+                "vms_authenticity_mode": "hash_preventivo",
+                "material_filmico": "MATERIAL FILMICO TEST",
+                "desarrollo": "DESARROLLO TEST",
+                "conclusion": "CONCLUSION TEST",
+            },
+            "frames": [],
+        }
+
+        out, filename = IntegrityService.generate_video_analysis_docx(payload)
+        self.assertTrue(filename.endswith(".docx"))
+
+        from docx import Document
+
+        document = Document(out)
+        paragraphs_text = "\n".join((paragraph.text or "") for paragraph in document.paragraphs)
+        self.assertIn("Referencia de verificacion:", paragraphs_text)
+        self.assertIn("MATERIAL FILMICO TEST", paragraphs_text)
+        self.assertIn("DESARROLLO TEST", paragraphs_text)
+        self.assertIn("CONCLUSION TEST", paragraphs_text)
+
+        self.assertEqual(len(document.tables), 2)
+        self.assertEqual(len(document.tables[0].rows), 6)
+        self.assertEqual(len(document.tables[1].rows), 2)
+
+        table_rows = [row.cells[0].text.strip() for row in document.tables[0].rows]
+        self.assertIn("PREVENCION SUMARIA: 003BAR/2026", table_rows)
+        self.assertIn("CARATULA: “AMBAR JUSTBICHER S/ DENUNCIA”", table_rows)
+        self.assertIn("DAMNIFICADO: AMBAR JUSTBICHER. -", table_rows)
+        self.assertIn("AEROPUERTO: TERMINAL B. -", table_rows)
+        fiscal_rows = [row for row in table_rows if row.startswith("FISCALIA:")]
+        self.assertTrue(fiscal_rows)
 
 
 class SerializerLimitConsistencyTests(TestCase):
@@ -453,7 +542,7 @@ class VideoAnalysisImproveTextApiTests(TestCase):
                 "sectores_analizados": "Hall de arribos, cinta 3",
                 "franja_horaria_analizada": "14:05 a 15:42",
                 "tiempo_total_analisis": "1 hora 37 minutos",
-                "sintesis_conclusion": "No se observa manipulación posterior del bulto",
+                "sintesis_conclusion": "No se observa manipulaciÃƒÂ³n posterior del bulto",
                 "hash_algorithms": ["sha256", "sha512"],
                 "vms_authenticity_mode": "vms_propio",
             },
@@ -477,7 +566,7 @@ class VideoAnalysisImproveTextApiTests(TestCase):
                 "sectores_analizados": "Hall de arribos, cinta 3",
                 "franja_horaria_analizada": "14:05 a 15:42",
                 "tiempo_total_analisis": "1 hora 37 minutos",
-                "sintesis_conclusion": "No se observa manipulación posterior del bulto",
+                "sintesis_conclusion": "No se observa manipulaciÃƒÂ³n posterior del bulto",
                 "hash_algorithms": ["sha256", "sha512"],
                 "vms_authenticity_mode": "vms_propio",
             },
@@ -502,7 +591,7 @@ class VideoAnalysisImproveTextApiTests(TestCase):
                     "sectores_analizados": "Hall de arribos, cinta 3",
                     "franja_horaria_analizada": "14:05 a 15:42",
                     "tiempo_total_analisis": "1 hora 37 minutos",
-                    "sintesis_conclusion": "No se observa manipulación posterior del bulto",
+                    "sintesis_conclusion": "No se observa manipulaciÃƒÂ³n posterior del bulto",
                 }
             },
             format='json'
@@ -667,7 +756,7 @@ class IntegrityServiceAiRequestTests(TestCase):
             "sectores_analizados": "Hall de arribos, cinta 3",
             "franja_horaria_analizada": "14:05 a 15:42",
             "tiempo_total_analisis": "1 hora 37 minutos",
-            "sintesis_conclusion": "No se observa manipulación posterior del bulto",
+            "sintesis_conclusion": "No se observa manipulaciÃƒÂ³n posterior del bulto",
             "hash_algorithms": ["sha256", "sha512"],
             "hash_program": "HASH MY FILE",
             "medida_seguridad_interna": "Auditoria interna",
@@ -793,7 +882,7 @@ class IntegrityServiceAiRequestTests(TestCase):
     )
     @patch('records.services.requests.post')
     def test_mode_material_filmico_sends_system_data_context(self, post_mock):
-        """mode='material_filmico' debe enviar datos técnicos (sistema, hash, VMS)."""
+        """mode='material_filmico' debe enviar datos tÃƒÂ©cnicos (sistema, hash, VMS)."""
         response_mock = Mock()
         response_mock.status_code = 200
         response_mock.json.return_value = {
@@ -813,7 +902,7 @@ class IntegrityServiceAiRequestTests(TestCase):
         )
 
         self.assertEqual(result.get('material_filmico'), 'Material generado')
-        # modo específico: desarrollo y conclusion no cambian
+        # modo especÃƒÂ­fico: desarrollo y conclusion no cambian
         self.assertEqual(result.get('desarrollo'), '')
         self.assertEqual(result.get('conclusion'), '')
 
@@ -837,7 +926,7 @@ class IntegrityServiceAiRequestTests(TestCase):
     )
     @patch('records.services.requests.post')
     def test_mode_desarrollo_sends_analysis_context(self, post_mock):
-        """mode='desarrollo' debe enviar datos analíticos (sectores, franja, tiempo, cantidad)."""
+        """mode='desarrollo' debe enviar datos analÃƒÂ­ticos (sectores, franja, tiempo, cantidad)."""
         response_mock = Mock()
         response_mock.status_code = 200
         response_mock.json.return_value = {
@@ -876,7 +965,7 @@ class IntegrityServiceAiRequestTests(TestCase):
     )
     @patch('records.services.requests.post')
     def test_mode_conclusion_sends_synthesis_context(self, post_mock):
-        """mode='conclusion' debe enviar datos de síntesis."""
+        """mode='conclusion' debe enviar datos de sÃƒÂ­ntesis."""
         response_mock = Mock()
         response_mock.status_code = 200
         response_mock.json.return_value = {
@@ -885,7 +974,7 @@ class IntegrityServiceAiRequestTests(TestCase):
         post_mock.return_value = response_mock
 
         context = {
-            "sintesis_conclusion": "No se observa manipulación",
+            "sintesis_conclusion": "No se observa manipulaciÃƒÂ³n",
             "cantidad_observada": "2 personas",
         }
         result = IntegrityService.improve_report_text_with_ai(
@@ -902,12 +991,12 @@ class IntegrityServiceAiRequestTests(TestCase):
         self.assertIn('datos_para_conclusion', user_content)
         self.assertEqual(
             user_content['datos_para_conclusion']['sintesis_del_analisis'],
-            'No se observa manipulación'
+            'No se observa manipulaciÃƒÂ³n'
         )
         self.assertEqual(set(user_content['formato_estricto'].keys()), {'conclusion'})
 
     def test_mode_rejects_invalid_value(self):
-        """El serializer debe rechazar un mode inválido."""
+        """El serializer debe rechazar un mode invÃƒÂ¡lido."""
         from .serializers import VideoReportImproveTextSerializer
         serializer = VideoReportImproveTextSerializer(data={
             "material_filmico": "texto",

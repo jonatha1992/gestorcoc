@@ -24,6 +24,7 @@ class FilmRecord(TimeStampedModel):
     REQUEST_KIND_CHOICES = [
         ('DENUNCIA', 'Denuncia'),
         ('PROCEDIMIENTO', 'Procedimiento'),
+        ('OTRO', 'Otro'),
     ]
 
     DELIVERY_STATUS_CHOICES = [

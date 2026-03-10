@@ -12,7 +12,7 @@ from assets.models import Camera, CameramanGear, Server, System, Unit
 from hechos.models import Hecho
 from novedades.models import Novedad
 from personnel.models import Person
-from records.models import Catalog, FilmRecord
+from records.models import Catalog, FilmRecord, FilmRecordInvolvedPerson
 
 
 class Command(BaseCommand):
@@ -209,6 +209,7 @@ class Command(BaseCommand):
             return
         statuses = ["PENDIENTE", "ENTREGADO", "DERIVADO", "FINALIZADO", "ANULADO"]
         request_types = ["FORMULARIO", "MEMORANDO", "NOTA", "OFICIO", "EXHORTO", "OTRO"]
+        request_kinds = ["DENUNCIA", "PROCEDIMIENTO", "OTRO"]
         requesters = [
             "Juzgado Federal Nro 1",
             "Juzgado Federal Nro 3",
@@ -220,7 +221,58 @@ class Command(BaseCommand):
             "Gendarmeria Nacional",
         ]
         organisms = ["PSA", "PFA", "GNA", "PNA", "INTERPOL", "MPF", "CSJN"]
+        criminal_problematics = [
+            "Hurto de equipaje",
+            "Sustraccion de efectos personales",
+            "Robo en sector de embarque",
+            "Danos y vandalismo",
+            "Averiguacion de ilicito",
+            "Estafa con equipaje",
+        ]
+        incident_modalities = [
+            "Sustraccion en cinta",
+            "Apropiacion indebida en hall",
+            "Descuido de pertenencias",
+            "Rotura de valija",
+            "Intercambio de equipaje",
+        ]
+        incident_places = [
+            "Hall de arribos",
+            "Hall de partidas",
+            "Sector check-in",
+            "Area de migraciones",
+            "Control de seguridad",
+            "Cinta de equipajes",
+        ]
+        incident_sectors = [
+            "Cinta 1",
+            "Cinta 2",
+            "Cinta 3",
+            "Sector Norte",
+            "Sector Sur",
+            "Plataforma",
+        ]
+        judicial_offices = [
+            "Fiscalia Federal Nro 1",
+            "Fiscalia Federal Nro 2",
+            "Juzgado Federal Nro 1",
+            "Juzgado Federal Nro 3",
+            "N/C",
+        ]
+        judicial_secretaries = [
+            "Secretaria Penal Nro 1",
+            "Secretaria Penal Nro 2",
+            "Secretaria de Turno",
+            "N/C",
+        ]
+        judicial_holders = [
+            "Dr. Juan Perez",
+            "Dra. Maria Gomez",
+            "Dr. Carlos Sosa",
+            "N/C",
+        ]
         supervisors = [person for person in people if person.role == "ADMIN"]
+        generator_units = list(Unit.objects.exclude(parent__isnull=True))
         base_order = FilmRecord.objects.aggregate(max_value=Max("order_number")).get("max_value") or 0
         sistemas_cctv = [
             "MILESTONE", "VIPRO", "DAHUA", "HIKVISION", "AVIGILON",
@@ -242,18 +294,34 @@ class Command(BaseCommand):
             act_num = f"ACTA-{self.fake.random_int(min=100, max=999)}/{start.year}" if delivered in ("ENTREGADO", "FINALIZADO") else None
             delivery_date = (start + timedelta(days=random.randint(1, 90))).date() if act_num else None
             retrieved = self.fake.last_name() if act_num else None
-            FilmRecord.objects.create(
+            judicial_office = random.choice(judicial_offices)
+            generator_unit = None
+            if operator.unit and random.random() > 0.35:
+                generator_unit = operator.unit
+            elif generator_units and random.random() > 0.40:
+                generator_unit = random.choice(generator_units)
+            record = FilmRecord.objects.create(
                 issue_number=f"AS-{start.year}-{1000 + base_order + i}",
                 order_number=base_order + i + 1,
                 entry_date=start.date(),
                 request_type=random.choice(request_types),
+                request_kind=random.choice(request_kinds),
                 request_number=f"{self.fake.random_int(min=1000, max=9999)}/{start.year}",
-                requester=random.choice(requesters),
+                requester=judicial_office if judicial_office != "N/C" else random.choice(requesters),
                 judicial_case_number=f"C-{self.fake.random_int(min=10000, max=99999)}/{start.year}",
                 case_title=self.fake.sentence(nb_words=6),
                 incident_date=start.date(),
+                incident_time=start.time().replace(second=0, microsecond=0),
+                incident_place=random.choice(incident_places),
+                incident_sector=random.choice(incident_sectors),
                 crime_type=random.choice(["Hurto", "Robo", "Amenaza", "Daños", "Averiguacion de ilicito", "Estafa"]),
+                criminal_problematic=random.choice(criminal_problematics),
+                incident_modality=random.choice(incident_modalities),
                 intervening_department=random.choice(["COC AER", "COC EZE", "COC IGU", "COC COR", "COC MDZ"]),
+                judicial_office=judicial_office,
+                judicial_secretary=random.choice(judicial_secretaries),
+                judicial_holder=random.choice(judicial_holders),
+                generator_unit=generator_unit,
                 sistema=random.choice(sistemas_cctv),
                 operator=operator,
                 received_by=random.choice(people) if random.random() > 0.30 else None,
@@ -278,7 +346,37 @@ class Command(BaseCommand):
                 delivery_status=delivered,
                 observations=self.fake.sentence(nb_words=10) if random.random() > 0.55 else "",
             )
+            self._seed_involved_people(record)
             self.created["film_records"] += 1
+
+    def _seed_involved_people(self, record):
+        total_people = random.randint(1, 4)
+        roles = ["DAMNIFICADO", "DENUNCIANTE", "DETENIDO", "OTRO"]
+        assigned_roles = []
+
+        # En la mayoria de casos incluimos al menos un denunciante para pruebas de Informe.
+        if random.random() > 0.25:
+            assigned_roles.append("DENUNCIANTE")
+        while len(assigned_roles) < total_people:
+            assigned_roles.append(random.choice(roles))
+        random.shuffle(assigned_roles)
+
+        entries = []
+        for role in assigned_roles:
+            birth_date = self.fake.date_of_birth(minimum_age=18, maximum_age=80)
+            entries.append(
+                FilmRecordInvolvedPerson(
+                    film_record=record,
+                    role=role,
+                    last_name=self.fake.last_name(),
+                    first_name=self.fake.first_name(),
+                    document_type=random.choice(["DNI", "PASAPORTE", "LC"]),
+                    document_number=str(self.fake.random_int(min=10000000, max=45999999)),
+                    nationality=random.choice(["Argentina", "Uruguaya", "Paraguaya", "Boliviana", "Chilena"]),
+                    birth_date=birth_date,
+                )
+            )
+        FilmRecordInvolvedPerson.objects.bulk_create(entries)
 
     def _ensure_novedades(self, cameras, servers, systems, gear, people):
         if not any([cameras, servers, systems, gear]):
