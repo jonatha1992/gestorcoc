@@ -94,6 +94,7 @@ describe('HomeComponent', () => {
               novedades_count: 2,
               hechos_count: 1,
               records_count: 3,
+              personnel_count: 5,
               cameras_online: 7,
               cameras_offline: 1,
               last_event_at: '2026-03-09T10:00:00Z',

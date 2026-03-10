@@ -1,8 +1,10 @@
 <div class="dashboard-shell space-y-2.5">
   <section class="dashboard-hero rounded-[22px] border border-slate-300 p-3 shadow-sm lg:p-4">
-    <div class="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+
+    <!-- Fila superior: Título + metadatos + botón Actualizar -->
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
       <div class="flex items-center gap-2.5">
-        <div class="flex h-9 w-9 items-center justify-center rounded-[14px] bg-white/85 text-slate-800 shadow-sm ring-1 ring-white/70">
+        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-white/85 text-slate-800 shadow-sm ring-1 ring-white/70">
           <app-ui-icon [name]="activeModuleConfig().icon" [className]="'h-4.5 w-4.5'"></app-ui-icon>
         </div>
         <div>
@@ -11,10 +13,6 @@
             <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
               <app-ui-icon [name]="'map'" [className]="'h-3 w-3'"></app-ui-icon>
               {{ pointCount() }} puntos BA
-            </span>
-            <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-              <app-ui-icon [name]="'calendar'" [className]="'h-3 w-3'"></app-ui-icon>
-              {{ currentDateRangeLabel() }}
             </span>
             <span class="hidden items-center gap-1.5 rounded-full border border-slate-300 bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-slate-500 sm:inline-flex">
               <app-ui-icon [name]="'refresh'" [className]="'h-3 w-3'"></app-ui-icon>
@@ -25,20 +23,41 @@
         </div>
       </div>
 
-      <div class="flex w-full flex-wrap items-end justify-end gap-2 xl:w-auto xl:max-w-[860px]">
-        @if (hasVisibleFilters()) {
-          @for (field of filterFields(); track field.key) {
-            <label class="dashboard-filter-card min-w-[230px] flex-1 sm:flex-none sm:w-[260px]">
-              <span class="mb-1 inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                <app-ui-icon [name]="field.icon" [className]="'h-3 w-3 text-slate-400'"></app-ui-icon>
-                {{ field.label }}
-              </span>
+      <button
+        type="button"
+        (click)="refresh()"
+        class="inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-800">
+        <app-ui-icon [name]="'refresh'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
+        Actualizar
+      </button>
+    </div>
 
+    <!-- Barra de filtros — solo visible cuando el módulo activo tiene filtros de período -->
+    @if (hasVisibleFilters()) {
+      <div class="mt-2.5 flex flex-col gap-2 rounded-[14px] border border-slate-200/80 bg-white/60 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-sm sm:flex-row sm:items-center">
+
+        <!-- Etiqueta del bloque de filtros -->
+        <div class="flex shrink-0 items-center gap-2">
+          <span class="flex h-6 w-6 items-center justify-center rounded-[8px] bg-slate-100 text-slate-500">
+            <app-ui-icon [name]="'calendar'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
+          </span>
+          <span class="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Periodo de análisis</span>
+          <span class="hidden h-3 w-px bg-slate-200 sm:block"></span>
+        </div>
+
+        <!-- Campos de fecha en línea -->
+        <div class="flex flex-1 flex-wrap items-center gap-2">
+          @for (field of filterFields(); track field.key; let i = $index) {
+            @if (i > 0) {
+              <span class="text-slate-300 text-sm font-light select-none">→</span>
+            }
+            <div class="flex items-center gap-1.5 rounded-[10px] border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm ring-1 ring-transparent transition focus-within:border-blue-400 focus-within:ring-blue-100">
+              <span class="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 whitespace-nowrap">{{ field.label }}</span>
               @if (field.type === 'select') {
                 <select
                   [ngModel]="getFilterValue(field.key)"
                   (ngModelChange)="setFilterValue(field.key, $event)"
-                  class="dashboard-field">
+                  class="border-0 bg-transparent p-0 text-[11px] font-semibold text-slate-700 outline-none cursor-pointer">
                   @for (option of field.options ?? []; track option.value) {
                     <option [value]="option.value">{{ option.label }}</option>
                   }
@@ -49,30 +68,28 @@
                   (ngModelChange)="setFilterValue(field.key, $event)"
                   [type]="field.type"
                   [placeholder]="field.placeholder ?? ''"
-                  class="dashboard-field" />
+                  class="w-[110px] border-0 bg-transparent p-0 text-[11px] font-semibold text-slate-700 outline-none" />
               }
-            </label>
+            </div>
           }
-        }
+        </div>
 
-        <button
-          type="button"
-          (click)="refresh()"
-          class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white/90 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white">
-          <app-ui-icon [name]="'refresh'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
-          Actualizar
-        </button>
-        @if (hasVisibleFilters()) {
+        <!-- Badge del rango activo + botón limpiar -->
+        <div class="flex shrink-0 items-center gap-2">
+          <span class="hidden items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-500 sm:inline-flex">
+            <app-ui-icon [name]="'calendar'" [className]="'h-3 w-3'"></app-ui-icon>
+            {{ currentDateRangeLabel() }}
+          </span>
           <button
             type="button"
             (click)="clearFilters()"
-            class="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800">
-            <app-ui-icon [name]="'filter-off'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
-            Limpiar filtros
+            class="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800">
+            <app-ui-icon [name]="'filter-off'" [className]="'h-3 w-3'"></app-ui-icon>
+            Limpiar
           </button>
-        }
+        </div>
       </div>
-    </div>
+    }
 
     <div class="mt-2.5 grid gap-1.5 md:grid-cols-2 xl:grid-cols-4">
       @for (module of modules; track module.value) {
