@@ -58,7 +58,7 @@ class FilmRecordAdmin(admin.ModelAdmin):
         'report_number',
         'expediente_number',
         'description',
-        'operator__last_name',
+        'operator',
     )
 
     inlines = [FilmRecordInvolvedPersonInline]

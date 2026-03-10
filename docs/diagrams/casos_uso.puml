@@ -12,13 +12,15 @@ skinparam UsecaseFontSize 11
 title GestorCOC - Diagrama de Casos de Uso
 
 ' ─── Actores ───────────────────────────────
-actor "Operador COC\n(OPERADOR)" as Op
-actor "Fiscalizador CREV\n(SUPERVISOR)" as Crev
+actor "Solo Visualizacion\n(OP_VIEWER)" as Viewer
+actor "Operador de Camaras\n(OP_CONTROL)" as Control
+actor "Operador Basico\n(OP_EXTRACTION)" as Extraction
 actor "Administrador\n(ADMIN)" as Admin
 
 ' Herencia de actores
-Op <|-- Crev
-Crev <|-- Admin
+Viewer <|-- Control
+Control <|-- Extraction
+Extraction <|-- Admin
 
 ' ─── Sistema ───────────────────────────────
 rectangle "GestorCOC" {
@@ -41,7 +43,7 @@ rectangle "GestorCOC" {
     package "Registros Filmicos" {
         usecase "Crear registro\nfilmico" as UC_CrearRegistro
         usecase "Registrar backup\ny hash de evidencia" as UC_Backup
-        usecase "Verificar registro\n(CREV)" as UC_VerificarCREV
+        usecase "Verificar registro\n(Integridad)" as UC_VerificarIntegridad
         usecase "Descargar certificado\nde verificacion PDF" as UC_Certificado
     }
 
@@ -77,36 +79,38 @@ rectangle "GestorCOC" {
     }
 }
 
-' ─── Relaciones Operador ───────────────────
-Op --> UC_VerActivos
-Op --> UC_ReportarNovedad
-Op --> UC_EstadoNovedad
-Op --> UC_TicketExterno
-Op --> UC_CrearRegistro
-Op --> UC_Backup
-Op --> UC_Hash
-Op --> UC_InformePDF
-Op --> UC_Wizard
-Op --> UC_MejorarIA
-Op --> UC_GenerarDOCX
-Op --> UC_Hecho
-Op --> UC_HechoCamara
-Op --> UC_KPIs
-Op --> UC_Mapa
+' ─── Relaciones Viewer ───────────────────
+Viewer --> UC_VerActivos
+Viewer --> UC_KPIs
+Viewer --> UC_Mapa
 
-' ─── Relaciones CREV (exclusivas) ──────────
-Crev --> UC_VerificarCREV
-Crev --> UC_Certificado
+' ─── Relaciones Control ──────────────────
+Control --> UC_ReportarNovedad
+Control --> UC_EstadoNovedad
+Control --> UC_TicketExterno
+Control --> UC_Hecho
+Control --> UC_HechoCamara
+
+' ─── Relaciones Extraction ───────────────
+Extraction --> UC_CrearRegistro
+Extraction --> UC_Backup
+Extraction --> UC_Hash
+Extraction --> UC_InformePDF
+Extraction --> UC_Wizard
+Extraction --> UC_MejorarIA
+Extraction --> UC_GenerarDOCX
 
 ' ─── Relaciones Admin (exclusivas) ─────────
 Admin --> UC_ABMActivos
 Admin --> UC_ABMPersonal
 Admin --> UC_PersonalExterno
 Admin --> UC_Gear
+Admin --> UC_VerificarIntegridad
+Admin --> UC_Certificado
 
 ' ─── Includes / Extends ────────────────────
 UC_Backup ..> UC_Hash : <<include>>
-UC_VerificarCREV ..> UC_Certificado : <<include>>
+UC_VerificarIntegridad ..> UC_Certificado : <<include>>
 UC_MejorarIA ..> UC_Wizard : <<extend>>
 
 @enduml

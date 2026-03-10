@@ -10,8 +10,8 @@ skinparam ActorBorderColor #555555
 
 title GestorCOC - Flujo Completo de Registro Filmico y Verificacion CREV
 
-actor "Operador\n(OPERADOR)" as Op
-actor "Fiscalizador\n(SUPERVISOR)" as Crev
+actor "Operador Basico\n(OP_EXTRACTION)" as Op
+actor "Administrador\n(ADMIN)" as Crev
 participant "Angular SPA\n/records" as SPA
 participant "FilmRecordViewSet\nDRF" as API
 participant "IntegrityService\nrecords/services.py" as Service
@@ -45,7 +45,7 @@ note over Op, DB : El operador puede usar /integrity\npara calcular el hash loca
 
 Crev -> SPA : Accede a registros pendientes\nde verificacion
 SPA -> API : POST /api/film-records/42/verify_by_crev/\n{ verified_by_crev_id: <person_id> }
-API -> API : Valida role == SUPERVISOR
+API -> API : Valida role == ADMIN
 API -> Model : filmrecord.verified_by_crev = person\nfilmrecord.verification_date = now()
 note right of Model : save() automaticamente\nsetea is_editable = False
 Model -> DB : UPDATE filmrecord SET\nverified_by_crev_id=5,\nverification_date=NOW(),\nis_editable=False

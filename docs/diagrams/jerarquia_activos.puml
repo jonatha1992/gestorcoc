@@ -53,8 +53,8 @@ package "assets" {
 package "personnel" {
     class Person {
         + badge_number : 6 digitos UNIQUE
-        + role : OPERADOR|SUPERVISOR|ADMIN
-        + rank : JEFE|OFICIAL|...|CIVIL
+        + role : ADMIN|OP_EXTRACTION|OP_CONTROL|OP_VIEWER
+        + rank : OFICIAL_AYUDANTE|...|CIVIL
         + guard_group : nullable
     }
 
@@ -90,6 +90,7 @@ package "records" {
         + file_hash [INDEX]
         + delivery_status : PENDIENTE|...|FINALIZADO
         + is_editable : False tras CREV
+        + operator : CharField
     }
 }
 
@@ -116,8 +117,8 @@ Camera "0..1" <.. "0..*" Hecho : registrado en
 
 ' ─── Registros sobre camaras ──────────────
 Camera "1" <-- "0..*" FilmRecord : graba
-Person "1" <-- "0..*" FilmRecord : operator (PROTECT)
-Person "0..1" <-- "0..*" FilmRecord : verified_by_crev\n(SUPERVISOR only)
+Person "0..1" <-- "0..*" FilmRecord : verified_by_crev\n(ADMIN only)
+Person "0..1" <-- "0..*" FilmRecord : received_by\n(PROTECT)
 
 note bottom of CameramanGear
     Campo <b>assigned_to_name</b>

@@ -16,89 +16,72 @@
     <form (ngSubmit)="generateReport()" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6"
         [class.opacity-70]="isReadOnly()" [class.pointer-events-none]="isReadOnly()">
         <h2 class="text-xl font-bold text-slate-800">Informe de Analisis de Video</h2>
-        <p *ngIf="validationMessage"
-            class="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+        <div *ngIf="validationMessage"
+            class="w-full text-base font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-2xl px-5 py-4 mb-4 animate-slide-in">
             {{ validationMessage }}
-        </p>
-        <div class="space-y-4">
-            <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1">Datos base</h3>
-            <div class="grid grid-cols-2 lg:grid-cols-12 gap-3">
-                <div class="col-span-2 lg:col-span-4">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Operador *</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('operador_select', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Operador">?</button>
+        </div>
+
+        <div class="space-y-4 pt-4">
+            <h3 class="text-base font-bold text-slate-800 border-b border-slate-200 pb-2">Datos base</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div class="col-span-1">
+                    <div class="flex items-center gap-1 mb-1.5">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">OPERADOR *</label>
                     </div>
                     <select [(ngModel)]="selectedOperatorId" (ngModelChange)="onOperatorChange($event)"
                         name="operador_select" [attr.data-invalid]="isFieldInvalid('operador') ? 'true' : null"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                        class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                         <option [ngValue]="null">Seleccione operador...</option>
                         <option *ngFor="let p of personnelOptions" [ngValue]="p.id">
                             {{ p.last_name }}, {{ p.first_name }}
                         </option>
                     </select>
                 </div>
-                <div class="col-span-1 lg:col-span-4">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Jerarquia *</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('grado', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Jerarquia">?</button>
+                <div class="col-span-1">
+                    <div class="flex items-center gap-1 mb-1.5">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">JERARQUIA *</label>
                     </div>
                     <select [(ngModel)]="form.grado" (ngModelChange)="onOperatorGradeChange($event)"
                         (change)="saveOperatorData()" name="grado"
                         [attr.data-invalid]="isFieldInvalid('grado') ? 'true' : null"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                        class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                         <option *ngFor="let gradoOption of gradeOptions" [ngValue]="gradoOption">{{ gradoOption }}
                         </option>
                     </select>
                 </div>
-                <div class="col-span-1 lg:col-span-4">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Número de Legajo *</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('lup', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Legajo">?</button>
+                <div class="col-span-1">
+                    <div class="flex items-center gap-1 mb-1.5">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">NÚMERO DE LEGAJO *</label>
                     </div>
                     <input [(ngModel)]="form.lup" (ngModelChange)="onOperatorLupChange($event)"
                         (blur)="saveOperatorData()" name="lup" type="number" placeholder="506896" min="100000"
                         max="999999" [attr.data-invalid]="isFieldInvalid('lup') ? 'true' : null"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                        class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
-                <div class="col-span-1 lg:col-span-4">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Fecha del Informe *</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('report_date', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Fecha del Informe">?</button>
+                <div class="col-span-1">
+                    <div class="flex items-center gap-1 mb-1.5">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">FECHA DEL INFORME *</label>
                     </div>
                     <input [(ngModel)]="form.report_date" (ngModelChange)="markDirty('report_date')" name="report_date"
                         type="date" [attr.data-invalid]="isFieldInvalid('report_date') ? 'true' : null"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                        class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
-                <div class="col-span-1 lg:col-span-4">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Numero de Informe *</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('numero_informe', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Numero de Informe">?</button>
+                <div class="col-span-1">
+                    <div class="flex items-center gap-1 mb-1.5">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">NUMERO DE INFORME *</label>
                     </div>
                     <input [(ngModel)]="form.numero_informe" (ngModelChange)="onNumeroInformeChange($event)"
                         name="numero_informe" type="text" placeholder="0001EZE/2026"
                         [attr.data-invalid]="isFieldInvalid('numero_informe') ? 'true' : null"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                        class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
-                <div class="col-span-2 lg:col-span-4">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Unidad *</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('unidad', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Unidad">?</button>
+                <div class="col-span-1">
+                    <div class="flex items-center gap-1 mb-1.5">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">UNIDAD *</label>
                     </div>
                     <select [(ngModel)]="form.unidad" (ngModelChange)="onUnidadChange($event)" name="unidad"
                         [attr.data-invalid]="isFieldInvalid('unidad') ? 'true' : null"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                        class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                         <option *ngFor="let unidadOption of unidadOptions" [ngValue]="unidadOption">
                             {{ unidadOption }}
                         </option>
@@ -110,10 +93,7 @@
                         Guardando jerarquia y legajo del operador...
                     </p>
                     <div class="flex items-center gap-2 mb-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase">Firma Digital</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('firma', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Firma Digital">?</button>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">FIRMA DIGITAL</label>
                         <input type="checkbox" [(ngModel)]="incluirFirma" name="incluirFirma" (change)="markDirty()"
                             class="rounded text-indigo-600 focus:ring-indigo-500">
                         <span class="text-xs text-slate-500">¿Incluir firma digital?</span>

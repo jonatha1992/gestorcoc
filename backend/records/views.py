@@ -28,7 +28,6 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
     Incluye búsqueda, filtrado y acción de verificación CREV.
     """
     queryset = FilmRecord.objects.select_related(
-        'operator',
         'received_by',
         'verified_by_crev',
         'generator_unit',
@@ -72,8 +71,7 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
         'involved_people__first_name',
         'involved_people__last_name',
         'involved_people__document_number',
-        'operator__first_name',
-        'operator__last_name',
+        'operator',
     ]
     
     # Ordenamiento
@@ -545,7 +543,7 @@ class DashboardQueryMixin:
         return qs
 
     def _apply_records_filters(self, request):
-        qs = FilmRecord.objects.select_related("camera__server__system__unit", "operator", "received_by", "verified_by_crev")
+        qs = FilmRecord.objects.select_related("received_by", "verified_by_crev")
         p = request.query_params
         search = (p.get("search") or "").strip()
         if search:
@@ -555,11 +553,10 @@ class DashboardQueryMixin:
                 | Q(request_number__icontains=search)
                 | Q(case_title__icontains=search)
                 | Q(requester__icontains=search)
-                | Q(camera__name__icontains=search)
-                | Q(operator__first_name__icontains=search)
-                | Q(operator__last_name__icontains=search)
+                | Q(sistema__icontains=search)
+                | Q(operator__icontains=search)
             )
-        for field in ["delivery_status", "camera", "operator", "received_by", "verified_by_crev"]:
+        for field in ["delivery_status", "sistema", "operator", "received_by", "verified_by_crev"]:
             value = p.get(field)
             if value not in (None, ""):
                 qs = qs.filter(**{field: value})
@@ -724,7 +721,7 @@ class DashboardMapView(DashboardQueryMixin, views.APIView):
                 Q(camera__server__system__unit=unit) | Q(server__system__unit=unit) | Q(system__unit=unit)
             )
             hechos = hechos_base.filter(camera__server__system__unit=unit)
-            records = records_base.filter(camera__server__system__unit=unit)
+            records = records_base.filter(generator_unit=unit)
             cameras = Camera.objects.filter(server__system__unit=unit)
             last_event = max(
                 [val for val in [novedades.aggregate(v=Max("created_at"))["v"], hechos.aggregate(v=Max("timestamp"))["v"], records.aggregate(v=Max("created_at"))["v"]] if val is not None],

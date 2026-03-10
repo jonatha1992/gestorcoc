@@ -1,0 +1,44 @@
+@startuml actividad_novedad
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam ActivityBackgroundColor #EFF6FF
+skinparam ActivityBorderColor #3B82F6
+skinparam ArrowColor #555555
+
+title Flujo de Actividad - Gestion de Novedades
+
+start
+:Operador detecta falla\no incidente en equipo;
+:Accede a GestorCOC > Novedades;
+:Haz clic en "Nueva Novedad";
+:Selecciona Activo Afectado\n(Camara, Sistema, Servidor, Gear);
+:Describe el problema;
+:Asigna Severidad\n(Baja, Media, Alta, Critica);
+
+if (¿Existe ticket externo\nen DGT/CCO?) then (Si)
+  :Ingresa ID del ticket externo;
+else (No)
+  :DGT/CCO generara el ticket\nposteriormente;
+end if
+
+:Guarda la Novedad\n(Estado inicial: OPEN);
+
+fork
+  :Tecnico revisa Novedad;
+  :Cambia estado a IN_PROGRESS;
+  :Realiza reparacion/mantenimiento;
+  :Cambia estado a CLOSED;
+fork again
+  :Operador realiza seguimiento;
+  if (¿Aun falla?) then (Si)
+    :Agrega comentario u observacion;
+  else (No)
+  end if
+end fork
+
+stop
+
+@enduml

@@ -7,9 +7,56 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 from assets.models import Unit
+from novedades.models import Novedad
 from personnel.models import Person
 from .models import FilmRecord
 from .services import IntegrityService
+
+
+class DashboardLabelApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_personnel_dashboard_uses_humanized_role_labels(self):
+        Person.objects.create(
+            first_name='Ana',
+            last_name='Control',
+            badge_number='223456',
+            role='OP_CONTROL',
+        )
+        Person.objects.create(
+            first_name='Luis',
+            last_name='Admin',
+            badge_number='223457',
+            role='ADMIN',
+        )
+
+        response = self.client.get('/api/dashboard/personnel/')
+
+        self.assertEqual(response.status_code, 200)
+        points = {item['key']: item for item in response.data['series']['distribution_primary']}
+        self.assertEqual(points['OP_CONTROL']['label'], 'Operador de Camaras (Fijas/Domos/PTZ)')
+        self.assertEqual(points['ADMIN']['label'], 'Administrador')
+
+    def test_novedades_dashboard_uses_humanized_status_labels(self):
+        Novedad.objects.create(description='Camara sin servicio', status='OPEN')
+        Novedad.objects.create(description='Servidor recuperado', status='CLOSED')
+
+        response = self.client.get('/api/dashboard/novedades/')
+
+        self.assertEqual(response.status_code, 200)
+        points = {item['key']: item for item in response.data['series']['distribution_primary']}
+        self.assertEqual(points['OPEN']['label'], 'Abierta')
+        self.assertEqual(points['CLOSED']['label'], 'Cerrada')
+
+    def test_records_dashboard_exposes_finalizado_label(self):
+        FilmRecord.objects.create(delivery_status='FINALIZADO')
+
+        response = self.client.get('/api/dashboard/records/')
+
+        self.assertEqual(response.status_code, 200)
+        points = {item['key']: item for item in response.data['series']['distribution_primary']}
+        self.assertEqual(points['FINALIZADO']['label'], 'Finalizado')
 
 
 class FilmRecordApiPeopleTests(TestCase):

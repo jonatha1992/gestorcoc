@@ -10,6 +10,54 @@ import { PersonnelService } from '../../services/personnel.service';
 import { RecordsService } from '../../services/records.service';
 import { ToastService } from '../../services/toast.service';
 
+export interface FilmRecord {
+  id: number;
+  issue_number: string;
+  order_number: number;
+  entry_date: string;
+  request_type: string;
+  request_kind: string;
+  request_number: string;
+  requester: string;
+  judicial_case_number: string;
+  case_title: string;
+  incident_date: string;
+  incident_time: string;
+  incident_place: string;
+  incident_sector: string;
+  crime_type: string;
+  criminal_problematic: string;
+  incident_modality: string;
+  intervening_department: string;
+  judicial_office: string;
+  judicial_secretary: string;
+  judicial_holder: string;
+  generator_unit: number;
+  sistema: string;
+  received_by: number;
+  operator: string;
+  description: string;
+  dvd_number: string;
+  report_number: string;
+  ifgra_number: string;
+  expediente_number: string;
+  delivery_act_number: string;
+  delivery_date: string;
+  retrieved_by: string;
+  organism: string;
+  delivery_status: string;
+  observations: string;
+  has_backup: boolean;
+  backup_path: string;
+  file_hash: string;
+  hash_algorithm: string;
+  file_size: number;
+  is_integrity_verified: boolean;
+  verified_by_crev: number;
+  verification_date: string;
+  is_editable: boolean;
+}
+
 @Component({
   selector: 'app-records',
   standalone: true,
@@ -32,6 +80,8 @@ export class RecordsComponent implements OnInit {
   showForm = signal(false);
   isEditing = signal(false);
   private editingRecordId: number | null = null;
+  showPhysicalSupport = signal(false);
+  showDeliveryStatus = signal(false);
 
   selectedRecord = signal<any | null>(null);
   selectedInforme = signal<any | null>(null);
@@ -57,6 +107,13 @@ export class RecordsComponent implements OnInit {
   private searchTimer: any;
 
   newRecord: any = this.createEmptyRecord();
+  invalidFields = new Set<string>();
+  validationMessage = '';
+
+  isFieldInvalid(fieldName: string): boolean {
+    return this.invalidFields.has(fieldName);
+  }
+
 
   ngOnInit() {
     this.loadData();
@@ -199,8 +256,12 @@ export class RecordsComponent implements OnInit {
 
   openCreateForm() {
     this.resetForm();
+    this.invalidFields.clear();
+    this.validationMessage = '';
     this.isEditing.set(false);
     this.editingRecordId = null;
+    this.showPhysicalSupport.set(false);
+    this.showDeliveryStatus.set(false);
     this.showForm.set(true);
   }
 
@@ -258,17 +319,50 @@ export class RecordsComponent implements OnInit {
       is_integrity_verified: !!record?.is_integrity_verified,
       involved_people: involvedPeople.length > 0 ? involvedPeople : [this.createEmptyInvolvedPerson()]
     };
+
+    // Detectar si hay datos en secciones opcionales para mostrarlas
+    this.showPhysicalSupport.set(
+      !!(record?.dvd_number || record?.report_number || record?.ifgra_number || record?.expediente_number)
+    );
+    this.showDeliveryStatus.set(
+      !!(record?.delivery_act_number || record?.delivery_date || record?.retrieved_by || record?.organism || (record?.delivery_status && record?.delivery_status !== 'PENDIENTE'))
+    );
+
     this.isEditing.set(true);
     this.editingRecordId = record?.id ?? null;
     this.showForm.set(true);
   }
 
   saveRecord() {
-    const missingMinimumFields = this.getMissingMinimumFields();
-    if (missingMinimumFields.length > 0) {
-      this.toastService.show(`Completa los datos minimos: ${missingMinimumFields.join(', ')}.`, 'warning');
+    this.invalidFields.clear();
+    this.validationMessage = '';
+
+    const textValue = (value: unknown) => String(value ?? '').trim();
+    
+    // Validamos manualmente para llenar invalidFields
+    if (!textValue(this.newRecord.request_kind)) this.invalidFields.add('request_kind');
+    if (!textValue(this.newRecord.issue_number)) this.invalidFields.add('issue_number');
+    if (!textValue(this.newRecord.case_title)) this.invalidFields.add('case_title');
+    if (!textValue(this.newRecord.judicial_case_number)) this.invalidFields.add('judicial_case_number');
+    if (!textValue(this.newRecord.judicial_office)) this.invalidFields.add('judicial_office');
+    if (!this.newRecord.generator_unit) this.invalidFields.add('generator_unit');
+    if (!this.newRecord.operator) this.invalidFields.add('operator');
+
+    if (this.invalidFields.size > 0) {
+      const missingLabels: string[] = [];
+      if (this.invalidFields.has('request_kind')) missingLabels.push('Denuncia / Procedimiento');
+      if (this.invalidFields.has('issue_number')) missingLabels.push('Nro. Asunto');
+      if (this.invalidFields.has('case_title')) missingLabels.push('Caratula');
+      if (this.invalidFields.has('judicial_case_number')) missingLabels.push('Nro. Causa Judicial');
+      if (this.invalidFields.has('judicial_office')) missingLabels.push('Juzgado / Fiscalia');
+      if (this.invalidFields.has('generator_unit')) missingLabels.push('Unidad Generadora');
+      if (this.invalidFields.has('operator')) missingLabels.push('Responsable a Cargo');
+
+      this.validationMessage = `Completa los datos mínimos requeridos: ${missingLabels.join(', ')}.`;
+      this.toastService.show(this.validationMessage, 'warning');
       return;
     }
+
 
     const involvedPeople = this.normalizeInvolvedPeople();
     if (involvedPeople === null) {
@@ -543,7 +637,7 @@ export class RecordsComponent implements OnInit {
       description: '',
       observations: '',
       is_integrity_verified: false,
-      involved_people: [this.createEmptyInvolvedPerson()],
+      involved_people: [this.createEmptyInvolvedPerson()]
     };
   }
 
@@ -551,6 +645,8 @@ export class RecordsComponent implements OnInit {
     this.newRecord = this.createEmptyRecord();
     this.isEditing.set(false);
     this.editingRecordId = null;
+    this.showPhysicalSupport.set(false);
+    this.showDeliveryStatus.set(false);
   }
 }
 

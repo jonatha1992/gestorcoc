@@ -319,7 +319,8 @@
                             <label class="field-label-compact">Denuncia / Procedimiento <span
                                     class="text-red-500">*</span></label>
                             <select name="request_kind" [(ngModel)]="newRecord.request_kind"
-                                class="field-control-compact" required>
+                                class="field-control-compact transition-colors"
+                                [class.border-red-500]="!newRecord.request_kind" required>
                                 <option value="">- Seleccione -</option>
                                 <option value="DENUNCIA">DENUNCIA</option>
                                 <option value="PROCEDIMIENTO">PROCEDIMIENTO</option>
@@ -342,7 +343,9 @@
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Nro. Asunto <span class="text-red-500">*</span></label>
                             <input type="text" name="issue_number" [(ngModel)]="newRecord.issue_number"
-                                class="field-control-compact" placeholder="Ej: INT-2026/032" required>
+                                class="field-control-compact transition-colors" 
+                                [class.border-red-500]="!newRecord.issue_number"
+                                placeholder="Ej: INT-2026/032" required>
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Nro. Orden</label>
@@ -478,13 +481,17 @@
                             <label class="field-label-compact">Nro. Causa Judicial <span
                                     class="text-red-500">*</span></label>
                             <input type="text" name="judicial_case_number" [(ngModel)]="newRecord.judicial_case_number"
-                                class="field-control-compact" placeholder="Ej: C-12345/2026" required>
+                                class="field-control-compact transition-colors"
+                                [class.border-red-500]="!newRecord.judicial_case_number"
+                                placeholder="Ej: C-12345/2026" required>
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Juzgado / Fiscalía <span
                                     class="text-red-500">*</span></label>
                             <input type="text" name="judicial_office" [(ngModel)]="newRecord.judicial_office"
-                                class="field-control-compact" placeholder="Si falta, se guarda N/C" required>
+                                class="field-control-compact transition-colors"
+                                [class.border-red-500]="!newRecord.judicial_office"
+                                placeholder="Si falta, se guarda N/C" required>
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Titular</label>
@@ -499,7 +506,9 @@
                         <div class="space-y-1.5 col-span-2">
                             <label class="field-label-compact">Carátula <span class="text-red-500">*</span></label>
                             <input type="text" name="case_title" [(ngModel)]="newRecord.case_title"
-                                class="field-control-compact" placeholder="Ej: DENUNCIA S/ HURTO" required>
+                                class="field-control-compact transition-colors"
+                                [class.border-red-500]="!newRecord.case_title"
+                                placeholder="Ej: DENUNCIA S/ HURTO" required>
                         </div>
                     </div>
                 </div>
@@ -514,7 +523,8 @@
                             <label class="field-label-compact">Unidad Generadora <span
                                     class="text-red-500">*</span></label>
                             <select name="generator_unit" [(ngModel)]="newRecord.generator_unit"
-                                class="field-control-compact" required>
+                                class="field-control-compact transition-colors"
+                                [class.border-red-500]="!newRecord.generator_unit" required>
                                 <option [ngValue]="''">- Sin especificar -</option>
                                 @for (unit of units(); track unit.id) {
                                 <option [ngValue]="unit.id">{{ unit.name }} ({{ unit.code }})</option>
@@ -534,7 +544,9 @@
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Responsable a Cargo <span
                                     class="text-red-500">*</span></label>
-                            <select name="operator" [(ngModel)]="newRecord.operator" required class="field-control-compact">
+                            <select name="operator" [(ngModel)]="newRecord.operator" required 
+                                class="field-control-compact transition-colors"
+                                [class.border-red-500]="!newRecord.operator">
                                 <option [ngValue]="''" disabled>Seleccione operador...</option>
                                 @for (person of people(); track person.id) {
                                 <option [ngValue]="person.id">{{ person.last_name }}, {{ person.first_name }}</option>
@@ -545,11 +557,19 @@
                 </div>
 
                 <div>
-                    <h4
-                        class="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3 pb-1 border-b border-indigo-100">
-                        Soporte Físico
-                    </h4>
-                    <div class="grid grid-cols-4 gap-3">
+                    <div class="flex items-center justify-between mb-3 pb-1 border-b border-indigo-100">
+                        <h4 class="text-xs font-bold text-indigo-700 uppercase tracking-wider">
+                            Soporte Físico
+                        </h4>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="showPhysicalSupport" [checked]="showPhysicalSupport()" 
+                                (change)="showPhysicalSupport.set(!showPhysicalSupport())"
+                                class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-all">
+                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 uppercase transition-colors">Completar Soporte</span>
+                        </label>
+                    </div>
+                    @if (showPhysicalSupport()) {
+                    <div class="grid grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Nº DVD</label>
                             <input type="text" name="dvd_number" [(ngModel)]="newRecord.dvd_number"
@@ -571,14 +591,23 @@
                                 class="field-control-compact" placeholder="Ej: EX-2026-000456">
                         </div>
                     </div>
+                    }
                 </div>
 
                 <div>
-                    <h4
-                        class="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3 pb-1 border-b border-indigo-100">
-                        Entrega y Estado
-                    </h4>
-                    <div class="grid grid-cols-3 gap-3">
+                    <div class="flex items-center justify-between mb-3 pb-1 border-b border-indigo-100">
+                        <h4 class="text-xs font-bold text-indigo-700 uppercase tracking-wider">
+                            Entrega y Estado
+                        </h4>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="showDeliveryStatus" [checked]="showDeliveryStatus()" 
+                                (change)="showDeliveryStatus.set(!showDeliveryStatus())"
+                                class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-all">
+                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 uppercase transition-colors">Sustituto Intervención</span>
+                        </label>
+                    </div>
+                    @if (showDeliveryStatus()) {
+                    <div class="grid grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Nº Acta de Entrega</label>
                             <input type="text" name="delivery_act_number" [(ngModel)]="newRecord.delivery_act_number"
@@ -617,6 +646,7 @@
                                 placeholder="Observaciones adicionales..."></textarea>
                         </div>
                     </div>
+                    }
                 </div>
 
             </form>

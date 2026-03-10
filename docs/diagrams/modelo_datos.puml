@@ -76,8 +76,8 @@ class Person {
     + first_name : CharField(100)
     + last_name : CharField(100)
     + badge_number : CharField(6) UNIQUE
-    + role : ENUM(OPERADOR | SUPERVISOR | ADMIN)
-    + rank : ENUM(JEFE | OFICIAL | INSPECTOR | ... | CIVIL)
+    + role : ENUM(ADMIN | OP_EXTRACTION | OP_CONTROL | OP_VIEWER)
+    + rank : ENUM(OFICIAL_AYUDANTE | OFICIAL_PRINCIPAL | OFICIAL_MAYOR | OFICIAL_JEFE | SUBINSPECTOR | INSPECTOR | COMISIONADO_MAYOR | COMISIONADO_GENERAL | CIVIL)
     + unit : FK(Unit) nullable
     + guard_group : CharField(50) nullable
     + is_active : BooleanField
@@ -140,24 +140,41 @@ class Hecho {
 ' ─────────────────────────────────────────
 class FilmRecord {
     + id : PK
-    + issue_number : CharField(50) nullable
+    + issue_number : CharField(50) nullable [INDEX]
     + order_number : IntegerField nullable
-    + entry_date : DateField nullable
-    + request_type : ENUM(OFICIO | NOTA | EXHORTO | OTRO) nullable
+    + entry_date : DateField nullable [INDEX]
+    + request_type : ENUM(FORMULARIO | MEMORANDO | NOTA | OFICIO | EXHORTO | OTRO) nullable
+    + request_kind : ENUM(DENUNCIA | PROCEDIMIENTO | OTRO) nullable
     + request_number : CharField(100) nullable
     + requester : CharField(200) nullable
     + judicial_case_number : CharField(100) nullable [INDEX]
     + case_title : TextField nullable
     + incident_date : DateField nullable
+    + incident_time : TimeField nullable
+    + incident_place : CharField(200) nullable
+    + incident_sector : CharField(200) nullable
     + crime_type : CharField(200) nullable
+    + criminal_problematic : CharField(250) nullable
+    + incident_modality : CharField(250) nullable
     + intervening_department : CharField(200) nullable
-    + camera : FK(Camera)
-    + operator : FK(Person) [PROTECT]
+    + judicial_office : CharField(250) nullable
+    + judicial_secretary : CharField(250) nullable
+    + judicial_holder : CharField(250) nullable
+    + generator_unit : FK(Unit) nullable
+    + sistema : CharField(200) nullable
     + received_by : FK(Person) nullable [PROTECT]
-    + start_time : DateTimeField
-    + end_time : DateTimeField
-    + record_type : ENUM(VD | IM | OT)
+    + operator : CharField(200) nullable
     + description : TextField nullable
+    + dvd_number : CharField(100) nullable
+    + report_number : CharField(100) nullable
+    + ifgra_number : CharField(100) nullable
+    + expediente_number : CharField(100) nullable
+    + delivery_act_number : CharField(100) nullable
+    + delivery_date : DateField nullable
+    + retrieved_by : CharField(200) nullable
+    + organism : CharField(200) nullable
+    + delivery_status : ENUM(PENDIENTE | ENTREGADO | DERIVADO | FINALIZADO | ANULADO) [INDEX]
+    + observations : TextField nullable
     + has_backup : BooleanField
     + backup_path : CharField(500) nullable
     + file_hash : CharField(128) nullable [INDEX]
@@ -167,8 +184,20 @@ class FilmRecord {
     + verified_by_crev : FK(Person) nullable [PROTECT]
     + verification_date : DateTimeField nullable
     + is_editable : BooleanField
-    + delivery_status : ENUM(PENDIENTE | ENTREGADO | DERIVADO | FINALIZADO | ANULADO)
-    + observations : TextField nullable
+    + start_time : DateTimeField nullable
+    + end_time : DateTimeField nullable
+}
+
+class FilmRecordInvolvedPerson {
+    + id : PK
+    + film_record : FK(FilmRecord)
+    + role : ENUM(DAMNIFICADO | DENUNCIANTE | DETENIDO | OTRO)
+    + last_name : CharField(120)
+    + first_name : CharField(120)
+    + document_type : CharField(30) nullable
+    + document_number : CharField(30) nullable
+    + nationality : CharField(80) nullable
+    + birth_date : DateField nullable
 }
 
 class Catalog {
@@ -210,6 +239,7 @@ TimeStampedModel <|-- ExternalPerson
 TimeStampedModel <|-- Novedad
 TimeStampedModel <|-- Hecho
 TimeStampedModel <|-- FilmRecord
+TimeStampedModel <|-- FilmRecordInvolvedPerson
 TimeStampedModel <|-- Catalog
 TimeStampedModel <|-- VideoAnalysisReport
 TimeStampedModel <|-- AIUsageLog
@@ -225,11 +255,12 @@ Server "0..1" <-- "0..*" Camera : server
 Person "0..1" <-- "0..*" CameramanGear : assigned_to
 Person "0..1" <-- "0..*" Novedad : reported_by
 Person "0..1" <-- "0..*" Hecho : reported_by
-Person "1" <-- "0..*" FilmRecord : operator
 Person "0..1" <-- "0..*" FilmRecord : received_by
 Person "0..1" <-- "0..*" FilmRecord : verified_by_crev
 Person "0..1" <-- "0..*" Person : unit (revista en)
 Person "0..*" <--> "0..*" System : assigned_systems (M2M)
+
+Unit "0..1" <-- "0..*" FilmRecord : generator_unit
 
 Camera "0..1" <-- "0..*" Novedad : camera
 System "0..1" <-- "0..*" Novedad : system
@@ -238,7 +269,7 @@ CameramanGear "0..1" <-- "0..*" Novedad : cameraman_gear
 
 Camera "0..1" <-- "0..*" Hecho : camera
 
-Camera "1" <-- "1..*" FilmRecord : camera
+FilmRecord "1" <-- "0..*" FilmRecordInvolvedPerson : film_record
 FilmRecord "0..1" <-- "0..1" VideoAnalysisReport : film_record
 FilmRecord "0..*" <--> "0..*" Catalog : records (M2M)
 

@@ -1,0 +1,40 @@
+@startuml actividad_hecho
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam ActivityBackgroundColor #FFF7ED
+skinparam ActivityBorderColor #F97316
+skinparam ArrowColor #555555
+
+title Flujo de Actividad - Registro de Hechos (Bitacora)
+
+start
+:Operador observa hecho en vivo\no recibe reporte radial;
+:Accede a GestorCOC > Hechos;
+:Haz clic en "Nuevo Hecho";
+:Ingresa Timestamp (Fecha/Hora);
+:Selecciona Categoria\n(POLICIAL, OPERATIVO, etc.);
+:Describe el hecho y elementos;
+:Selecciona Camara (opcional);
+:Ingresa Sector y Grupos Intervinientes;
+
+if (¿Intervencion COC?) then (Si)
+  :Marcar "Intervencion COC";
+else (No)
+end if
+
+:Guardar Hecho;
+
+if (¿Continuidad operativa?) then (Si)
+  :Monitorear hasta finalizacion;
+  :Ingresa Hora de Fin;
+  :Describe Resolucion;
+  :Marcar "Se Soluciono";
+else (No)
+end if
+
+stop
+
+@enduml

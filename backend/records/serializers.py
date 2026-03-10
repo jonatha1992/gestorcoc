@@ -83,9 +83,8 @@ class FilmRecordSerializer(serializers.ModelSerializer):
         read_only_fields = ['is_editable', 'verification_date']
 
     def get_operator_full_name(self, obj):
-        if obj.operator:
-            return f"{obj.operator.last_name}, {obj.operator.first_name}"
-        return None
+        # El campo operator ahora es un CharField con texto libre
+        return obj.operator or None
 
     def get_received_by_full_name(self, obj):
         if obj.received_by:

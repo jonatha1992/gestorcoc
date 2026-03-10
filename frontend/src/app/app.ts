@@ -14,7 +14,7 @@ import { ToastComponent } from './components/toast.component';
 })
 export class App {
   title = 'Gestor COC';
-  pageTitle = 'Dashboard';
+  pageTitle = 'Panel operativo';
   isSidebarCollapsed = false;
   private hasInitializedViewport = false;
 
@@ -68,7 +68,7 @@ export class App {
     } else if (url.includes('/settings')) {
       this.pageTitle = 'Configuracion';
     } else {
-      this.pageTitle = 'Dashboard';
+      this.pageTitle = 'Panel operativo';
     }
   }
 }

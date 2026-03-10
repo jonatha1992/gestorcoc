@@ -11,6 +11,7 @@ export interface DashboardCard {
 }
 
 export interface DashboardSeriesPoint {
+  key?: string;
   label: string;
   value: number;
 }

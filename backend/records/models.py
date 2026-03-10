@@ -83,13 +83,12 @@ class FilmRecord(TimeStampedModel):
         null=True,
         verbose_name='Recepcionado por',
     )
-    operator = models.ForeignKey(
-        Person,
-        on_delete=models.PROTECT,
-        related_name='operated_records',
+    operator = models.CharField(
+        max_length=200,
         blank=True,
         null=True,
         verbose_name='Confeccionado por',
+        help_text='Jerarquía, Nombre y Apellido del responsable',
     )
 
     # Detalle y soporte
