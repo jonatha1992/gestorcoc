@@ -24,6 +24,10 @@ class Migration(migrations.Migration):
                 'abstract': False,
             },
         ),
+        migrations.RemoveField(
+            model_name='system',
+            name='location',
+        ),
         migrations.AddField(
             model_name='system',
             name='unit',

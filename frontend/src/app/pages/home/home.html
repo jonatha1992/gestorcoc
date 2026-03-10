@@ -1,37 +1,27 @@
-<div class="dashboard-shell space-y-4">
-  <section class="dashboard-hero rounded-[24px] border border-slate-300 p-4 shadow-sm lg:p-5">
-    <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-      <div class="max-w-3xl">
-        <div class="flex items-start gap-3">
-          <div class="flex h-12 w-12 items-center justify-center rounded-[18px] bg-white/85 text-slate-800 shadow-sm ring-1 ring-white/70">
-            <app-ui-icon [name]="activeModuleConfig().icon" [className]="'h-6 w-6'"></app-ui-icon>
+<div class="dashboard-shell space-y-2.5">
+  <section class="dashboard-hero rounded-[22px] border border-slate-300 p-3 shadow-sm lg:p-4">
+    <div class="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="flex h-9 w-9 items-center justify-center rounded-[14px] bg-white/85 text-slate-800 shadow-sm ring-1 ring-white/70">
+          <app-ui-icon [name]="activeModuleConfig().icon" [className]="'h-4.5 w-4.5'"></app-ui-icon>
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h2 class="text-base font-black tracking-tight text-slate-950">{{ activeModuleConfig().title }}</h2>
+            <span class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold" [ngClass]="toneClasses(activeModuleConfig().tone).badge">
+              <app-ui-icon [name]="'layers'" [className]="'h-3 w-3'"></app-ui-icon>
+              {{ moduleTotal() }}
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+              <app-ui-icon [name]="'map'" [className]="'h-3 w-3'"></app-ui-icon>
+              {{ pointCount() }} puntos BA
+            </span>
+            <span class="hidden items-center gap-1.5 rounded-full border border-slate-300 bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-slate-500 sm:inline-flex">
+              <app-ui-icon [name]="'refresh'" [className]="'h-3 w-3'"></app-ui-icon>
+              {{ formatLastUpdated() }}
+            </span>
           </div>
-          <div class="space-y-1.5">
-            <div class="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-600">
-              <app-ui-icon [name]="'panel'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
-              Panel operativo
-            </div>
-            <div>
-              <h2 class="text-xl font-black tracking-tight text-slate-950 md:text-[1.7rem]">{{ activeModuleConfig().title }}</h2>
-              <p class="mt-1.5 max-w-2xl text-xs leading-5 text-slate-600">
-                {{ activeModuleConfig().subtitle }}
-              </p>
-            </div>
-            <div class="flex flex-wrap gap-2 pt-1">
-              <span class="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold" [ngClass]="toneClasses(activeModuleConfig().tone).badge">
-                <app-ui-icon [name]="'layers'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
-                {{ moduleTotal() }} registros visibles
-              </span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-slate-600">
-                <app-ui-icon [name]="'map'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
-                {{ pointCount() }} puntos BA
-              </span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-slate-600">
-                <app-ui-icon [name]="'refresh'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
-                Actualizado {{ formatLastUpdated() }}
-              </span>
-            </div>
-          </div>
+          <p class="mt-0.5 text-[11px] leading-4 text-slate-500">{{ activeModuleConfig().subtitle }}</p>
         </div>
       </div>
 
@@ -39,34 +29,34 @@
         <button
           type="button"
           (click)="refresh()"
-          class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white/90 px-3 py-2 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white">
-          <app-ui-icon [name]="'refresh'" [className]="'h-4 w-4'"></app-ui-icon>
+          class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white/90 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white">
+          <app-ui-icon [name]="'refresh'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
           Actualizar
         </button>
         <button
           type="button"
           (click)="clearFilters()"
-          class="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-[11px] font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800">
-          <app-ui-icon [name]="'filter-off'" [className]="'h-4 w-4'"></app-ui-icon>
+          class="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800">
+          <app-ui-icon [name]="'filter-off'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
           Limpiar filtros
         </button>
       </div>
     </div>
 
-    <div class="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+    <div class="mt-2.5 grid gap-1.5 md:grid-cols-2 xl:grid-cols-4">
       @for (module of modules; track module.value) {
         <button
           type="button"
           (click)="onModuleChange(module.value)"
           class="dashboard-module-pill text-left"
           [ngClass]="selectedModule() === module.value ? 'dashboard-module-pill-active' : 'dashboard-module-pill-idle'">
-          <span class="flex h-10 w-10 items-center justify-center rounded-[16px]" [ngClass]="selectedModule() === module.value ? 'bg-white text-slate-900 shadow-sm' : 'bg-slate-100 text-slate-500'">
-            <app-ui-icon [name]="module.icon" [className]="'h-4.5 w-4.5'"></app-ui-icon>
+          <span class="flex h-8 w-8 items-center justify-center rounded-[12px]" [ngClass]="selectedModule() === module.value ? 'bg-white text-slate-900 shadow-sm' : 'bg-slate-100 text-slate-500'">
+            <app-ui-icon [name]="module.icon" [className]="'h-4 w-4'"></app-ui-icon>
           </span>
           <span class="min-w-0">
             <span class="block text-xs font-bold text-slate-900">{{ module.label }}</span>
-            <span class="mt-1 block text-[10px] font-medium text-slate-500">
-              {{ selectedModule() === module.value ? 'Vista activa del panel' : 'Cambiar enfoque del dashboard' }}
+            <span class="block text-[10px] font-medium text-slate-500">
+              {{ selectedModule() === module.value ? 'Vista activa' : 'Cambiar enfoque' }}
             </span>
           </span>
         </button>
@@ -74,20 +64,17 @@
     </div>
   </section>
 
-  <section class="dashboard-panel dashboard-panel-muted rounded-[22px] border border-slate-300 bg-slate-100/90 p-3.5 shadow-sm lg:p-4">
-    <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-      <div>
-        <p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Filtros del modulo</p>
-        <h3 class="mt-1 text-sm font-bold text-slate-900">Refina la lectura del panel sin salir del Home</h3>
-      </div>
-      <p class="text-[11px] text-slate-600">Todos los filtros usan etiquetas visibles en espanol y mantienen los codigos internos solo para la consulta.</p>
+  <section class="dashboard-panel dashboard-panel-muted rounded-[18px] border border-slate-300 bg-slate-100/90 p-2.5 shadow-sm">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Filtros del modulo</p>
+      <p class="text-[10px] text-slate-400">Los filtros usan etiquetas en espanol.</p>
     </div>
 
-    <div class="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+    <div class="mt-2 grid gap-1.5 md:grid-cols-2 xl:grid-cols-3">
       @for (field of filterFields(); track field.key) {
         <label class="dashboard-filter-card">
-          <span class="mb-2 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
-            <app-ui-icon [name]="field.icon" [className]="'h-3.5 w-3.5 text-slate-400'"></app-ui-icon>
+          <span class="mb-1 inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">
+            <app-ui-icon [name]="field.icon" [className]="'h-3 w-3 text-slate-400'"></app-ui-icon>
             {{ field.label }}
           </span>
 
@@ -122,19 +109,113 @@
       <p class="mt-1.5 text-xs text-slate-500">Estamos sincronizando el panel con la informacion mas reciente.</p>
     </section>
   } @else {
-    <div class="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-      @for (card of cards(); track card.id) {
-        <article class="dashboard-stat-card rounded-[20px] border border-slate-300 bg-white p-3.5 shadow-sm">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{{ card.label }}</p>
-              <p class="mt-2 text-2xl font-black tracking-tight text-slate-950">{{ card.value }}</p>
+    <section class="dashboard-panel dashboard-panel-map rounded-[20px] border border-slate-300 bg-slate-100 p-3 shadow-sm">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <app-ui-icon [name]="'map'" [className]="'h-3.5 w-3.5 text-slate-500'"></app-ui-icon>
+          <h3 class="text-sm font-bold text-slate-900">Mapa operativo BA</h3>
+          <span class="text-[10px] text-slate-400">— Cobertura visual por unidad</span>
+        </div>
+        <div class="flex gap-2 text-[10px] font-semibold text-slate-600">
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-2 py-0.5">
+            <span class="h-2 w-2 rounded-full bg-amber-400"></span>Seleccion actual
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-2 py-0.5">
+            <span class="h-2 w-2 rounded-full bg-sky-400"></span>Cobertura regional
+          </span>
+        </div>
+      </div>
+
+      <div class="mt-2.5 grid gap-2.5 xl:grid-cols-[2fr_1fr]">
+        <div class="relative h-[500px] overflow-hidden rounded-[20px] border border-slate-700">
+          <div #leafletMap class="h-full w-full"></div>
+          @if (!mapPoints().length) {
+            <div class="absolute inset-0 flex items-center justify-center p-6 text-center">
+              <div class="max-w-xs rounded-[18px] border border-slate-700 bg-slate-950/85 p-5 shadow-sm">
+                <div class="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-slate-100">
+                  <app-ui-icon [name]="'pin'" [className]="'h-5 w-5'"></app-ui-icon>
+                </div>
+                <p class="mt-3 text-sm font-semibold text-white">No hay puntos operativos para el alcance BA.</p>
+              </div>
             </div>
-            <span class="inline-flex h-10 w-10 items-center justify-center rounded-[16px] ring-1" [ngClass]="toneClasses(card.tone).icon">
-              <app-ui-icon [name]="card.icon" [className]="'h-4 w-4'"></app-ui-icon>
+          }
+        </div>
+
+        <div class="rounded-[18px] border border-slate-300 bg-white p-3">
+          @if (selectedPoint(); as point) {
+            <div class="flex items-center gap-2.5">
+              <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-slate-100 text-slate-700 shadow-sm">
+                <app-ui-icon [name]="'building'" [className]="'h-4 w-4'"></app-ui-icon>
+              </span>
+              <div class="min-w-0">
+                <p class="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400">Unidad seleccionada</p>
+                <h4 class="text-sm font-black text-slate-900">{{ point.unit_name }}</h4>
+                <p class="text-[10px] text-slate-400">{{ point.unit_code }} · {{ point.airport || 'Sin aeropuerto' }}</p>
+              </div>
+            </div>
+
+            <div class="mt-2.5 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+              @for (stat of selectedPointStats(); track stat.label) {
+                <div class="rounded-[14px] border border-slate-200 bg-slate-50 p-2">
+                  <div class="flex items-center gap-2">
+                    <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] ring-1" [ngClass]="toneClasses(stat.tone).icon">
+                      <app-ui-icon [name]="stat.icon" [className]="'h-3 w-3'"></app-ui-icon>
+                    </span>
+                    <div class="min-w-0">
+                      <p class="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400">{{ stat.label }}</p>
+                      <p class="text-sm font-black text-slate-900">{{ stat.value }}</p>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div class="mt-2 rounded-[14px] border border-slate-200 bg-slate-50 p-2">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+                  <app-ui-icon [name]="'clock'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
+                  Ultimo evento
+                </div>
+                <span class="text-[10px] font-bold text-slate-800">{{ formatPointEvent(point.last_event_at) }}</span>
+              </div>
+              <div class="mt-1.5 grid grid-cols-2 gap-1.5">
+                <div class="rounded-[10px] bg-white p-1.5">
+                  <p class="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Camaras</p>
+                  <p class="text-xs font-semibold text-slate-700">{{ point.cameras_online }}✓ / {{ point.cameras_offline }}✗</p>
+                </div>
+                <div class="rounded-[10px] bg-white p-1.5">
+                  <p class="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Alcance</p>
+                  <p class="text-xs font-semibold text-slate-700">Buenos Aires</p>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <div class="flex h-full min-h-[200px] items-center justify-center text-center">
+              <div class="max-w-xs">
+                <div class="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-400 shadow-sm">
+                  <app-ui-icon [name]="'pin'" [className]="'h-4 w-4'"></app-ui-icon>
+                </div>
+                <p class="mt-2 text-xs font-semibold text-slate-500">Selecciona un punto del mapa para ver el detalle de la unidad.</p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      @for (card of cards(); track card.id) {
+        <article class="dashboard-stat-card rounded-[18px] border border-slate-300 bg-white p-3 shadow-sm">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">{{ card.label }}</p>
+              <p class="mt-1 text-xl font-black tracking-tight text-slate-950">{{ card.value }}</p>
+            </div>
+            <span class="inline-flex h-9 w-9 items-center justify-center rounded-[14px] ring-1" [ngClass]="toneClasses(card.tone).icon">
+              <app-ui-icon [name]="card.icon" [className]="'h-3.5 w-3.5'"></app-ui-icon>
             </span>
           </div>
-          <p class="mt-2 text-[11px] leading-4.5 text-slate-500">{{ card.helper }}</p>
+          <p class="mt-1 text-[10px] leading-4 text-slate-400">{{ card.helper }}</p>
         </article>
       }
     </div>
@@ -224,168 +305,40 @@
         </section>
       </div>
 
-      <div class="grid gap-3 lg:grid-cols-3">
-        <section class="dashboard-panel dashboard-panel-soft-alt rounded-[22px] border border-slate-300 bg-slate-50 p-3.5 shadow-sm">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <div class="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                <app-ui-icon [name]="'shield'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
-                Distribucion complementaria
-              </div>
-              <h3 class="mt-1.5 text-sm font-bold text-slate-900">{{ activeModuleConfig().secondaryTitle }}</h3>
+      <section class="dashboard-panel dashboard-panel-soft-alt rounded-[22px] border border-slate-300 bg-slate-50 p-3.5 shadow-sm">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <div class="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              <app-ui-icon [name]="'shield'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
+              Distribucion complementaria
             </div>
-            <span class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600">{{ secondaryRows().length }} indicadores</span>
+            <h3 class="mt-1.5 text-sm font-bold text-slate-900">{{ activeModuleConfig().secondaryTitle }}</h3>
           </div>
+          <span class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600">{{ secondaryRows().length }} indicadores</span>
+        </div>
 
-          <div class="mt-3 space-y-2.5">
-            @for (item of secondaryRows(); track item.trackKey) {
-              <div class="rounded-[18px] border border-slate-200 bg-white p-2.5">
-                <div class="flex items-start gap-3">
-                  <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] ring-1" [ngClass]="toneClasses(item.tone).icon">
-                    <app-ui-icon [name]="item.icon" [className]="'h-3.5 w-3.5'"></app-ui-icon>
-                  </span>
-                  <div class="min-w-0 flex-1">
-                    <div class="flex items-center justify-between gap-3">
-                      <div class="truncate text-xs font-semibold text-slate-700">{{ item.displayLabel }}</div>
-                      <div class="text-xs font-black text-slate-900">{{ item.value }}</div>
-                    </div>
-                    <div class="mt-1.5 h-2 overflow-hidden rounded-full" [ngClass]="toneClasses(item.tone).rail">
-                      <div class="h-full rounded-full" [ngClass]="toneClasses(item.tone).bar" [style.width.%]="item.percent"></div>
-                    </div>
-                    <div class="mt-1.5 text-[10px] font-semibold text-slate-500">{{ formatPercent(item.percent) }} del total visible</div>
+        <div class="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          @for (item of secondaryRows(); track item.trackKey) {
+            <div class="rounded-[18px] border border-slate-200 bg-white p-2.5">
+              <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] ring-1" [ngClass]="toneClasses(item.tone).icon">
+                  <app-ui-icon [name]="item.icon" [className]="'h-3.5 w-3.5'"></app-ui-icon>
+                </span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="truncate text-xs font-semibold text-slate-700">{{ item.displayLabel }}</div>
+                    <div class="text-xs font-black text-slate-900">{{ item.value }}</div>
                   </div>
+                  <div class="mt-1.5 h-2 overflow-hidden rounded-full" [ngClass]="toneClasses(item.tone).rail">
+                    <div class="h-full rounded-full" [ngClass]="toneClasses(item.tone).bar" [style.width.%]="item.percent"></div>
+                  </div>
+                  <div class="mt-1.5 text-[10px] font-semibold text-slate-500">{{ formatPercent(item.percent) }} del total visible</div>
                 </div>
               </div>
-            }
-          </div>
-        </section>
-
-        <section class="dashboard-panel dashboard-panel-map rounded-[22px] border border-slate-300 bg-slate-100 p-3.5 shadow-sm lg:col-span-2">
-          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div class="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                <app-ui-icon [name]="'map'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
-                Mapa operativo BA
-              </div>
-              <h3 class="mt-1.5 text-sm font-bold text-slate-900">Cobertura visual por unidad y ultimo movimiento detectado</h3>
             </div>
-            <div class="flex flex-wrap gap-2 text-[10px] font-semibold text-slate-600">
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-2.5 py-1">
-                <span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>
-                Seleccion actual
-              </span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-2.5 py-1">
-                <span class="h-2.5 w-2.5 rounded-full bg-sky-400"></span>
-                Cobertura regional
-              </span>
-            </div>
-          </div>
-
-          <div class="mt-3 grid gap-3 xl:grid-cols-[1.3fr_0.85fr]">
-            <div class="dashboard-map-surface relative h-[390px] overflow-hidden rounded-[20px] border border-slate-700">
-              <div class="dashboard-map-region" aria-hidden="true"></div>
-              <div class="dashboard-map-route dashboard-map-route-north" aria-hidden="true"></div>
-              <div class="dashboard-map-route dashboard-map-route-south" aria-hidden="true"></div>
-              <div class="dashboard-map-label dashboard-map-label-north">Corredor norte</div>
-              <div class="dashboard-map-label dashboard-map-label-south">Corredor sur</div>
-              <div class="absolute left-3 top-3 rounded-full border border-white/12 bg-slate-950/78 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
-                Buenos Aires
-              </div>
-              <div class="absolute right-3 top-3 rounded-full border border-white/12 bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-100">
-                {{ pointCount() }} puntos visibles
-              </div>
-
-              @for (point of mapPoints(); track point.unit_code) {
-                <button
-                  type="button"
-                  (click)="selectPoint(point)"
-                  [style.left.%]="mapLeft(point)"
-                  [style.top.%]="mapTop(point)"
-                  [title]="point.unit_name + ' (' + point.unit_code + ')'"
-                  class="dashboard-map-marker"
-                  [ngClass]="selectedPoint()?.unit_code === point.unit_code ? 'dashboard-map-marker-active' : ''">
-                  <span class="sr-only">{{ point.unit_name }}</span>
-                </button>
-              }
-
-              @if (!mapPoints().length) {
-                <div class="absolute inset-0 flex items-center justify-center p-6 text-center">
-                  <div class="max-w-xs rounded-[18px] border border-slate-700 bg-slate-950/85 p-5 shadow-sm">
-                    <div class="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-slate-100">
-                      <app-ui-icon [name]="'pin'" [className]="'h-5 w-5'"></app-ui-icon>
-                    </div>
-                    <p class="mt-3 text-sm font-semibold text-white">No hay puntos operativos para el alcance BA.</p>
-                  </div>
-                </div>
-              }
-            </div>
-
-            <div class="rounded-[20px] border border-slate-300 bg-white p-3.5">
-              @if (selectedPoint(); as point) {
-                <div class="flex items-start gap-3">
-                  <span class="inline-flex h-11 w-11 items-center justify-center rounded-[16px] bg-slate-100 text-slate-700 shadow-sm">
-                    <app-ui-icon [name]="'building'" [className]="'h-4.5 w-4.5'"></app-ui-icon>
-                  </span>
-                  <div class="min-w-0">
-                    <p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Unidad seleccionada</p>
-                    <h4 class="mt-1 text-base font-black text-slate-900">{{ point.unit_name }}</h4>
-                    <p class="mt-1 text-xs text-slate-500">{{ point.unit_code }} - {{ point.airport || 'Sin aeropuerto asociado' }}</p>
-                  </div>
-                </div>
-
-                <div class="mt-3 grid gap-2.5 sm:grid-cols-2">
-                  @for (stat of selectedPointStats(); track stat.label) {
-                    <div class="rounded-[18px] border border-slate-200 bg-slate-50 p-2.5 shadow-sm">
-                      <div class="flex items-center gap-3">
-                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-[14px] ring-1" [ngClass]="toneClasses(stat.tone).icon">
-                          <app-ui-icon [name]="stat.icon" [className]="'h-3.5 w-3.5'"></app-ui-icon>
-                        </span>
-                        <div>
-                          <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">{{ stat.label }}</p>
-                          <p class="mt-1 text-base font-black text-slate-900">{{ stat.value }}</p>
-                        </div>
-                      </div>
-                    </div>
-                  }
-                </div>
-
-                <div class="mt-3 space-y-3 rounded-[18px] border border-slate-200 bg-slate-50 p-3 shadow-sm">
-                  <div class="flex items-center gap-2 text-[11px] font-semibold text-slate-500">
-                    <app-ui-icon [name]="'clock'" [className]="'h-4 w-4'"></app-ui-icon>
-                    Ultimo evento detectado
-                  </div>
-                  <div class="text-xs font-bold text-slate-900">{{ formatPointEvent(point.last_event_at) }}</div>
-                  <div class="grid gap-2.5 sm:grid-cols-2">
-                    <div class="rounded-[16px] bg-white p-2.5">
-                      <div class="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                        <app-ui-icon [name]="'camera'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
-                        Cobertura visual
-                      </div>
-                      <p class="mt-1.5 text-xs font-semibold text-slate-700">{{ point.cameras_online }} activas / {{ point.cameras_offline }} inactivas</p>
-                    </div>
-                    <div class="rounded-[16px] bg-white p-2.5">
-                      <div class="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                        <app-ui-icon [name]="'route'" [className]="'h-3.5 w-3.5'"></app-ui-icon>
-                        Alcance actual
-                      </div>
-                      <p class="mt-1.5 text-xs font-semibold text-slate-700">Visual de Buenos Aires con metricas filtradas del modulo.</p>
-                    </div>
-                  </div>
-                </div>
-              } @else {
-                <div class="flex h-full min-h-[280px] items-center justify-center text-center">
-                  <div class="max-w-xs">
-                    <div class="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-500 shadow-sm">
-                      <app-ui-icon [name]="'pin'" [className]="'h-5 w-5'"></app-ui-icon>
-                    </div>
-                    <p class="mt-3 text-sm font-semibold text-slate-700">Selecciona un punto del mapa para revisar el detalle operativo de la unidad.</p>
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-        </section>
-      </div>
+          }
+        </div>
+      </section>
     }
   }
 </div>

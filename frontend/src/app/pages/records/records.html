@@ -307,7 +307,7 @@
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Nro. Solicitud</label>
                             <input type="text" name="request_number" [(ngModel)]="newRecord.request_number"
-                                class="field-control-compact" placeholder="Ej: SOL-2026/100">
+                                class="field-control-compact uppercase" placeholder="Ej: SOL-2026/100">
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Fecha del Requerimiento</label>
@@ -341,7 +341,7 @@
                         <div class="space-y-1.5">
                             <label class="field-label-compact uppercase">Nro. Asunto *</label>
                             <input type="text" name="issue_number" [(ngModel)]="newRecord.issue_number"
-                                class="field-control-compact transition-colors" 
+                                class="field-control-compact transition-colors uppercase"
                                 [attr.data-invalid]="isFieldInvalid('issue_number') ? 'true' : null"
                                 placeholder="Ej: INT-2026/032" required>
                         </div>
@@ -362,12 +362,12 @@
                         <div class="space-y-1.5 col-span-2">
                             <label class="field-label-compact">Problemática Delictiva</label>
                             <input type="text" name="criminal_problematic" [(ngModel)]="newRecord.criminal_problematic"
-                                class="field-control-compact" placeholder="Ej: Hurto de equipaje">
+                                class="field-control-compact uppercase" placeholder="Ej: Hurto de equipaje">
                         </div>
                         <div class="space-y-1.5 col-span-2">
                             <label class="field-label-compact">Modalidad</label>
                             <input type="text" name="incident_modality" [(ngModel)]="newRecord.incident_modality"
-                                class="field-control-compact" placeholder="Ej: Sustracción en cinta">
+                                class="field-control-compact uppercase" placeholder="Ej: Sustracción en cinta">
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Fecha del Hecho</label>
@@ -382,7 +382,7 @@
                         <div class="space-y-1.5 col-span-4">
                             <label class="field-label-compact">Descripción del Hecho</label>
                             <textarea name="description" [(ngModel)]="newRecord.description" rows="3"
-                                class="field-control-compact resize-none"
+                                class="field-control-compact resize-none uppercase"
                                 placeholder="Detalle del hecho observado..."></textarea>
                         </div>
                     </div>
@@ -415,19 +415,19 @@
                                 <div class="space-y-1.5 col-span-2">
                                     <label class="field-label-compact">Apellido</label>
                                     <input type="text" [name]="'involved_last_name_' + $index"
-                                        [(ngModel)]="person.last_name" class="field-control-compact"
+                                        [(ngModel)]="person.last_name" class="field-control-compact uppercase"
                                         placeholder="Ej: Perez">
                                 </div>
                                 <div class="space-y-1.5 col-span-2">
                                     <label class="field-label-compact">Nombre</label>
                                     <input type="text" [name]="'involved_first_name_' + $index"
-                                        [(ngModel)]="person.first_name" class="field-control-compact"
+                                        [(ngModel)]="person.first_name" class="field-control-compact uppercase"
                                         placeholder="Ej: Ana">
                                 </div>
                                 <div class="space-y-1.5">
                                     <label class="field-label-compact">Tipo Doc.</label>
                                     <input type="text" [name]="'involved_document_type_' + $index"
-                                        [(ngModel)]="person.document_type" class="field-control-compact"
+                                        [(ngModel)]="person.document_type" class="field-control-compact uppercase"
                                         placeholder="DNI">
                                 </div>
                             </div>
@@ -436,13 +436,13 @@
                                 <div class="space-y-1.5 col-span-2">
                                     <label class="field-label-compact">DNI / Documento</label>
                                     <input type="text" [name]="'involved_document_number_' + $index"
-                                        [(ngModel)]="person.document_number" class="field-control-compact"
+                                        [(ngModel)]="person.document_number" class="field-control-compact uppercase"
                                         placeholder="Ej: 30111222">
                                 </div>
                                 <div class="space-y-1.5 col-span-2">
                                     <label class="field-label-compact">Nacionalidad</label>
                                     <input type="text" [name]="'involved_nationality_' + $index"
-                                        [(ngModel)]="person.nationality" class="field-control-compact"
+                                        [(ngModel)]="person.nationality" class="field-control-compact uppercase"
                                         placeholder="Ej: Argentina">
                                 </div>
                                 <div class="space-y-1.5">
@@ -478,31 +478,31 @@
                         <div class="space-y-1.5">
                             <label class="field-label-compact uppercase">Nro. Causa Judicial *</label>
                             <input type="text" name="judicial_case_number" [(ngModel)]="newRecord.judicial_case_number"
-                                class="field-control-compact transition-colors"
+                                class="field-control-compact transition-colors uppercase"
                                 [attr.data-invalid]="isFieldInvalid('judicial_case_number') ? 'true' : null"
                                 placeholder="Ej: C-12345/2026" required>
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact uppercase">Juzgado / Fiscalía *</label>
                             <input type="text" name="judicial_office" [(ngModel)]="newRecord.judicial_office"
-                                class="field-control-compact transition-colors"
+                                class="field-control-compact transition-colors uppercase"
                                 [attr.data-invalid]="isFieldInvalid('judicial_office') ? 'true' : null"
                                 placeholder="Si falta, se guarda N/C" required>
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Titular</label>
                             <input type="text" name="judicial_holder" [(ngModel)]="newRecord.judicial_holder"
-                                class="field-control-compact" placeholder="Si falta, se guarda N/C">
+                                class="field-control-compact uppercase" placeholder="Si falta, se guarda N/C">
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Secretaría</label>
                             <input type="text" name="judicial_secretary" [(ngModel)]="newRecord.judicial_secretary"
-                                class="field-control-compact" placeholder="Si falta, se guarda N/C">
+                                class="field-control-compact uppercase" placeholder="Si falta, se guarda N/C">
                         </div>
                         <div class="space-y-1.5 col-span-2">
                             <label class="field-label-compact uppercase">Carátula *</label>
                             <input type="text" name="case_title" [(ngModel)]="newRecord.case_title"
-                                class="field-control-compact transition-colors"
+                                class="field-control-compact transition-colors uppercase"
                                 [attr.data-invalid]="isFieldInvalid('case_title') ? 'true' : null"
                                 placeholder="Ej: DENUNCIA S/ HURTO" required>
                         </div>
@@ -527,25 +527,16 @@
                             </select>
                         </div>
                         <div class="space-y-1.5">
-                            <label class="field-label-compact">Recepcionado por</label>
-                            <select name="received_by" [(ngModel)]="newRecord.received_by"
-                                class="field-control-compact">
-                                <option [ngValue]="''">- Sin especificar -</option>
-                                @for (person of people(); track person.id) {
-                                <option [ngValue]="person.id">{{ person.last_name }}, {{ person.first_name }}</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="space-y-1.5">
                             <label class="field-label-compact uppercase">Responsable a Cargo *</label>
-                            <select name="operator" [(ngModel)]="newRecord.operator" required 
+                            <input type="text" name="operator" [(ngModel)]="newRecord.operator" required
+                                list="records-people-options" placeholder="Apellido, Nombre"
                                 class="field-control-compact transition-colors"
                                 [attr.data-invalid]="isFieldInvalid('operator') ? 'true' : null">
-                                <option [ngValue]="''" disabled>Seleccione operador...</option>
+                            <datalist id="records-people-options">
                                 @for (person of people(); track person.id) {
-                                <option [ngValue]="person.id">{{ person.last_name }}, {{ person.first_name }}</option>
+                                <option [value]="person.last_name + ', ' + person.first_name"></option>
                                 }
-                            </select>
+                            </datalist>
                         </div>
                     </div>
                 </div>
@@ -556,10 +547,12 @@
                             Soporte Físico
                         </h4>
                         <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="showPhysicalSupport" [checked]="showPhysicalSupport()" 
+                            <input type="checkbox" name="showPhysicalSupport" [checked]="showPhysicalSupport()"
                                 (change)="showPhysicalSupport.set(!showPhysicalSupport())"
                                 class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-all">
-                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 uppercase transition-colors">Completar Soporte</span>
+                            <span
+                                class="text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 uppercase transition-colors">Completar
+                                Soporte</span>
                         </label>
                     </div>
                     @if (showPhysicalSupport()) {
@@ -567,22 +560,22 @@
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Nº DVD</label>
                             <input type="text" name="dvd_number" [(ngModel)]="newRecord.dvd_number"
-                                class="field-control-compact" placeholder="Ej: DVD-001">
+                                class="field-control-compact uppercase" placeholder="Ej: DVD-001">
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Nº Informe</label>
                             <input type="text" name="report_number" [(ngModel)]="newRecord.report_number"
-                                class="field-control-compact" placeholder="Ej: 0042AEP/2026">
+                                class="field-control-compact uppercase" placeholder="Ej: 0042AEP/2026">
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">IFGRA</label>
                             <input type="text" name="ifgra_number" [(ngModel)]="newRecord.ifgra_number"
-                                class="field-control-compact" placeholder="Ej: IF-2026-000123">
+                                class="field-control-compact uppercase" placeholder="Ej: IF-2026-000123">
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Expediente</label>
                             <input type="text" name="expediente_number" [(ngModel)]="newRecord.expediente_number"
-                                class="field-control-compact" placeholder="Ej: EX-2026-000456">
+                                class="field-control-compact uppercase" placeholder="Ej: EX-2026-000456">
                         </div>
                     </div>
                     }
@@ -594,10 +587,12 @@
                             Entrega y Estado
                         </h4>
                         <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="showDeliveryStatus" [checked]="showDeliveryStatus()" 
+                            <input type="checkbox" name="showDeliveryStatus" [checked]="showDeliveryStatus()"
                                 (change)="showDeliveryStatus.set(!showDeliveryStatus())"
                                 class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-all">
-                            <span class="text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 uppercase transition-colors">Sustituto Intervención</span>
+                            <span
+                                class="text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 uppercase transition-colors">Sustituto
+                                Intervención</span>
                         </label>
                     </div>
                     @if (showDeliveryStatus()) {
@@ -605,7 +600,7 @@
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Nº Acta de Entrega</label>
                             <input type="text" name="delivery_act_number" [(ngModel)]="newRecord.delivery_act_number"
-                                class="field-control-compact" placeholder="Ej: ACTA-2026/005">
+                                class="field-control-compact uppercase" placeholder="Ej: ACTA-2026/005">
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Fecha de Entrega</label>
@@ -626,17 +621,17 @@
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Retirado por</label>
                             <input type="text" name="retrieved_by" [(ngModel)]="newRecord.retrieved_by"
-                                class="field-control-compact" placeholder="Ej: Oficial Pérez">
+                                class="field-control-compact uppercase" placeholder="Ej: Oficial Pérez">
                         </div>
                         <div class="col-span-2 space-y-1.5">
                             <label class="field-label-compact">Organismo Destinatario</label>
                             <input type="text" name="organism" [(ngModel)]="newRecord.organism"
-                                class="field-control-compact" placeholder="Ej: Juzgado Federal Nro. 3">
+                                class="field-control-compact uppercase" placeholder="Ej: Juzgado Federal Nro. 3">
                         </div>
                         <div class="col-span-3 space-y-1.5">
                             <label class="field-label-compact">Observaciones</label>
                             <textarea name="observations" [(ngModel)]="newRecord.observations" rows="2"
-                                class="field-control-compact resize-none"
+                                class="field-control-compact resize-none uppercase"
                                 placeholder="Observaciones adicionales..."></textarea>
                         </div>
                     </div>
@@ -963,11 +958,6 @@
                             class="h-px flex-1 bg-slate-100"></span>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <div class="text-[10px] font-bold text-slate-400 uppercase">Recepcionado Por</div>
-                            <div class="text-xs font-semibold text-slate-700 mt-0.5">{{
-                                selectedRecord().received_by_full_name || '-' }}</div>
-                        </div>
                         <div>
                             <div class="text-[10px] font-bold text-slate-400 uppercase">Responsable a Cargo</div>
                             <div class="text-xs font-semibold text-slate-700 mt-0.5">{{

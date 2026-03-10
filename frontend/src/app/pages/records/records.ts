@@ -34,7 +34,7 @@ export interface FilmRecord {
   judicial_holder: string;
   generator_unit: number;
   sistema: string;
-  received_by: number;
+  received_by: number | '' | null;
   operator: string;
   description: string;
   dvd_number: string;
@@ -300,7 +300,7 @@ export class RecordsComponent implements OnInit {
       judicial_secretary: record?.judicial_secretary || '',
       judicial_holder: record?.judicial_holder || '',
       generator_unit: record?.generator_unit ?? '',
-      received_by: record?.received_by ?? '',
+      received_by: null,
       operator: record?.operator ?? '',
       sistema: record?.sistema || '',
       dvd_number: record?.dvd_number || '',
@@ -338,7 +338,7 @@ export class RecordsComponent implements OnInit {
     this.validationMessage = '';
 
     const textValue = (value: unknown) => String(value ?? '').trim();
-    
+
     // Validamos manualmente para llenar invalidFields
     if (!textValue(this.newRecord.request_kind)) this.invalidFields.add('request_kind');
     if (!textValue(this.newRecord.issue_number)) this.invalidFields.add('issue_number');
@@ -373,6 +373,7 @@ export class RecordsComponent implements OnInit {
 
     const payload = {
       ...this.newRecord,
+      received_by: null,
       incident_place: unifiedLocation,
       incident_sector: unifiedLocation,
       is_integrity_verified: !!this.newRecord.is_integrity_verified,
@@ -381,6 +382,7 @@ export class RecordsComponent implements OnInit {
     };
 
     this.normalizeJudicialFields(payload);
+    this.normalizePayloadToUppercase(payload);
 
     if (this.isEditing() && this.editingRecordId) {
       this.persistRecord(
@@ -620,7 +622,7 @@ export class RecordsComponent implements OnInit {
       judicial_secretary: '',
       judicial_holder: '',
       generator_unit: '',
-      received_by: '',
+      received_by: null,
       operator: '',
       sistema: '',
       dvd_number: '',
@@ -647,6 +649,21 @@ export class RecordsComponent implements OnInit {
     this.editingRecordId = null;
     this.showPhysicalSupport.set(false);
     this.showDeliveryStatus.set(false);
+  }
+
+  private normalizePayloadToUppercase(obj: any): void {
+    if (!obj || typeof obj !== 'object') return;
+
+    Object.keys(obj).forEach(key => {
+      const value = obj[key];
+      if (typeof value === 'string') {
+        obj[key] = value.toUpperCase().trim();
+      } else if (Array.isArray(value)) {
+        value.forEach(item => this.normalizePayloadToUppercase(item));
+      } else if (value && typeof value === 'object') {
+        this.normalizePayloadToUppercase(value);
+      }
+    });
   }
 }
 

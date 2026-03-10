@@ -9,7 +9,7 @@ from rest_framework import serializers
 from personnel.models import Person
 from .models import Catalog, FilmRecord, FilmRecordInvolvedPerson, VideoAnalysisReport
 
-HASH_ALGORITHM_CHOICES = ('sha1', 'sha3', 'sha256', 'sha512')
+HASH_ALGORITHM_CHOICES = ('sha1', 'sha3', 'sha256', 'sha512', 'otro')
 VMS_AUTHENTICITY_MODE_CHOICES = (
     'vms_propio',
     'hash_preventivo',
@@ -210,11 +210,14 @@ class VideoReportInvolvedPersonSerializer(serializers.Serializer):
 
 class VideoReportMaterialContextSerializer(serializers.Serializer):
     sistema = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    source_system_id = serializers.IntegerField(required=False, allow_null=True)
     aeropuerto = serializers.CharField(max_length=200, required=False, allow_blank=True)
     cantidad_observada = serializers.CharField(max_length=120, required=False, allow_blank=True)
     sectores_analizados = serializers.CharField(max_length=300, required=False, allow_blank=True)
     franja_horaria_analizada = serializers.CharField(max_length=120, required=False, allow_blank=True)
     tiempo_total_analisis = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    sintesis = serializers.CharField(max_length=1000, required=False, allow_blank=True)
+    sintesis_desarrollo = serializers.CharField(max_length=500, required=False, allow_blank=True)
     sintesis_conclusion = serializers.CharField(max_length=500, required=False, allow_blank=True)
     prevencion_sumaria = serializers.CharField(max_length=100, required=False, allow_blank=True)
     caratula = serializers.CharField(max_length=500, required=False, allow_blank=True)
@@ -225,11 +228,18 @@ class VideoReportMaterialContextSerializer(serializers.Serializer):
     unidad = serializers.CharField(max_length=200, required=False, allow_blank=True)
     involved_people_summary = serializers.CharField(max_length=3000, required=False, allow_blank=True)
     involved_people = VideoReportInvolvedPersonSerializer(many=True, required=False)
+    vms_native_hash_algorithms = serializers.ListField(
+        child=serializers.ChoiceField(choices=HASH_ALGORITHM_CHOICES),
+        required=False,
+        allow_empty=True,
+    )
+    vms_native_hash_algorithm_other = serializers.CharField(max_length=200, required=False, allow_blank=True)
     hash_algorithms = serializers.ListField(
         child=serializers.ChoiceField(choices=HASH_ALGORITHM_CHOICES),
         required=False,
         allow_empty=True,
     )
+    hash_algorithm_other = serializers.CharField(max_length=200, required=False, allow_blank=True)
     hash_program = serializers.CharField(max_length=200, required=False, allow_blank=True)
     motivo_sin_hash = serializers.CharField(max_length=500, required=False, allow_blank=True)
     medida_seguridad_interna = serializers.CharField(max_length=300, required=False, allow_blank=True)
@@ -240,12 +250,35 @@ class VideoReportMaterialContextSerializer(serializers.Serializer):
     )
     vms_authenticity_detail = serializers.CharField(max_length=500, required=False, allow_blank=True)
 
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            normalized = dict(data)
+            sintesis = str(normalized.get('sintesis') or '').strip()
+            if not sintesis:
+                sintesis = (
+                    str(normalized.get('sintesis_desarrollo') or '').strip()
+                    or str(normalized.get('sintesis_conclusion') or '').strip()
+                )
+            normalized['sintesis'] = sintesis
+            return super().to_internal_value(normalized)
+        return super().to_internal_value(data)
+
     def validate(self, attrs):
         mode = (attrs.get('vms_authenticity_mode') or '').strip()
         detail = (attrs.get('vms_authenticity_detail') or '').strip()
+        vms_native_algorithms = attrs.get('vms_native_hash_algorithms') or []
+        hash_algorithms = attrs.get('hash_algorithms') or []
         if mode == 'otro' and not detail:
             raise serializers.ValidationError({
                 'vms_authenticity_detail': "Debe completar detalle cuando autenticidad = 'otro'."
+            })
+        if 'otro' in vms_native_algorithms and not (attrs.get('vms_native_hash_algorithm_other') or '').strip():
+            raise serializers.ValidationError({
+                'vms_native_hash_algorithm_other': "Debe completar el nombre del algoritmo nativo cuando selecciona 'otro'."
+            })
+        if 'otro' in hash_algorithms and not (attrs.get('hash_algorithm_other') or '').strip():
+            raise serializers.ValidationError({
+                'hash_algorithm_other': "Debe completar el nombre del algoritmo cuando selecciona 'otro'."
             })
         return attrs
 
@@ -262,16 +295,26 @@ class VideoReportDataSerializer(serializers.Serializer):
     dni = serializers.CharField(max_length=20, required=False, allow_blank=True, write_only=True)
     lup = serializers.CharField(max_length=30)
     sistema = serializers.CharField(max_length=100)
+    source_system_id = serializers.IntegerField(required=False, allow_null=True)
     cantidad_observada = serializers.CharField(max_length=120, required=False, allow_blank=True)
     sectores_analizados = serializers.CharField(max_length=300, required=False, allow_blank=True)
     franja_horaria_analizada = serializers.CharField(max_length=120, required=False, allow_blank=True)
     tiempo_total_analisis = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    sintesis = serializers.CharField(max_length=1000, required=False, allow_blank=True)
+    sintesis_desarrollo = serializers.CharField(max_length=500, required=False, allow_blank=True, write_only=True)
     sintesis_conclusion = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    vms_native_hash_algorithms = serializers.ListField(
+        child=serializers.ChoiceField(choices=HASH_ALGORITHM_CHOICES),
+        required=False,
+        allow_empty=True,
+    )
+    vms_native_hash_algorithm_other = serializers.CharField(max_length=200, required=False, allow_blank=True)
     hash_algorithms = serializers.ListField(
         child=serializers.ChoiceField(choices=HASH_ALGORITHM_CHOICES),
         required=False,
         allow_empty=True,
     )
+    hash_algorithm_other = serializers.CharField(max_length=200, required=False, allow_blank=True)
     hash_program = serializers.CharField(max_length=200, required=False, allow_blank=True)
     motivo_sin_hash = serializers.CharField(max_length=500, required=False, allow_blank=True)
     medida_seguridad_interna = serializers.CharField(max_length=300, required=False, allow_blank=True)
@@ -305,6 +348,15 @@ class VideoReportDataSerializer(serializers.Serializer):
             # Legacy compatibility: accepted and ignored.
             normalized.pop('unidad_aeroportuaria', None)
             normalized.pop('asiento', None)
+            sintesis = str(normalized.get('sintesis') or '').strip()
+            if not sintesis:
+                sintesis = (
+                    str(normalized.get('sintesis_desarrollo') or '').strip()
+                    or str(normalized.get('sintesis_conclusion') or '').strip()
+                )
+            normalized['sintesis'] = sintesis
+            if not str(normalized.get('sintesis_conclusion') or '').strip():
+                normalized['sintesis_conclusion'] = sintesis
             # Estandarizacion: destinatarios siempre se deriva de fiscalia/juzgado.
             fiscalia = str(normalized.get('fiscalia') or '').strip()
             normalized['destinatarios'] = fiscalia or 'Fiscalia / Juzgado'
@@ -314,9 +366,19 @@ class VideoReportDataSerializer(serializers.Serializer):
     def validate(self, attrs):
         mode = (attrs.get('vms_authenticity_mode') or '').strip()
         detail = (attrs.get('vms_authenticity_detail') or '').strip()
+        vms_native_algorithms = attrs.get('vms_native_hash_algorithms') or []
+        hash_algorithms = attrs.get('hash_algorithms') or []
         if mode == 'otro' and not detail:
             raise serializers.ValidationError({
                 'vms_authenticity_detail': "Debe completar detalle cuando autenticidad = 'otro'."
+            })
+        if 'otro' in vms_native_algorithms and not (attrs.get('vms_native_hash_algorithm_other') or '').strip():
+            raise serializers.ValidationError({
+                'vms_native_hash_algorithm_other': "Debe completar el nombre del algoritmo nativo cuando selecciona 'otro'."
+            })
+        if 'otro' in hash_algorithms and not (attrs.get('hash_algorithm_other') or '').strip():
+            raise serializers.ValidationError({
+                'hash_algorithm_other': "Debe completar el nombre del algoritmo cuando selecciona 'otro'."
             })
         return attrs
 

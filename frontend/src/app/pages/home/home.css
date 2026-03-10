@@ -10,12 +10,12 @@
 .dashboard-panel-soft{--panel-bg:linear-gradient(180deg,rgba(255,255,255,.94),rgba(248,250,252,.98))}
 .dashboard-panel-soft-alt{--panel-bg:linear-gradient(180deg,rgba(255,251,235,.55),rgba(248,250,252,.98))}
 .dashboard-panel-map{--panel-bg:linear-gradient(180deg,rgba(226,232,240,.92),rgba(241,245,249,.98))}
-.dashboard-module-pill{display:flex;align-items:center;gap:.8rem;border-radius:1.1rem;padding:.8rem .9rem;transition:transform .18s ease,border-color .18s ease,background-color .18s ease,box-shadow .18s ease}
+.dashboard-module-pill{display:flex;align-items:center;gap:.6rem;border-radius:1.1rem;padding:.55rem .75rem;transition:transform .18s ease,border-color .18s ease,background-color .18s ease,box-shadow .18s ease}
 .dashboard-module-pill:hover,.dashboard-stat-card:hover{transform:translateY(-2px)}
 .dashboard-module-pill-active{border:1px solid rgba(203,213,225,.95);background:rgba(255,255,255,.95);box-shadow:0 14px 24px rgba(15,23,42,.07)}
 .dashboard-module-pill-idle{border:1px solid rgba(203,213,225,.9);background:rgba(248,250,252,.82)}
-.dashboard-filter-card{display:flex;flex-direction:column;border:1px solid #cbd5e1;border-radius:1rem;padding:.85rem;background:linear-gradient(180deg,#fff,rgba(248,250,252,.94));box-shadow:inset 0 1px 0 rgba(255,255,255,.78)}
-.dashboard-field{width:100%;border:1px solid #cbd5e1;border-radius:.9rem;background:#fff;padding:.68rem .82rem;color:#0f172a;font-size:.72rem;line-height:1rem;transition:border-color .16s ease,box-shadow .16s ease}
+.dashboard-filter-card{display:flex;flex-direction:column;border:1px solid #cbd5e1;border-radius:.85rem;padding:.5rem .65rem;background:linear-gradient(180deg,#fff,rgba(248,250,252,.94));box-shadow:inset 0 1px 0 rgba(255,255,255,.78)}
+.dashboard-field{width:100%;border:1px solid #cbd5e1;border-radius:.7rem;background:#fff;padding:.32rem .6rem;color:#0f172a;font-size:.72rem;line-height:1rem;transition:border-color .16s ease,box-shadow .16s ease}
 .dashboard-field:hover{border-color:#94a3b8}
 .dashboard-field:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
 .dashboard-stat-card{position:relative;overflow:hidden;background:linear-gradient(180deg,#fff,rgba(248,250,252,.96));transition:transform .18s ease,box-shadow .18s ease}

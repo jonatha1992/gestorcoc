@@ -28,21 +28,23 @@
                     <div class="flex items-center gap-1 mb-1.5">
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">OPERADOR *</label>
                     </div>
-                    <select [(ngModel)]="selectedOperatorId" (ngModelChange)="onOperatorChange($event)"
-                        name="operador_select" [attr.data-invalid]="isFieldInvalid('operador') ? 'true' : null"
+                    <input [ngModel]="form.operador" (ngModelChange)="onOperatorInputChange($event)"
+                        name="operador" type="text" list="operator-options" placeholder="Apellido, Nombre"
+                        [attr.data-invalid]="isFieldInvalid('operador') ? 'true' : null"
                         class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                        <option [ngValue]="null">Seleccione operador...</option>
-                        <option *ngFor="let p of personnelOptions" [ngValue]="p.id">
-                            {{ p.last_name }}, {{ p.first_name }}
-                        </option>
-                    </select>
+                    <datalist id="operator-options">
+                        <option *ngFor="let p of personnelOptions" [value]="getPersonDisplayName(p)"></option>
+                    </datalist>
+                    <p class="text-[11px] text-slate-400 mt-1">
+                        {{ personnelOptions.length > 0 ? 'Escribi o selecciona un operador cargado en la base.' : 'Si el personal no carga, completa este dato manualmente.' }}
+                    </p>
                 </div>
                 <div class="col-span-1">
                     <div class="flex items-center gap-1 mb-1.5">
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">JERARQUIA *</label>
                     </div>
                     <select [(ngModel)]="form.grado" (ngModelChange)="onOperatorGradeChange($event)"
-                        (change)="saveOperatorData()" name="grado"
+                        name="grado"
                         [attr.data-invalid]="isFieldInvalid('grado') ? 'true' : null"
                         class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                         <option *ngFor="let gradoOption of gradeOptions" [ngValue]="gradoOption">{{ gradoOption }}
@@ -54,7 +56,7 @@
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">NÚMERO DE LEGAJO *</label>
                     </div>
                     <input [(ngModel)]="form.lup" (ngModelChange)="onOperatorLupChange($event)"
-                        (blur)="saveOperatorData()" name="lup" type="number" placeholder="506896" min="100000"
+                        name="lup" type="number" placeholder="506896" min="100000"
                         max="999999" [attr.data-invalid]="isFieldInvalid('lup') ? 'true' : null"
                         class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
@@ -82,16 +84,16 @@
                     <select [(ngModel)]="form.unidad" (ngModelChange)="onUnidadChange($event)" name="unidad"
                         [attr.data-invalid]="isFieldInvalid('unidad') ? 'true' : null"
                         class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                        <option [ngValue]="''">Seleccione unidad...</option>
                         <option *ngFor="let unidadOption of unidadOptions" [ngValue]="unidadOption">
                             {{ unidadOption }}
                         </option>
                     </select>
+                    <p class="text-[11px] text-slate-400 mt-1">
+                        {{ unidadOptions.length > 0 ? 'Unidades cargadas desde la base de datos.' : 'No hay unidades disponibles desde la base de datos.' }}
+                    </p>
                 </div>
                 <div class="col-span-2 lg:col-span-12">
-                    <p *ngIf="isSavingOperatorData"
-                        class="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-2 py-1 mb-2">
-                        Guardando jerarquia y legajo del operador...
-                    </p>
                     <div class="flex items-center gap-2 mb-2">
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">FIRMA DIGITAL</label>
                         <input type="checkbox" [(ngModel)]="incluirFirma" name="incluirFirma" (change)="markDirty()"
@@ -139,6 +141,9 @@
 
         <div class="space-y-5">
             <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1">Datos de causa</h3>
+            <p class="text-xs text-slate-500 -mt-3">
+                Estos campos se precargan desde la solicitud vinculada cuando existe, pero siguen siendo editables.
+            </p>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3">
                 <div class="lg:col-span-3">
@@ -337,24 +342,35 @@
                                 class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
                                 aria-label="Ayuda Sistema">?</button>
                         </div>
-                        <div class="relative">
-                            <input [(ngModel)]="form.sistema" (ngModelChange)="markDirty('sistema')"
-                                (focus)="showSistemaDropdown = true" (blur)="onSistemaInputBlur()"
-                                name="sistema" type="text"
-                                placeholder="Ej: Milestone XProtect, BMS Aeroportuario, Intercargo..."
-                                [attr.data-invalid]="isFieldInvalid('sistema') ? 'true' : null"
-                                class="w-full px-2 py-1.5 pr-8 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                            <button type="button" (mousedown)="$event.preventDefault()"
-                                (click)="showSistemaDropdown = !showSistemaDropdown"
-                                class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs leading-none">▾</button>
-                            <div *ngIf="showSistemaDropdown && filteredSistemaOptions.length > 0"
-                                class="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                                <div *ngFor="let opt of filteredSistemaOptions"
-                                    (mousedown)="$event.preventDefault(); selectSistemaOption(opt)"
-                                    class="px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50 hover:text-indigo-700">
-                                    {{ opt }}
-                                </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+                            <div>
+                                <select [ngModel]="selectedSourceSystemOption"
+                                    (ngModelChange)="onSourceSystemSelectionChange($event)" name="source_system_id"
+                                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                                    <option [ngValue]="null">Seleccione sistema cargado...</option>
+                                    <option *ngFor="let system of sourceSystemOptions" [ngValue]="system.id">
+                                        {{ system.name }}{{ system.unit?.name ? ' - ' + system.unit?.name : '' }}
+                                    </option>
+                                    <option [ngValue]="'otro'">Otro sistema / dispositivo</option>
+                                </select>
+                                <p class="text-[11px] text-slate-400 mt-1">
+                                    {{ isLoadingSourceSystems ? 'Cargando sistemas activos desde la base...' : 'Se muestran los sistemas activos cargados en la base, priorizando la unidad seleccionada.' }}
+                                </p>
                             </div>
+                            <div *ngIf="selectedSourceSystemOption === 'otro'; else selectedSystemHint">
+                                <input [(ngModel)]="form.sistema" (ngModelChange)="onSistemaManualChange($event)"
+                                    name="sistema" type="text"
+                                    placeholder="Ej: Milestone XProtect, BMS aeroportuario, otro dispositivo..."
+                                    [attr.data-invalid]="isFieldInvalid('sistema') ? 'true' : null"
+                                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                                <p class="text-[11px] text-slate-400 mt-1">Completa manualmente el origen si no existe en inventario.</p>
+                            </div>
+                            <ng-template #selectedSystemHint>
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                                    <span *ngIf="form.sistema; else emptySystemHint">Sistema aplicado al informe: <strong>{{ form.sistema }}</strong></span>
+                                    <ng-template #emptySystemHint>Selecciona un sistema de la base o elige <strong>Otro</strong>.</ng-template>
+                                </div>
+                            </ng-template>
                         </div>
                     </div>
 
@@ -636,30 +652,6 @@
                         <button type="button" (click)="removeFrame(i)"
                             class="px-3 py-1.5 rounded-lg border border-rose-300 text-rose-700 text-sm">Eliminar</button>
                     </div>
-                </div>
-            </div>
-
-            <!-- Síntesis para el desarrollo — ancho completo, debajo de fotogramas -->
-            <div class="shadow-sm p-4 rounded-xl bg-sky-50/30 border border-sky-100 space-y-3">
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Síntesis para el
-                        desarrollo</label>
-                    <p class="text-[10px] text-slate-400 mb-1">Puntos clave cronológicos para que la IA redacte el desarrollo. Si no completás este campo, la IA usará el resto del contexto.</p>
-                    <textarea [(ngModel)]="form.sintesis_desarrollo"
-                        (ngModelChange)="markDirty('sintesis_desarrollo')"
-                        name="sintesis_desarrollo" rows="4"
-                        placeholder="Ej: 14:05 ingresa al hall → 14:22 retira bulto en cinta 3 → 14:35 sale por acceso norte sin ser detectado"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Síntesis para la
-                        conclusión</label>
-                    <p class="text-[10px] text-slate-400 mb-1">Resultado final que la IA debe reflejar en la conclusión. Si no completás este campo, la IA concluirá en base al desarrollo.</p>
-                    <textarea [(ngModel)]="form.sintesis_conclusion"
-                        (ngModelChange)="markDirty('sintesis_conclusion')"
-                        name="sintesis_conclusion" rows="4"
-                        placeholder="Ej: No se observa manipulación posterior del bulto. El material fue exportado con integridad verificada mediante SHA-256."
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
                 </div>
             </div>
 

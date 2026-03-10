@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { map, Observable, tap } from 'rxjs';
 import { ApiService } from './api.service';
 import { CacheService, TTL } from './cache.service';
 
@@ -39,7 +39,12 @@ export class PersonnelService {
         return this.cache.withCache<any[]>(
             CACHE_KEY,
             TTL.MEDIUM,
-            this.api.get<any[]>('api/people/')
+            this.api.get<any>('api/people/').pipe(
+                map((response) => {
+                    const results = response?.results ?? response;
+                    return Array.isArray(results) ? results : [];
+                })
+            )
         );
     }
 

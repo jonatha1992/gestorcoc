@@ -19,7 +19,7 @@ import {
 import { ToastService } from '../../services/toast.service';
 import { LoadingService } from '../../services/loading.service';
 import { PersonnelService } from '../../services/personnel.service';
-import { AssetService } from '../../services/asset.service';
+import { AssetService, SystemAsset } from '../../services/asset.service';
 
 type HelpKey = keyof VideoReportFormData | 'operador_select' | 'frame_upload' | 'frame_description';
 
@@ -60,49 +60,24 @@ export class InformesComponent implements OnInit, OnDestroy {
     'No correspondía por el tipo de análisis solicitado',
   ];
 
-  readonly sistemaOptions: string[] = [
-    'Milestone XProtect',
-    'Avigilon Control Center',
-    'BMS Aeroportuario',
-    'Intercargo',
-    'TCA',
-    'Cámara Bipro',
-    'Sistema CCTV propio',
-    'Dispositivo externo',
-    'Otro',
-  ];
-
   showAirportDropdown = false;
-  showSistemaDropdown = false;
+  sourceSystemOptions: SystemAsset[] = [];
+  selectedSourceSystemOption: number | 'otro' | null = null;
+  isLoadingSourceSystems = false;
 
   get filteredAirportOptions(): string[] {
     const q = (this.form.aeropuerto || '').toLowerCase();
     return this.airportOptions.filter(o => o.toLowerCase().includes(q));
   }
 
-  get filteredSistemaOptions(): string[] {
-    const q = (this.form.sistema || '').toLowerCase();
-    return this.sistemaOptions.filter(o => o.toLowerCase().includes(q));
-  }
-
   onAirportInputBlur(): void {
     setTimeout(() => { this.showAirportDropdown = false; }, 150);
-  }
-
-  onSistemaInputBlur(): void {
-    setTimeout(() => { this.showSistemaDropdown = false; }, 150);
   }
 
   selectAirportOption(opt: string): void {
     this.form.aeropuerto = opt;
     this.showAirportDropdown = false;
     this.onAirportSelect(opt);
-  }
-
-  selectSistemaOption(opt: string): void {
-    this.form.sistema = opt;
-    this.showSistemaDropdown = false;
-    this.markDirty('sistema');
   }
 
   isGenerating = false;
@@ -130,31 +105,15 @@ export class InformesComponent implements OnInit, OnDestroy {
   frames: VideoReportFrame[] = [];
   personnelOptions: any[] = [];
   selectedOperatorId: number | null = null;
-  isSavingOperatorData = false;
-  private pendingOperatorSave = false;
   invalidFields = new Set<keyof VideoReportFormData>();
   validationMessage = '';
   private lastSuggestedReportNumber = '';
   private readonly numeroInformePattern = /^\d{4}[A-Z]{3,4}\/\d{4}$/;
+  private unitIdByName: Record<string, number> = {};
   private unitCodeByName: Record<string, string> = {};
   private unitAirportByName: Record<string, string> = {};
-  private readonly fallbackUnidadOptions: string[] = [
-    'Coordinacion Regional de Video Vigilancia I del Este',
-    'Coordinacion Regional de Video Vigilancia II del Centro',
-    'Coordinacion Regional de Video Vigilancia III del Norte',
-    'Coordinacion Regional de Video Vigilancia IV del Litoral',
-    'Coordinacion Regional de Video Vigilancia V de la Patagonia',
-    'CEAC',
-  ];
-  unidadOptions: string[] = [...this.fallbackUnidadOptions];
-  private readonly fallbackAirportOptions: string[] = [
-    'Aeropuerto Internacional Mtro. Pistarini',
-    'Aeroparque Jorge Newbery',
-    'Aeropuerto Internacional de San Fernando',
-    'Aeropuerto Comandante Espora',
-    'Aeropuerto Astor Piazzolla',
-  ];
-  airportOptions: string[] = [...this.fallbackAirportOptions];
+  unidadOptions: string[] = [];
+  airportOptions: string[] = [];
   readonly hashAlgorithmOptions: { value: VideoReportHashAlgorithm; label: string }[] = [
     { value: 'sha3', label: 'SHA-3' },
     { value: 'sha256', label: 'SHA-256' },
@@ -207,7 +166,7 @@ export class InformesComponent implements OnInit, OnDestroy {
               this.linkedRecordId.set(informe.film_record);
             }
             if (informe.form_data && typeof informe.form_data === 'object') {
-              Object.assign(this.form, informe.form_data);
+              this.applyLoadedFormData(informe.form_data);
             }
             this.toastService.show('Informe en modo lectura — no se puede modificar.', 'info');
           },
@@ -225,7 +184,7 @@ export class InformesComponent implements OnInit, OnDestroy {
               this.existingReportId.set(informe.id);
               this.isReadOnly.set(true);
               if (informe.form_data && typeof informe.form_data === 'object') {
-                Object.assign(this.form, informe.form_data);
+                this.applyLoadedFormData(informe.form_data);
               }
               this.toastService.show('Informe en modo lectura — no se puede modificar.', 'info');
             } else {
@@ -331,6 +290,9 @@ export class InformesComponent implements OnInit, OnDestroy {
 
         // Auto-detectar hash y algoritmo del registro
         this.prefillHashFromRecord(record);
+        this.syncAirportManualOverride();
+        this.syncFlightSectionVisibility();
+        this.loadSourceSystemsForCurrentUnit();
 
         this.toastService.show('Campos pre-cargados desde el registro.', 'info');
       },
@@ -504,80 +466,85 @@ export class InformesComponent implements OnInit, OnDestroy {
   private loadUnits() {
     this.assetService.getUnits().subscribe({
       next: (units) => {
-        setTimeout(() => this.applyUnitsFromApi(units || []), 50);
+        this.applyUnitsFromApi(units);
       },
       error: (err) => {
         console.error('Error loading units:', err);
-        setTimeout(() => this.applyFallbackUnits(), 50);
-        this.toastService.show(
-          'No se pudieron cargar las unidades desde la base de datos. Se usa lista local.',
-          'warning'
-        );
+        this.resetUnitCatalog();
+        this.loadSourceSystemsForCurrentUnit();
+        this.toastService.show('No se pudieron cargar las unidades desde la base de datos.', 'warning');
       }
     });
   }
 
-  private applyUnitsFromApi(units: any[]): void {
-    const sortedUnits = [...units].sort((a, b) =>
+  private resetUnitCatalog(): void {
+    this.unitIdByName = {};
+    this.unitCodeByName = {};
+    this.unitAirportByName = {};
+    this.unidadOptions = [];
+    this.refreshAirportOptions();
+  }
+
+  private applyUnitsFromApi(units: any): void {
+    const unitList = Array.isArray(units?.results) ? units.results : Array.isArray(units) ? units : [];
+    const sortedUnits = [...unitList].sort((a, b) =>
       (a.name || '').localeCompare((b.name || ''), 'es', { sensitivity: 'base' })
     );
 
+    this.resetUnitCatalog();
+
     if (sortedUnits.length === 0) {
-      this.applyFallbackUnits();
+      this.loadSourceSystemsForCurrentUnit();
       return;
     }
 
-    this.unitCodeByName = {};
-    this.unitAirportByName = {};
     for (const unit of sortedUnits) {
       const name = (unit.name || '').trim();
       const code = this.normalizeUnitCode(unit.code || '');
+      if (name && unit.id != null) {
+        this.unitIdByName[name] = Number(unit.id);
+      }
       if (name && code) {
         this.unitCodeByName[name] = code;
       }
       if (name) {
-        // Priorizar el aeropuerto que viene de la BD; fallback a inferencia local
         const apiAirport = (unit.airport || '').trim();
-        this.unitAirportByName[name] = apiAirport || this.inferAirportFromUnit(name, code);
+        if (apiAirport) {
+          this.unitAirportByName[name] = apiAirport;
+        }
       }
     }
     this.refreshAirportOptions();
 
-    this.unidadOptions = sortedUnits.map((unit) => unit.name).filter((name) => !!name);
+    const apiUnitOptions = sortedUnits
+      .map((unit) => (unit.name || '').trim())
+      .filter((name) => !!name);
 
     const currentUnit = (this.form.unidad || '').trim();
-    if (!currentUnit || !this.unidadOptions.includes(currentUnit)) {
-      this.form.unidad = this.unidadOptions[0] || '';
-    }
-    this.syncAirportFromUnitSelection();
-    this.applySuggestedReportNumber(true);
-  }
+    this.unidadOptions =
+      currentUnit && !apiUnitOptions.includes(currentUnit)
+        ? [currentUnit, ...apiUnitOptions]
+        : apiUnitOptions;
 
-  private applyFallbackUnits(): void {
-    this.unitCodeByName = {};
-    this.unitAirportByName = {};
-    this.unidadOptions = [...this.fallbackUnidadOptions];
-    this.refreshAirportOptions();
-    if (!this.form.unidad) {
-      this.form.unidad = this.unidadOptions[0];
-    }
     this.syncAirportFromUnitSelection();
-    this.applySuggestedReportNumber(true);
+    this.applySuggestedReportNumber(false);
+    this.loadSourceSystemsForCurrentUnit();
   }
 
   private loadPersonnel() {
     this.personnelService.getPeople().subscribe({
       next: (people) => {
-        setTimeout(() => {
-          this.personnelOptions = people;
-          for (const person of this.personnelOptions) {
-            this.registerGradeOption((person?.rank || '').trim());
-          }
-        }, 50);
+        const results = Array.isArray((people as any)?.results) ? (people as any).results : people;
+        this.personnelOptions = Array.isArray(results) ? results : [];
+        for (const person of this.personnelOptions) {
+          this.registerGradeOption((person?.rank || '').trim());
+        }
+        this.syncSelectedOperatorFromCurrentForm();
       },
       error: (err) => {
         console.error('Error loading personnel:', err);
-        this.toastService.show('Error al cargar personal', 'error');
+        this.personnelOptions = [];
+        this.toastService.show('No se pudo cargar personal. Puede completarlo manualmente.', 'warning');
       }
     });
   }
@@ -587,34 +554,131 @@ export class InformesComponent implements OnInit, OnDestroy {
       this.form.operador = '';
       this.form.grado = '';
       this.form.lup = '';
+      this.selectedOperatorId = null;
       this.markDirty('operador');
       return;
     }
 
     const person = this.personnelOptions.find(p => p.id === personId);
     if (person) {
-      this.form.operador = `${person.last_name}, ${person.first_name}`;
+      this.form.operador = this.getPersonDisplayName(person);
       this.form.grado = this.normalizeGrade((person.rank || '').trim());
       this.form.lup = person.badge_number || '';
 
-      // Auto-seleccionar la unidad asignada al operador (si la tiene y existe en las opciones)
-      if (person.unit_details && person.unit_details.name) {
-        const unitName = person.unit_details.name.trim();
-        if (this.unidadOptions.includes(unitName)) {
-          this.form.unidad = unitName;
-          this.syncAirportFromUnitSelection();
-        }
-      } else if (person.unit) {
-        // Si por alguna razon solo viene el ID o el codigo
-        const unitMatches = this.unidadOptions.filter(opt => opt.includes(person.unit) || this.unitCodeByName[opt] === person.unit);
-        if (unitMatches.length > 0) {
-          this.form.unidad = unitMatches[0];
-          this.syncAirportFromUnitSelection();
+      const personUnitCode = String(person.unit || '').trim().toUpperCase();
+      if (personUnitCode) {
+        const matchedUnit = Object.entries(this.unitCodeByName).find(
+          ([, code]) => code === personUnitCode
+        );
+        if (matchedUnit) {
+          this.form.unidad = matchedUnit[0];
+          this.scheduleUnitContextRefresh();
+          this.markDirty('unidad');
+          this.markDirty('numero_informe');
+          this.markDirty('aeropuerto');
         }
       }
 
       this.markDirty('operador');
+      this.markDirty('grado');
+      this.markDirty('lup');
     }
+  }
+
+  onOperatorInputChange(value: string): void {
+    this.form.operador = (value || '').trim();
+    if (!this.form.operador) {
+      this.selectedOperatorId = null;
+      this.markDirty('operador');
+      return;
+    }
+
+    const matchedOperator = this.personnelOptions.find((person) =>
+      this.getPersonDisplayName(person).toLowerCase() === this.form.operador.toLowerCase()
+    );
+    if (matchedOperator?.id) {
+      this.selectedOperatorId = matchedOperator.id;
+      this.onOperatorChange(matchedOperator.id);
+      return;
+    }
+
+    this.selectedOperatorId = null;
+    this.markDirty('operador');
+  }
+
+  private applyLoadedFormData(rawData: unknown): void {
+    if (!rawData || typeof rawData !== 'object') {
+      return;
+    }
+
+    const formData = rawData as Record<string, unknown>;
+    Object.assign(this.form, formData);
+
+    const sourceSystemId = formData['source_system_id'];
+    this.form.source_system_id =
+      typeof sourceSystemId === 'number'
+        ? sourceSystemId
+        : typeof sourceSystemId === 'string' && sourceSystemId.trim()
+          ? Number(sourceSystemId)
+          : null;
+
+    this.form.sintesis = this.resolvePreferredSintesis(formData);
+    this.ensureAirportOption(this.form.aeropuerto || '');
+    this.syncAirportManualOverride();
+    this.syncSelectedOperatorFromCurrentForm();
+    this.syncFlightSectionVisibility();
+    this.loadSourceSystemsForCurrentUnit();
+  }
+
+  private resolvePreferredSintesis(data: Record<string, unknown>): string {
+    const direct = this.normalizeText(data['sintesis']);
+    if (direct) {
+      return direct;
+    }
+
+    return (
+      this.normalizeText(data['sintesis_desarrollo']) ||
+      this.normalizeText(data['sintesis_conclusion'])
+    );
+  }
+
+  private syncFlightSectionVisibility(): void {
+    this.incluirDatosVuelo = [
+      this.form.fecha_hecho,
+      this.form.vuelo,
+      this.form.empresa_aerea,
+      this.form.destino,
+    ].some((value) => !!this.normalizeText(value));
+  }
+
+  private syncAirportManualOverride(): void {
+    const currentAirport = this.normalizeText(this.form.aeropuerto);
+    if (!currentAirport) {
+      this.airportManualOverride = false;
+      return;
+    }
+
+    const unitName = this.normalizeText(this.form.unidad);
+    const databaseAirport = this.unitAirportByName[unitName] || '';
+
+    this.airportManualOverride = !!databaseAirport && currentAirport !== databaseAirport;
+  }
+
+  private syncSelectedOperatorFromCurrentForm(): void {
+    const currentOperator = this.normalizeText(this.form.operador).toLowerCase();
+    if (!currentOperator || !Array.isArray(this.personnelOptions) || this.personnelOptions.length === 0) {
+      this.selectedOperatorId = null;
+      return;
+    }
+
+    const matchedOperator = this.personnelOptions.find((person) =>
+      this.getPersonDisplayName(person).toLowerCase() === currentOperator
+    );
+    this.selectedOperatorId = matchedOperator?.id ?? null;
+  }
+
+  getPersonDisplayName(person: any): string {
+    return `${person?.last_name || ''}, ${person?.first_name || ''}`.trim();
   }
 
   onOperatorGradeChange(value: string) {
@@ -625,81 +689,6 @@ export class InformesComponent implements OnInit, OnDestroy {
   onOperatorLupChange(value: string) {
     this.form.lup = (value || '').replace(/\D/g, '');
     this.markDirty('lup');
-  }
-
-  saveOperatorData(): void {
-    if (!this.selectedOperatorId) {
-      return;
-    }
-
-    const person = this.personnelOptions.find(p => p.id === this.selectedOperatorId);
-    if (!person) {
-      return;
-    }
-
-    const rankInput = (this.form.grado || '').trim();
-    const lupInput = (this.form.lup || '').trim();
-    if (!rankInput || !lupInput) {
-      return;
-    }
-
-    const currentRank = (person.rank || '').trim();
-    const currentLup = (person.badge_number || '').trim();
-    if (rankInput === currentRank && lupInput === currentLup) {
-      return;
-    }
-
-    if (this.isSavingOperatorData) {
-      this.pendingOperatorSave = true;
-      return;
-    }
-
-    this.isSavingOperatorData = true;
-    const payload = this.buildOperatorUpdatePayload(person, rankInput, lupInput);
-
-    this.personnelService.updatePerson(person.id, payload).subscribe({
-      next: (updatedPerson) => {
-        this.personnelOptions = this.personnelOptions.map((p) =>
-          p.id === updatedPerson.id ? updatedPerson : p
-        );
-        this.form.grado = this.normalizeGrade((updatedPerson.rank || '').trim());
-        this.form.lup = (updatedPerson.badge_number || '').trim();
-        this.toastService.success('Jerarquia y legajo del operador guardados en la base de datos.');
-      },
-      error: (error: HttpErrorResponse) => {
-        this.toastService.error(
-          this.getSimpleApiErrorMessage(error, 'No se pudieron guardar los datos del operador.')
-        );
-      },
-      complete: () => {
-        this.isSavingOperatorData = false;
-        this.runPendingOperatorSave();
-      }
-    });
-  }
-
-  private runPendingOperatorSave() {
-    if (!this.pendingOperatorSave) {
-      return;
-    }
-    this.pendingOperatorSave = false;
-    this.saveOperatorData();
-  }
-
-  private buildOperatorUpdatePayload(person: any, rank: string, lup: string) {
-    return {
-      first_name: person.first_name || '',
-      last_name: person.last_name || '',
-      badge_number: lup,
-      role: person.role || 'OPERADOR',
-      rank,
-      unit: person.unit ?? null,
-      guard_group: person.guard_group ?? '',
-      assigned_systems: Array.isArray(person.assigned_systems)
-        ? person.assigned_systems
-        : [],
-      is_active: !!person.is_active
-    };
   }
 
   private normalizeGrade(value: string): string {
@@ -732,11 +721,134 @@ export class InformesComponent implements OnInit, OnDestroy {
   }
 
   onUnidadChange(_val: string) {
-    this.syncAirportFromUnitSelection();
-    this.applySuggestedReportNumber(false);
+    this.scheduleUnitContextRefresh();
     this.markDirty('unidad');
     this.markDirty('numero_informe');
     this.markDirty('aeropuerto');
+  }
+
+  private scheduleUnitContextRefresh(forceSuggestedReportNumber = false): void {
+    window.setTimeout(() => {
+      this.syncAirportFromUnitSelection();
+      this.applySuggestedReportNumber(forceSuggestedReportNumber);
+      this.loadSourceSystemsForCurrentUnit();
+    }, 0);
+  }
+
+  onSourceSystemSelectionChange(value: number | 'otro' | null): void {
+    this.selectedSourceSystemOption = value;
+
+    if (value === 'otro' || value === null) {
+      this.form.source_system_id = null;
+      if (value === null) {
+        this.form.sistema = '';
+      }
+      this.markDirty('source_system_id');
+      this.markDirty('sistema');
+      return;
+    }
+
+    const selectedSystem = this.sourceSystemOptions.find((system) => system.id === value);
+    if (!selectedSystem) {
+      return;
+    }
+
+    this.form.source_system_id = selectedSystem.id;
+    this.form.sistema = selectedSystem.name || '';
+    this.applySourceSystemDefaults(selectedSystem);
+    this.markDirty('source_system_id');
+    this.markDirty('sistema');
+  }
+
+  onSistemaManualChange(value: string): void {
+    this.form.sistema = (value || '').trim();
+    this.form.source_system_id = null;
+    this.selectedSourceSystemOption = this.form.sistema ? 'otro' : null;
+    this.markDirty('source_system_id');
+    this.markDirty('sistema');
+  }
+
+  private loadSourceSystemsForCurrentUnit(): void {
+    this.isLoadingSourceSystems = true;
+    this.assetService.getSystems({ is_active: 'true' }).subscribe({
+      next: (response) => {
+        const results = (response as any)?.results ?? response;
+        this.sourceSystemOptions = this.sortSystemsForDisplay(Array.isArray(results) ? results : []);
+        this.syncSourceSystemSelection();
+      },
+      error: (err) => {
+        console.error('Error loading source systems:', err);
+        this.sourceSystemOptions = [];
+        this.syncSourceSystemSelection();
+      },
+      complete: () => {
+        this.isLoadingSourceSystems = false;
+      }
+    });
+  }
+
+  private sortSystemsForDisplay(systems: SystemAsset[]): SystemAsset[] {
+    const currentUnitId = this.unitIdByName[(this.form.unidad || '').trim()];
+    return [...systems].sort((a, b) => {
+      const aMatch = currentUnitId != null && a.unit?.id === currentUnitId ? 0 : 1;
+      const bMatch = currentUnitId != null && b.unit?.id === currentUnitId ? 0 : 1;
+      if (aMatch !== bMatch) {
+        return aMatch - bMatch;
+      }
+      return (a.name || '').localeCompare((b.name || ''), 'es', { sensitivity: 'base' });
+    });
+  }
+
+  private syncSourceSystemSelection(): void {
+    if (this.form.source_system_id != null) {
+      const selectedById = this.sourceSystemOptions.find((system) => system.id === this.form.source_system_id);
+      if (selectedById) {
+        this.selectedSourceSystemOption = selectedById.id;
+        this.form.sistema = selectedById.name || this.form.sistema;
+        return;
+      }
+    }
+
+    const currentSystemName = (this.form.sistema || '').trim().toLowerCase();
+    if (currentSystemName) {
+      const selectedByName = this.sourceSystemOptions.find(
+        (system) => (system.name || '').trim().toLowerCase() === currentSystemName
+      );
+      if (selectedByName) {
+        this.selectedSourceSystemOption = selectedByName.id;
+        this.form.source_system_id = selectedByName.id;
+        this.form.sistema = selectedByName.name || this.form.sistema;
+        return;
+      }
+      this.selectedSourceSystemOption = 'otro';
+      this.form.source_system_id = null;
+      return;
+    }
+
+    this.selectedSourceSystemOption = null;
+    this.form.source_system_id = null;
+  }
+
+  private applySourceSystemDefaults(system: SystemAsset): void {
+    const authenticityMode = (system.report_authenticity_mode_default || '') as VideoReportVmsAuthenticityMode | '';
+    if (authenticityMode) {
+      this.onVmsAuthenticityModeChange(authenticityMode);
+    }
+    this.form.vms_authenticity_detail = system.report_authenticity_detail_default || '';
+    this.form.vms_native_hash_algorithms = [...(system.report_native_hash_algorithms_default || [])];
+    this.form.vms_native_hash_algorithm_other = system.report_native_hash_algorithm_other_default || '';
+
+    if ((system.report_hash_program_default || '').trim()) {
+      this.form.hash_program = system.report_hash_program_default || '';
+    } else if (authenticityMode === 'hash_preventivo' || authenticityMode === 'vms_propio') {
+      this.form.hash_program = 'HashMyFiles';
+    }
+
+    this.markDirty('vms_authenticity_mode');
+    this.markDirty('vms_authenticity_detail');
+    this.markDirty('vms_native_hash_algorithms');
+    this.markDirty('vms_native_hash_algorithm_other');
+    this.markDirty('hash_program');
   }
 
   /**
@@ -802,11 +914,9 @@ export class InformesComponent implements OnInit, OnDestroy {
     this.ensureAirportOption(selectedAirport);
 
     const unitName = (this.form.unidad || '').trim();
-    const inferredAirport =
-      this.unitAirportByName[unitName] ||
-      this.inferAirportFromUnit(unitName, this.unitCodeByName[unitName] || '');
+    const databaseAirport = this.unitAirportByName[unitName] || '';
 
-    this.airportManualOverride = !!selectedAirport && selectedAirport !== inferredAirport;
+    this.airportManualOverride = !!selectedAirport && selectedAirport !== databaseAirport;
     this.markDirty('aeropuerto');
   }
 
@@ -942,9 +1052,16 @@ export class InformesComponent implements OnInit, OnDestroy {
   }
 
   private buildSuggestedReportNumber(unitName: string): string {
+    const normalizedUnitName = (unitName || '').trim();
+    if (!normalizedUnitName) {
+      return '';
+    }
     const now = new Date();
     const year = now.getFullYear();
-    const unitCode = this.getUnitCode(unitName);
+    const unitCode = this.getUnitCode(normalizedUnitName);
+    if (!unitCode) {
+      return '';
+    }
     return `0001${unitCode}/${year}`;
   }
 
@@ -958,46 +1075,7 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   private getUnitCode(unitName: string): string {
     const rawName = (unitName || '').trim();
-    const codeFromDb = this.unitCodeByName[rawName];
-    if (codeFromDb) {
-      return codeFromDb;
-    }
-
-    const normalized = rawName.toLowerCase();
-    if (normalized.includes('ceac')) return 'CEAC';
-    if (normalized.includes('este')) return 'EZE';
-    if (normalized.includes('centro')) return 'CEN';
-    if (normalized.includes('norte')) return 'NOR';
-    if (normalized.includes('litoral')) return 'LIT';
-    if (normalized.includes('patagonia')) return 'PAT';
-    if (normalized.includes('ezeiza')) return 'EZE';
-    if (normalized.includes('aeroparque')) return 'AEP';
-    if (normalized.includes('san fernando')) return 'FDO';
-    if (normalized.includes('bahia blanca') || normalized.includes('bahía blanca')) return 'BHI';
-    if (normalized.includes('mar del plata')) return 'MDQ';
-    return 'UN';
-  }
-
-  private inferAirportFromUnit(unitName: string, unitCode: string): string {
-    const normalizedName = (unitName || '').trim().toLowerCase();
-    const code = this.normalizeUnitCode(unitCode || this.getUnitCode(unitName));
-
-    if (code === 'EZE' || normalizedName.includes('ezeiza')) {
-      return 'Aeropuerto Internacional Mtro. Pistarini';
-    }
-    if (code === 'AEP' || normalizedName.includes('aeroparque')) {
-      return 'Aeroparque Jorge Newbery';
-    }
-    if (code === 'FDO' || normalizedName.includes('san fernando')) {
-      return 'Aeropuerto Internacional de San Fernando';
-    }
-    if (code === 'BHI' || normalizedName.includes('bahia blanca') || normalizedName.includes('bahía blanca')) {
-      return 'Aeropuerto Comandante Espora';
-    }
-    if (code === 'MDQ' || normalizedName.includes('mar del plata')) {
-      return 'Aeropuerto Astor Piazzolla';
-    }
-    return '';
+    return this.normalizeUnitCode(this.unitCodeByName[rawName] || '');
   }
 
   private syncAirportFromUnitSelection(): void {
@@ -1011,19 +1089,21 @@ export class InformesComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const inferredAirport =
-      this.unitAirportByName[unitName] ||
-      this.inferAirportFromUnit(unitName, this.unitCodeByName[unitName] || '');
+    const databaseAirport = this.unitAirportByName[unitName] || '';
 
-    if (inferredAirport) {
-      this.form.aeropuerto = inferredAirport;
-      this.ensureAirportOption(inferredAirport);
+    if (databaseAirport) {
+      this.form.aeropuerto = databaseAirport;
+      this.ensureAirportOption(databaseAirport);
       this.airportManualOverride = false;
+      return;
     }
+
+    this.form.aeropuerto = '';
+    this.airportManualOverride = false;
   }
 
   private refreshAirportOptions(): void {
-    const options = new Set<string>(this.fallbackAirportOptions);
+    const options = new Set<string>();
     for (const value of Object.values(this.unitAirportByName)) {
       const normalized = (value || '').trim();
       if (normalized) {
@@ -1064,19 +1144,19 @@ export class InformesComponent implements OnInit, OnDestroy {
   form: VideoReportFormData = {
     report_date: new Date().toISOString().slice(0, 10),
     destinatarios: '',
-    unidad: this.fallbackUnidadOptions[0],
+    unidad: '',
     tipo_informe: 'Informe de análisis de videos',
     numero_informe: '',
     grado: '',
     operador: '',
     lup: '',
     sistema: '',
+    source_system_id: null,
     cantidad_observada: '',
     sectores_analizados: '',
     franja_horaria_analizada: '',
     tiempo_total_analisis: '',
-    sintesis_conclusion: '',
-    sintesis_desarrollo: '',
+    sintesis: '',
     vms_native_hash_algorithms: [],
     vms_native_hash_algorithm_other: '',
     hash_algorithms: [],
@@ -1114,13 +1194,13 @@ export class InformesComponent implements OnInit, OnDestroy {
     operador: 'Operador',
     lup: 'Legajo (LUP)',
     unidad: 'Unidad',
-    sistema: 'Sistema o Dispositivo proveniente de la información',
+    sistema: 'Sistema o Dispositivo proveniente de la informaci??n',
+    source_system_id: 'Sistema origen registrado',
     cantidad_observada: 'Cantidad observada',
     sectores_analizados: 'Sectores analizados',
     franja_horaria_analizada: 'Franja horaria analizada',
-    tiempo_total_analisis: 'Tiempo total de análisis',
-    sintesis_conclusion: 'Síntesis para conclusión',
-    sintesis_desarrollo: 'Síntesis para el desarrollo',
+    tiempo_total_analisis: 'Tiempo total de an??lisis',
+    sintesis: 'Sintesis del analisis',
     vms_native_hash_algorithms: 'Algoritmos Hash Nativos del VMS',
     vms_native_hash_algorithm_other: 'Otro algoritmo de hash nativo',
     hash_algorithms: 'Algoritmos SHA',
@@ -1143,7 +1223,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     destino: 'Destino',
     fecha_hecho: 'Fecha del Hecho',
     objeto_denunciado: 'Objeto Denunciado / Marca',
-    aeropuerto: 'Aeropuerto',
+    aeropuerto: 'Lugar de origen de la informacion',
     desarrollo: 'Desarrollo',
     conclusion: 'Conclusion',
     firma: 'Firma',
@@ -1190,6 +1270,10 @@ export class InformesComponent implements OnInit, OnDestroy {
       quePoner: 'Sistema de video donde se realizo el analisis.',
       ejemplo: 'MILESTONE',
     },
+    source_system_id: {
+      quePoner: 'Sistema registrado en inventario para sugerir autenticidad y hash.',
+      ejemplo: 'Milestone XProtect - CReV I',
+    },
     cantidad_observada: {
       quePoner: 'Cantidad simple relacionada al hecho observado (personas, bultos, eventos, etc.).',
       ejemplo: '2 personas / 1 bulto / 3 eventos',
@@ -1203,16 +1287,12 @@ export class InformesComponent implements OnInit, OnDestroy {
       ejemplo: '14:05 a 15:42',
     },
     tiempo_total_analisis: {
-      quePoner: 'Duración total invertida en el análisis visual.',
+      quePoner: 'Duraci??n total invertida en el an??lisis visual.',
       ejemplo: '1 hora 37 minutos',
     },
-    sintesis_conclusion: {
-      quePoner: 'Resumen breve que quieras ver reflejado en la conclusión.',
-      ejemplo: 'No se observa manipulación posterior del bulto denunciado',
-    },
-    sintesis_desarrollo: {
-      quePoner: 'Puntos clave que quieras que la IA incluya en el desarrollo cronológico.',
-      ejemplo: 'A las 14:05 se observa ingreso al hall, a las 14:22 retiro del bulto en cinta 3',
+    sintesis: {
+      quePoner: 'Resumen breve del hallazgo para guiar desarrollo y conclusion.',
+      ejemplo: 'No se observa manipulacion posterior del bulto denunciado',
     },
     vms_native_hash_algorithms: {
       quePoner: 'Algoritmos hash generados nativamente por el VMS.',
@@ -1411,6 +1491,11 @@ export class InformesComponent implements OnInit, OnDestroy {
     if (field && this.invalidFields.has(field)) {
       this.invalidFields.delete(field);
     }
+    if (this.validationMessage) {
+      const result = this.buildValidationResult();
+      this.invalidFields = result.invalid;
+      this.validationMessage = result.message;
+    }
   }
 
   toggleHelp(helpKey: HelpKey, event: MouseEvent): void {
@@ -1525,7 +1610,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     return this.invalidFields.has(field);
   }
 
-  private validate(notify: boolean): boolean {
+  private buildValidationResult(): { invalid: Set<keyof VideoReportFormData>; message: string } {
     const required = [...this.requiredFields, 'aeropuerto' as keyof VideoReportFormData];
     const missing = required.filter((field) => this.isBlankField(field));
     const invalid = new Set<keyof VideoReportFormData>(missing);
@@ -1564,11 +1649,8 @@ export class InformesComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.invalidFields = invalid;
-
     if (invalid.size === 0) {
-      this.validationMessage = '';
-      return true;
+      return { invalid, message: '' };
     }
 
     const labels = missing.map((field) => this.fieldLabels[field]);
@@ -1579,9 +1661,23 @@ export class InformesComponent implements OnInit, OnDestroy {
     if (hasHashProgramError) labels.push('Programa de hash (obligatorio cuando autenticidad = Hash externo)');
     if (hasExternalHashWithoutAlgorithmError) labels.push('Algoritmo SHA (obligatorio cuando autenticidad = Hash externo)');
 
-    const message = `Completa los campos requeridos: ${labels.join(', ')}`;
-    this.validationMessage = message;
-    if (notify) this.toastService.error(message);
+    return {
+      invalid,
+      message: `Completa los campos requeridos: ${labels.join(', ')}`,
+    };
+  }
+
+  private validate(notify: boolean): boolean {
+    const result = this.buildValidationResult();
+    this.invalidFields = result.invalid;
+    this.validationMessage = result.message;
+
+    if (!result.message) {
+      return true;
+    }
+    if (notify) {
+      this.toastService.error(result.message);
+    }
     return false;
   }
 
@@ -1748,6 +1844,7 @@ export class InformesComponent implements OnInit, OnDestroy {
   private buildPayload(): VideoReportPayload {
     const reportData: VideoReportFormData = { ...this.form };
     reportData.destinatarios = this.getStandardDestinatarios(reportData.fiscalia);
+    reportData.sintesis = '';
     if (!reportData.vms_native_hash_algorithms.includes('otro')) {
       reportData.vms_native_hash_algorithm_other = '';
     }
@@ -1840,12 +1937,12 @@ export class InformesComponent implements OnInit, OnDestroy {
   private buildMaterialSpeechContext(): MaterialSpeechContext {
     return {
       sistema: this.form.sistema,
+      source_system_id: this.form.source_system_id,
       aeropuerto: this.form.aeropuerto,
       cantidad_observada: this.form.cantidad_observada,
       sectores_analizados: this.form.sectores_analizados,
       franja_horaria_analizada: this.form.franja_horaria_analizada,
       tiempo_total_analisis: this.form.tiempo_total_analisis,
-      sintesis_conclusion: this.form.sintesis_conclusion,
       prevencion_sumaria: this.form.prevencion_sumaria,
       caratula: this.form.caratula,
       fecha_hecho: this.form.fecha_hecho,
@@ -1913,7 +2010,6 @@ export class InformesComponent implements OnInit, OnDestroy {
       this.form.sectores_analizados,
       this.form.franja_horaria_analizada,
       this.form.tiempo_total_analisis,
-      this.form.sintesis_conclusion,
       this.form.sistema,
       this.form.aeropuerto,
       (this.form.vms_native_hash_algorithms || []).join(','),
@@ -1927,22 +2023,38 @@ export class InformesComponent implements OnInit, OnDestroy {
     const franja = (this.form.franja_horaria_analizada || '').trim() || 'franja horaria no consignada';
     const tiempo = (this.form.tiempo_total_analisis || '').trim() || 'tiempo total no consignado';
     const cantidad = (this.form.cantidad_observada || '').trim() || 'cantidad observada no consignada';
+    const objeto = (this.form.objeto_denunciado || '').trim();
+    const denunciante = (this.form.denunciante || '').trim();
+    const involvedSummary =
+      (this.form.involved_people_summary || '').trim() ||
+      this.buildInvolvedPeopleSummary(this.normalizeReportInvolvedPeople(this.form.involved_people || []));
+    const flightSummary = [
+      (this.form.vuelo || '').trim(),
+      (this.form.empresa_aerea || '').trim(),
+      (this.form.destino || '').trim(),
+    ].filter((value) => !!value).join(' / ');
+    const objectPart = objeto ? ` Hecho vinculado a: ${objeto}.` : '';
+    const complainantPart = denunciante ? ` Denunciante registrado: ${denunciante}.` : '';
+    const peoplePart = involvedSummary ? ` Personas vinculadas: ${involvedSummary}.` : '';
+    const flightPart = flightSummary ? ` Datos de vuelo asociados: ${flightSummary}.` : '';
 
-    return `Se analizaron los sectores ${sectores}, en la franja horaria ${franja}, con un tiempo total de análisis de ${tiempo}. Cantidad observada: ${cantidad}.`;
+    return `Se analizaron los sectores ${sectores}, en la franja horaria ${franja}, con un tiempo total de analisis de ${tiempo}. Cantidad observada: ${cantidad}.${objectPart}${complainantPart}${peoplePart}${flightPart}`;
   }
 
   private buildConclusionSeedFromContext(): string {
-    const sintesis = (this.form.sintesis_conclusion || '').trim();
-    if (sintesis) {
-      return `Síntesis para conclusión: ${sintesis}.`;
-    }
-
+    const sistema = (this.form.sistema || '').trim() || 'sistema no consignado';
+    const origen = (this.form.aeropuerto || '').trim() || 'origen no consignado';
+    const objeto = (this.form.objeto_denunciado || '').trim() || 'los hechos investigados';
     const cantidad = (this.form.cantidad_observada || '').trim();
-    if (cantidad) {
-      return `Síntesis para conclusión: cantidad observada ${cantidad}.`;
-    }
+    const involvedSummary =
+      (this.form.involved_people_summary || '').trim() ||
+      this.buildInvolvedPeopleSummary(this.normalizeReportInvolvedPeople(this.form.involved_people || []));
+    const cantidadPart = cantidad
+      ? `se registro ${cantidad}`
+      : 'no se consigno una cantidad observada especifica';
+    const peoplePart = involvedSummary ? ` Personas vinculadas: ${involvedSummary}.` : '';
 
-    return 'Síntesis para conclusión no consignada.';
+    return `Con base en la revision del material del sistema ${sistema}, con origen en ${origen}, y respecto de ${objeto}, se informa que ${cantidadPart}.${peoplePart}`;
   }
 
   private getHashAlgorithmLabel(code: VideoReportHashAlgorithm, customOther = ''): string {
@@ -2040,19 +2152,24 @@ export class InformesComponent implements OnInit, OnDestroy {
   }
 
   private buildConclusionFallbackTextFromReport(report: VideoReportFormData): string {
-    const sintesis = (report.sintesis_conclusion || '').trim();
-    if (sintesis) {
-      return `En virtud del análisis efectuado, y sin apartarse de los extremos objetivamente observables, se concluye: **${sintesis}**.`;
-    }
+    const sistema = (report.sistema || '').trim() || 'el sistema analizado';
+    const origen = (report.aeropuerto || '').trim() || 'origen no consignado';
+    const objeto = (report.objeto_denunciado || '').trim() || 'los hechos investigados';
     const cantidad = (report.cantidad_observada || '').trim();
-    if (cantidad) {
-      return `En virtud del análisis efectuado, y dentro de los límites propios de la revisión visual, se concluye que la cantidad observada fue de **${cantidad}**. No se advierten elementos adicionales a los ya consignados en el desarrollo, quedando la valoración jurídica sujeta a la autoridad competente.`;
-    }
-    return 'En virtud del análisis efectuado sobre el material fílmico, y dentro de los límites propios de la revisión visual practicada, no se advierten elementos adicionales a los ya consignados en el desarrollo. La valoración jurídica del material queda sujeta a la autoridad competente.';
+    const involvedSummary =
+      (report.involved_people_summary || '').trim() ||
+      this.buildInvolvedPeopleSummary(this.normalizeReportInvolvedPeople(report.involved_people || []));
+
+    const cantidadPart = cantidad
+      ? `se consigno una cantidad observada de **${cantidad}**`
+      : 'no se consigno una cantidad observada especifica';
+    const peoplePart = involvedSummary ? ` Personas vinculadas: **${involvedSummary}**.` : '';
+
+    return `En virtud del analisis efectuado sobre el material del sistema **${sistema}**, con origen en **${origen}**, y respecto de **${objeto}**, se concluye que ${cantidadPart}.${peoplePart} La valoracion juridica del contenido corresponde a la autoridad competente.`;
   }
 
   canGenerateFullReport(): boolean {
-    return this.validate(false);
+    return this.buildValidationResult().invalid.size === 0;
   }
 
   async generateFullReportWithAi(): Promise<void> {
@@ -2135,8 +2252,6 @@ export class InformesComponent implements OnInit, OnDestroy {
     if (!this.validate(true)) {
       return;
     }
-    this.saveOperatorData();
-
     this.isGenerating = true;
     const payload = this.buildPayload();
     this.loadingService.show();
@@ -2310,7 +2425,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     const locationMeta =
       aeropuerto || unidad
         ? `
-          <p><strong>Aeropuerto:</strong> ${this.escapeHtml(aeropuerto || 'No consignado')}</p>
+          <p><strong>Lugar de origen de la informacion:</strong> ${this.escapeHtml(aeropuerto || 'No consignado')}</p>
           <p><strong>Unidad:</strong> ${this.escapeHtml(unidad || 'No consignada')}</p>
         `
         : '';
@@ -2383,7 +2498,6 @@ export class InformesComponent implements OnInit, OnDestroy {
           <p><strong>Sectores analizados:</strong> ${this.escapeHtml((report.sectores_analizados || '').trim() || 'No consignados')}</p>
           <p><strong>Franja horaria analizada:</strong> ${this.escapeHtml((report.franja_horaria_analizada || '').trim() || 'No consignada')}</p>
           <p><strong>Tiempo total de análisis:</strong> ${this.escapeHtml((report.tiempo_total_analisis || '').trim() || 'No consignado')}</p>
-          <p><strong>Síntesis para conclusión:</strong> ${this.escapeHtml((report.sintesis_conclusion || '').trim() || 'No consignada')}</p>
           <p><strong>Algoritmos Hash Nativos del VMS:</strong> ${this.escapeHtml(nativeHashesText)}</p>
           <p><strong>Algoritmos SHA:</strong> ${this.escapeHtml(hashAlgorithmsText)}</p>
           <p><strong>Programa de hash:</strong> ${this.escapeHtml(hashProgramText)}</p>
@@ -2438,19 +2552,7 @@ export class InformesComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // We update the data that we want to save
-    const currentData = { ...this.form };
-    currentData.destinatarios = this.getStandardDestinatarios(currentData.fiscalia);
-    currentData.involved_people = this.normalizeReportInvolvedPeople(currentData.involved_people);
-    if (!(currentData.involved_people_summary || '').trim()) {
-      currentData.involved_people_summary = this.buildInvolvedPeopleSummary(currentData.involved_people);
-    }
-    if (!(currentData.denunciante || '').trim()) {
-      const mainComplainant = this.pickMainComplainant(currentData.involved_people);
-      if (mainComplainant) {
-        currentData.denunciante = mainComplainant;
-      }
-    }
+    const currentData = this.buildPayload().report_data;
 
     this.informeService.saveReportDraft(this.linkedRecordId()!, currentData).subscribe({
       next: (res) => {
@@ -2526,3 +2628,8 @@ export class InformesComponent implements OnInit, OnDestroy {
     return fallback;
   }
 }
+
+
+
+
+

@@ -1,17 +1,29 @@
 from rest_framework import serializers
 
 from assets.models import System, Unit
-from assets.serializers import SystemSerializer
 
 from .models import ExternalPerson, Person
 
 
 class PersonSerializer(serializers.ModelSerializer):
-    assigned_systems_details = SystemSerializer(source="assigned_systems", many=True, read_only=True)
+    assigned_systems_details = serializers.SerializerMethodField()
     assigned_systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True, required=False)
     unit = serializers.SlugRelatedField(queryset=Unit.objects.all(), slug_field="code", required=False, allow_null=True)
     rank_display = serializers.CharField(source="get_rank_display", read_only=True)
     role_display = serializers.CharField(source="get_role_display", read_only=True)
+
+    def get_assigned_systems_details(self, obj):
+        return [
+            {
+                "id": system.id,
+                "name": system.name,
+                "unit_code": system.unit.code if system.unit else "",
+                "unit_name": system.unit.name if system.unit else "",
+                "system_type": system.system_type,
+                "is_active": system.is_active,
+            }
+            for system in obj.assigned_systems.all()
+        ]
 
     class Meta:
         model = Person

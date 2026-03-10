@@ -268,14 +268,43 @@ export class AssetsComponent implements OnInit {
   // System CRUD
   showSystemModal = false;
   currentSystem: any = {};
+  readonly reportAuthenticityModeOptions = [
+    { value: '', label: 'Sin sugerencia' },
+    { value: 'vms_propio', label: 'Propio VMS' },
+    { value: 'hash_preventivo', label: 'Hash preventivo externo' },
+    { value: 'sin_autenticacion', label: 'Sin autenticacion' },
+    { value: 'otro', label: 'Otro metodo' },
+  ];
+  readonly reportHashOptions = [
+    { value: 'sha1', label: 'SHA-1' },
+    { value: 'sha3', label: 'SHA-3' },
+    { value: 'sha256', label: 'SHA-256' },
+    { value: 'sha512', label: 'SHA-512' },
+    { value: 'otro', label: 'Otro' },
+  ];
 
   openSystemModal() {
-    this.currentSystem = { is_active: true };
+    this.currentSystem = {
+      is_active: true,
+      report_authenticity_mode_default: '',
+      report_authenticity_detail_default: '',
+      report_native_hash_algorithms_default: [],
+      report_native_hash_algorithm_other_default: '',
+      report_hash_program_default: '',
+    };
     this.showSystemModal = true;
   }
 
   editSystem(sys: any) {
-    this.currentSystem = { ...sys, unit_id: sys.unit?.id };
+    this.currentSystem = {
+      ...sys,
+      unit_id: sys.unit?.id,
+      report_authenticity_mode_default: sys.report_authenticity_mode_default || '',
+      report_authenticity_detail_default: sys.report_authenticity_detail_default || '',
+      report_native_hash_algorithms_default: [...(sys.report_native_hash_algorithms_default || [])],
+      report_native_hash_algorithm_other_default: sys.report_native_hash_algorithm_other_default || '',
+      report_hash_program_default: sys.report_hash_program_default || '',
+    };
     this.showSystemModal = true;
   }
 
@@ -284,7 +313,29 @@ export class AssetsComponent implements OnInit {
     this.currentSystem = {};
   }
 
+  toggleSystemNativeHash(algorithm: string) {
+    const current = Array.isArray(this.currentSystem.report_native_hash_algorithms_default)
+      ? this.currentSystem.report_native_hash_algorithms_default
+      : [];
+    if (current.includes(algorithm)) {
+      this.currentSystem.report_native_hash_algorithms_default = current.filter((item: string) => item !== algorithm);
+    } else {
+      this.currentSystem.report_native_hash_algorithms_default = [...current, algorithm];
+    }
+  }
+
+  hasSystemNativeHash(algorithm: string): boolean {
+    return Array.isArray(this.currentSystem.report_native_hash_algorithms_default)
+      && this.currentSystem.report_native_hash_algorithms_default.includes(algorithm);
+  }
+
   saveSystem() {
+    if (this.currentSystem.report_authenticity_mode_default !== 'otro') {
+      this.currentSystem.report_authenticity_detail_default = '';
+    }
+    if (!this.hasSystemNativeHash('otro')) {
+      this.currentSystem.report_native_hash_algorithm_other_default = '';
+    }
     this.loadingService.show();
     const obs = this.currentSystem.id ?
       this.assetService.updateSystem(this.currentSystem.id, this.currentSystem) :

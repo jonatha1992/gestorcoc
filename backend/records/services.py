@@ -1,4 +1,5 @@
 import hashlib
+import typing
 import os
 import base64
 import binascii
@@ -50,8 +51,34 @@ class IntegrityService:
             'sha3': 'SHA-3',
             'sha256': 'SHA-256',
             'sha512': 'SHA-512',
+            'otro': 'OTRO',
         }
         return labels.get(str(code or '').lower(), str(code or '').upper())
+
+    @staticmethod
+    def _hash_algorithm_labels(value, custom_other=''):
+        output = []
+        custom_label = IntegrityService._as_text(custom_other, '').strip()
+        for item in IntegrityService._as_list(value):
+            normalized = str(item or '').strip().lower()
+            if not normalized:
+                continue
+            if normalized == 'otro':
+                label = custom_label or 'OTRO'
+            else:
+                label = IntegrityService._hash_algorithm_label(normalized)
+            if label not in output:
+                output.append(label)
+        return output
+
+    @staticmethod
+    def _preferred_sintesis(context):
+        ctx = context or {}
+        return (
+            IntegrityService._as_text(ctx.get('sintesis'), '').strip()
+            or IntegrityService._as_text(ctx.get('sintesis_desarrollo'), '').strip()
+            or IntegrityService._as_text(ctx.get('sintesis_conclusion'), '').strip()
+        )
 
     @staticmethod
     def _vms_authenticity_label(mode):
@@ -67,8 +94,10 @@ class IntegrityService:
     def _build_verification_reference(context):
         ctx = context or {}
         hash_program = IntegrityService._as_text(ctx.get('hash_program'), '').strip() or 'programa no consignado'
-        hash_algorithms = IntegrityService._normalize_hash_algorithms(ctx.get('hash_algorithms'))
-        hash_labels = [IntegrityService._hash_algorithm_label(item) for item in hash_algorithms]
+        hash_labels = IntegrityService._hash_algorithm_labels(
+            ctx.get('hash_algorithms'),
+            ctx.get('hash_algorithm_other'),
+        )
         if hash_labels:
             algorithms_text = ', '.join(hash_labels)
         else:
@@ -90,18 +119,23 @@ class IntegrityService:
         sistema = IntegrityService._as_text(ctx.get('sistema'), 'el sistema de videovigilancia').strip() or 'el sistema de videovigilancia'
         lugar = IntegrityService._as_text(ctx.get('aeropuerto'), '').strip()
         hash_program = IntegrityService._as_text(ctx.get('hash_program'), '').strip()
-        hash_algorithms = IntegrityService._normalize_hash_algorithms(ctx.get('hash_algorithms'))
-        hash_labels = [IntegrityService._hash_algorithm_label(item) for item in hash_algorithms]
+        hash_labels = IntegrityService._hash_algorithm_labels(
+            ctx.get('hash_algorithms'),
+            ctx.get('hash_algorithm_other'),
+        )
         motivo_sin_hash = IntegrityService._as_text(ctx.get('motivo_sin_hash'), '').strip()
         vms_mode = IntegrityService._as_text(ctx.get('vms_authenticity_mode'), '').strip()
         vms_detail = IntegrityService._as_text(ctx.get('vms_authenticity_detail'), '').strip()
-        vms_native_algorithms = IntegrityService._normalize_hash_algorithms(ctx.get('vms_native_hash_algorithms'))
-        vms_native_labels = [IntegrityService._hash_algorithm_label(item) for item in vms_native_algorithms]
+        vms_native_labels = IntegrityService._hash_algorithm_labels(
+            ctx.get('vms_native_hash_algorithms'),
+            ctx.get('vms_native_hash_algorithm_other'),
+        )
 
         lugar_clause = f'desde donde se obtuvo la información en "{lugar}"' if lugar else 'desde donde se obtuvo el material analizado'
 
         if vms_mode == 'vms_propio':
             if vms_native_labels:
+                vms_native_labels = typing.cast(typing.List[str], vms_native_labels)
                 native_text = ' y '.join(vms_native_labels) if len(vms_native_labels) <= 2 else ', '.join(vms_native_labels[:-1]) + f' y {vms_native_labels[-1]}'
                 auth_clause = f'posee como medida de seguridad autenticación provista por el propio sistema "{sistema}", que incorpora algoritmos de hash nativos ({native_text})'
             else:
@@ -118,6 +152,7 @@ class IntegrityService:
             auth_clause = 'cuenta con medidas de seguridad propias del sistema'
 
         if hash_labels:
+            hash_labels = typing.cast(typing.List[str], hash_labels)
             hash_algorithms_text = ' y '.join(hash_labels) if len(hash_labels) <= 2 else ', '.join(hash_labels[:-1]) + f' y {hash_labels[-1]}'
             hash_program_text = hash_program or 'herramienta de hash'
             hash_clause = (
@@ -144,7 +179,7 @@ class IntegrityService:
         tiempo = IntegrityService._as_text(ctx.get('tiempo_total_analisis'), '').strip()
         cantidad = IntegrityService._as_text(ctx.get('cantidad_observada'), '').strip()
 
-        partes = []
+        partes: typing.List[str] = []
         if sectores:
             partes.append(f'centrado en los sectores: {sectores}')
         if franja:
@@ -165,7 +200,7 @@ class IntegrityService:
     @staticmethod
     def _build_conclusion_fallback(context):
         ctx = context or {}
-        sintesis_conclusion = IntegrityService._as_text(ctx.get('sintesis_conclusion'), '').strip()
+        sintesis_conclusion = IntegrityService._preferred_sintesis(ctx)
         cantidad_observada = IntegrityService._as_text(ctx.get('cantidad_observada'), '').strip()
 
         if sintesis_conclusion:
@@ -362,6 +397,22 @@ class IntegrityService:
         return f"{parsed.day:02d} DE {month_name} DEL {parsed.year}"
 
     @staticmethod
+    def _normalize_report_code_for_filename(value, fallback):
+        raw = IntegrityService._as_text(value, '').strip().upper()
+        if not raw:
+            return fallback
+
+        match = re.match(r'^([^/]+)\/(\d{4})$', raw)
+        if match:
+            prefix, year = match.groups()
+            year = str(year)
+            raw = f'{prefix}-{year[-2:]}'
+
+        raw = re.sub(r'[\\/:*?"<>|]+', '-', raw)
+        raw = re.sub(r'\s+', ' ', raw).strip(' .-_')
+        return raw or fallback
+
+    @staticmethod
     def _replace_section_body(document, section_marker, next_marker, body_text):
         if not str(body_text or '').strip():
             return False
@@ -370,7 +421,7 @@ class IntegrityService:
         section_norm = IntegrityService._normalize_match_text(section_marker)
         next_norm = IntegrityService._normalize_match_text(next_marker) if next_marker else ''
 
-        start_index = -1
+        start_index: int = -1
         for idx, paragraph in enumerate(paragraphs):
             if section_norm in IntegrityService._normalize_match_text(paragraph.text):
                 start_index = idx
@@ -378,7 +429,7 @@ class IntegrityService:
         if start_index < 0:
             return False
 
-        end_index = len(paragraphs)
+        end_index: int = len(paragraphs)
         if next_norm:
             for idx in range(start_index + 1, len(paragraphs)):
                 if next_norm in IntegrityService._normalize_match_text(paragraphs[idx].text):
@@ -475,11 +526,14 @@ class IntegrityService:
             sistema = (ctx.get('sistema') or '').strip()
             aeropuerto = (ctx.get('aeropuerto') or '').strip()
             hash_algorithms = ctx.get('hash_algorithms') or []
+            hash_algorithm_other = (ctx.get('hash_algorithm_other') or '').strip()
             hash_program = (ctx.get('hash_program') or '').strip()
             vms_mode = ctx.get('vms_authenticity_mode') or ''
             vms_detail = ctx.get('vms_authenticity_detail') or ''
             medida = IntegrityService._vms_mode_to_text(vms_mode, vms_detail)
-            hash_text = ', '.join(h.upper() for h in hash_algorithms) if hash_algorithms else ''
+            hash_text = ', '.join(
+                IntegrityService._hash_algorithm_labels(hash_algorithms, hash_algorithm_other)
+            ) if hash_algorithms else ''
 
             system_prompt = (
                 "Eres un redactor experto en informes policiales argentinos de analisis de video de CCTV. "
@@ -545,7 +599,7 @@ class IntegrityService:
             }
 
         elif mode == 'conclusion':
-            sintesis = (ctx.get('sintesis_conclusion') or '').strip()
+            sintesis = IntegrityService._preferred_sintesis(ctx)
             cantidad = (ctx.get('cantidad_observada') or '').strip()
             caratula = (ctx.get('caratula') or '').strip()
 
@@ -680,8 +734,9 @@ class IntegrityService:
         ).strip().lower()
         if selection_mode == 'round_robin' and len(provider_order) > 1 and not preferred_provider:
             with IntegrityService._provider_rotation_lock:
-                start_idx = IntegrityService._provider_rotation_index % len(provider_order)
+                start_idx: int = IntegrityService._provider_rotation_index % len(provider_order)
                 IntegrityService._provider_rotation_index += 1
+            provider_order = typing.cast(typing.List[typing.Dict[str, typing.Any]], provider_order)
             provider_order = provider_order[start_idx:] + provider_order[:start_idx]
 
         providers = {
@@ -800,7 +855,7 @@ class IntegrityService:
                 message = choices[0].get('message') if isinstance(choices[0], dict) else None
                 content = message.get('content') if isinstance(message, dict) else None
                 if isinstance(content, list):
-                    parts = []
+                    parts: typing.List[str] = []
                     for item in content:
                         if isinstance(item, dict):
                             parts.append(str(item.get('text', '') or ''))
@@ -942,15 +997,22 @@ class IntegrityService:
         sectores_analizados = IntegrityService._as_text(report_data.get("sectores_analizados"), "").strip()
         franja_horaria_analizada = IntegrityService._as_text(report_data.get("franja_horaria_analizada"), "").strip()
         tiempo_total_analisis = IntegrityService._as_text(report_data.get("tiempo_total_analisis"), "").strip()
-        sintesis_conclusion = IntegrityService._as_text(report_data.get("sintesis_conclusion"), "").strip()
-        hash_algorithms = IntegrityService._normalize_hash_algorithms(report_data.get("hash_algorithms"))
+        sintesis = IntegrityService._preferred_sintesis(report_data)
+        hash_algorithms = IntegrityService._as_list(report_data.get("hash_algorithms"))
+        hash_algorithm_other = IntegrityService._as_text(report_data.get("hash_algorithm_other"), "").strip()
         hash_program = IntegrityService._as_text(report_data.get("hash_program"), "").strip()
         medida_seguridad_interna = IntegrityService._as_text(report_data.get("medida_seguridad_interna"), "").strip()
         vms_authenticity_mode = IntegrityService._as_text(report_data.get("vms_authenticity_mode"), "").strip()
         vms_authenticity_detail = IntegrityService._as_text(report_data.get("vms_authenticity_detail"), "").strip()
+        vms_native_hash_algorithms = IntegrityService._as_list(report_data.get("vms_native_hash_algorithms"))
+        vms_native_hash_algorithm_other = IntegrityService._as_text(
+            report_data.get("vms_native_hash_algorithm_other"),
+            "",
+        ).strip()
         verification_reference = IntegrityService._build_verification_reference({
             "hash_program": hash_program,
             "hash_algorithms": hash_algorithms,
+            "hash_algorithm_other": hash_algorithm_other,
             "vms_authenticity_mode": vms_authenticity_mode,
             "vms_authenticity_detail": vms_authenticity_detail,
         })
@@ -985,10 +1047,13 @@ class IntegrityService:
                 "franja_horaria_analizada": franja_horaria_analizada,
                 "tiempo_total_analisis": tiempo_total_analisis,
                 "hash_algorithms": hash_algorithms,
+                "hash_algorithm_other": hash_algorithm_other,
                 "hash_program": hash_program,
                 "medida_seguridad_interna": medida_seguridad_interna,
                 "vms_authenticity_mode": vms_authenticity_mode,
                 "vms_authenticity_detail": vms_authenticity_detail,
+                "vms_native_hash_algorithms": vms_native_hash_algorithms,
+                "vms_native_hash_algorithm_other": vms_native_hash_algorithm_other,
             })
 
         if not desarrollo.strip():
@@ -1001,12 +1066,12 @@ class IntegrityService:
 
         if not conclusion.strip():
             conclusion = IntegrityService._build_conclusion_fallback({
-                "sintesis_conclusion": sintesis_conclusion,
+                "sintesis": sintesis,
                 "cantidad_observada": cantidad_observada,
             })
 
         if not involved_people_summary and involved_people:
-            summary_parts = []
+            summary_parts: typing.List[str] = []
             for person in involved_people:
                 if not isinstance(person, dict):
                     continue
@@ -1030,13 +1095,14 @@ class IntegrityService:
         RQ = "\u201d"  # ” right double quotation mark
 
         # Build hash algorithm text for paragraph [9] replacement
-        if hash_algorithms:
-            algo_labels = [IntegrityService._hash_algorithm_label(a) for a in hash_algorithms]
+        algo_labels = IntegrityService._hash_algorithm_labels(hash_algorithms, hash_algorithm_other)
+        if algo_labels:
             if len(algo_labels) == 1:
                 hash_algo_text = f"{algo_labels[0]} respectivamente"
             elif len(algo_labels) == 2:
                 hash_algo_text = f"{algo_labels[0]} y {algo_labels[1]} respectivamente"
             else:
+                algo_labels = typing.cast(typing.List[str], algo_labels)
                 hash_algo_text = f"{chr(44).join(algo_labels[:-1])} y {algo_labels[-1]} respectivamente"
         else:
             hash_algo_text = "algoritmos no consignados respectivamente"
@@ -1147,7 +1213,15 @@ class IntegrityService:
         out = BytesIO()
         document.save(out)
         out.seek(0)
-        return out, f"informe_analisis_video_{parsed.strftime('%Y%m%d')}.docx"
+        numero_filename = IntegrityService._normalize_report_code_for_filename(
+            numero_informe,
+            parsed.strftime('%Y%m%d'),
+        )
+        prevencion_filename = IntegrityService._normalize_report_code_for_filename(
+            prevencion_sumaria,
+            'S-D',
+        )
+        return out, f"INFORME CORTO {numero_filename} PS {prevencion_filename}.docx"
 
     @staticmethod
     def _get_hasher(algorithm='sha256'):
@@ -1354,8 +1428,8 @@ class IntegrityService:
                 time_ms = time_ms[:-3]
 
             # Partir el hash en líneas si es muy largo
-            hash_lines = [hash_value[i:i + chars_per_line] for i in range(0, len(hash_value), chars_per_line)] if hash_value != "N/A" else [hash_value]
-            row_height = max(14, len(hash_lines) * 10 + 4)
+            hash_lines: typing.List[str] = [hash_value[i:i + chars_per_line] for i in range(0, len(hash_value), chars_per_line)] if hash_value != "N/A" else [hash_value]
+            row_height: float = max(14.0, float(len(hash_lines)) * 10.0 + 4.0)
 
             if y - row_height < margin + 20:
                 p.showPage()
@@ -1373,8 +1447,10 @@ class IntegrityService:
             row_top = y
             p.setFont("Helvetica", 8)
             p.drawString(margin + 4,   row_top, str(idx))
-            p.drawString(margin + 20,  row_top, name[:25] if len(name) > 25 else name)
-            p.drawString(margin + 170, row_top, ext_type[:7] if len(ext_type) > 7 else ext_type)
+            name_label = str(name)[:25] if len(str(name)) > 25 else str(name)
+            p.drawString(margin + 20,  row_top, name_label)
+            ext_label = str(ext_type)[:7] if len(str(ext_type)) > 7 else str(ext_type)
+            p.drawString(margin + 170, row_top, ext_label)
             p.drawString(margin + 210, row_top, size_str)
             p.drawString(margin + 260, row_top, algorithm)
             p.drawString(margin + 310, row_top, str(time_ms))
@@ -1431,15 +1507,15 @@ class IntegrityService:
         p.line(50, height - 105, width - 50, height - 105)
 
         # Información del Registro
-        y = height - 140
+        y: float = float(height) - 140.0
         p.setFont("Helvetica-Bold", 14)
         p.drawString(50, y, f"Registro N° {film_record.id}")
-        y -= 30
+        y -= 30.0
         
         # Datos principales
         p.setFont("Helvetica-Bold", 11)
         p.drawString(50, y, "Información de la Solicitud:")
-        y -= 20
+        y -= 20.0
         p.setFont("Helvetica", 10)
         
         fields = [
@@ -1454,16 +1530,16 @@ class IntegrityService:
         for label, value in fields:
             if value:
                 p.drawString(70, y, f"{label}: {value}")
-                y -= 18
+                y -= 18.0
         
         # Información de Backup
-        y -= 20
+        y -= 20.0
         p.setFont("Helvetica-Bold", 11)
         p.drawString(50, y, "Información de Backup:")
-        y -= 20
+        y -= 20.0
         p.setFont("Helvetica", 10)
         p.drawString(70, y, f"Ruta: {film_record.backup_path or 'No especificada'}")
-        y -= 18
+        y -= 18.0
         p.drawString(70, y, f"Tamaño: {film_record.file_size or 'N/A'} bytes")
         
         # Hash de Integridad

@@ -23,12 +23,13 @@ export interface VideoReportInvolvedPerson {
 
 export interface MaterialSpeechContext {
     sistema?: string;
+    source_system_id?: number | null;
     aeropuerto?: string;
     cantidad_observada?: string;
     sectores_analizados?: string;
     franja_horaria_analizada?: string;
     tiempo_total_analisis?: string;
-    sintesis_conclusion?: string;
+    sintesis?: string;
     prevencion_sumaria?: string;
     caratula?: string;
     fecha_hecho?: string;
@@ -58,12 +59,12 @@ export interface VideoReportFormData {
     operador: string;
     lup: string;
     sistema: string;
+    source_system_id: number | null;
     cantidad_observada: string;
     sectores_analizados: string;
     franja_horaria_analizada: string;
     tiempo_total_analisis: string;
-    sintesis_conclusion: string;
-    sintesis_desarrollo: string;
+    sintesis: string;
     vms_native_hash_algorithms: VideoReportHashAlgorithm[];
     vms_native_hash_algorithm_other: string;
     hash_algorithms: VideoReportHashAlgorithm[];

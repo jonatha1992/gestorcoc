@@ -17,14 +17,14 @@ class Migration(migrations.Migration):
             name='filmrecord',
             options={'ordering': ['-entry_date', '-created_at'], 'verbose_name': 'Registro Fílmico', 'verbose_name_plural': 'Registros Fílmicos'},
         ),
-#        migrations.RemoveField(
-#            model_name='filmrecord',
-#            name='is_verified',
-#        ),
-#        migrations.RemoveField(
-#            model_name='filmrecord',
-#            name='verification_hash',
-#        ),
+        migrations.RemoveField(
+            model_name='filmrecord',
+            name='is_verified',
+        ),
+        migrations.RemoveField(
+            model_name='filmrecord',
+            name='verification_hash',
+        ),
         migrations.AddField(
             model_name='filmrecord',
             name='backup_path',

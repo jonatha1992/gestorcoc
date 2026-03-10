@@ -11,6 +11,14 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RemoveField(
+            model_name='camera',
+            name='system',
+        ),
+        migrations.RemoveField(
+            model_name='system',
+            name='ip_address',
+        ),
         migrations.AddField(
             model_name='system',
             name='system_type',

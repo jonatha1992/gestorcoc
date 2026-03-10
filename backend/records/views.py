@@ -2,7 +2,7 @@ from django.http import FileResponse
 from django.core.exceptions import RequestDataTooBig
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 from django.db.models.functions import TruncDate
 from datetime import timedelta
 from rest_framework import viewsets, views, status
@@ -434,7 +434,7 @@ class DashboardStatsView(views.APIView):
 
 
 class DashboardQueryMixin:
-    BA_CODES = {"AEP", "EZE", "FDO"}
+    BA_CODES = {"AEP", "EZE", "FDO", "BHI", "MDQ"}
 
     def _to_bool(self, raw):
         if raw is None:

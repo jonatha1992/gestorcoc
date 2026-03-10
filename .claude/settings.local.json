@@ -36,7 +36,13 @@
       "Bash(.venvScriptspython.exe:*)",
       "Bash(npx tsc:*)",
       "Bash(python:*)",
-      "Bash(\"D:/Repositorio/jonatha1992/gestorcoc/backend/.venv/Scripts/python.exe\":*)"
+      "Bash(\"D:/Repositorio/jonatha1992/gestorcoc/backend/.venv/Scripts/python.exe\":*)",
+      "mcp__filesystem__list_directory",
+      "Bash(source .venv/Scripts/activate)",
+      "mcp__puppeteer__puppeteer_navigate",
+      "mcp__puppeteer__puppeteer_screenshot",
+      "mcp__puppeteer__puppeteer_evaluate",
+      "Bash(node -e \"const d=require\\(''./node_modules/leaflet/package.json''\\); console.log\\(''leaflet version:'', d.version\\)\")"
     ]
   }
 }

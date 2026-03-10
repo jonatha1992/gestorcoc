@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import * as L from 'leaflet';
 import { ChartComponent } from 'ng-apexcharts';
 
 import { UiIconComponent, UiIconName } from '../../components/ui-icon.component';
@@ -415,7 +416,7 @@ const MODULE_CONFIG: Record<DashboardModule, DashboardModuleUiConfig> = {
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly dashboardService = inject(DashboardService);
   private readonly dateTimeFormatter = new Intl.DateTimeFormat('es-AR', {
     dateStyle: 'short',
@@ -425,6 +426,10 @@ export class HomeComponent implements OnInit {
     day: '2-digit',
     month: '2-digit',
   });
+
+  @ViewChild('leafletMap') leafletMapRef!: ElementRef<HTMLDivElement>;
+  private leafletMap: L.Map | null = null;
+  private markerLayer: L.LayerGroup | null = null;
 
   selectedModule = signal<DashboardModule>('novedades');
   loading = signal(false);
@@ -557,6 +562,76 @@ export class HomeComponent implements OnInit {
 
   ngOnInit(): void {
     this.refresh();
+  }
+
+  ngAfterViewInit(): void {
+    // Map init is deferred until loadMap resolves (DOM not ready yet at this point)
+  }
+
+  ngOnDestroy(): void {
+    this.leafletMap?.remove();
+    this.leafletMap = null;
+  }
+
+  private initLeafletMap(): void {
+    if (!this.leafletMapRef?.nativeElement) return;
+    if (this.leafletMap) return; // already initialized
+
+    this.leafletMap = L.map(this.leafletMapRef.nativeElement, {
+      center: [-34.62, -58.52],
+      zoom: 10,
+      zoomControl: true,
+      attributionControl: false,
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 19,
+    }).addTo(this.leafletMap);
+
+    this.markerLayer = L.layerGroup().addTo(this.leafletMap);
+
+    const points = this.mapPoints();
+    if (points.length) {
+      this.updateLeafletMarkers(points);
+    }
+  }
+
+  private updateLeafletMarkers(points: DashboardMapPoint[]): void {
+    if (!this.leafletMap || !this.markerLayer) return;
+    this.markerLayer.clearLayers();
+    if (!points.length) return;
+
+    const selected = this.selectedPoint();
+
+    const latlngs: L.LatLngTuple[] = points.map((p) => [p.lat, p.lon]);
+    L.polyline(latlngs, { color: '#38bdf8', weight: 2, opacity: 0.6, dashArray: '6 4' }).addTo(
+      this.markerLayer,
+    );
+
+    points.forEach((point) => {
+      const isSelected = selected?.unit_code === point.unit_code;
+      const marker = L.circleMarker([point.lat, point.lon], {
+        radius: isSelected ? 13 : 9,
+        fillColor: isSelected ? '#f59e0b' : '#38bdf8',
+        color: '#ffffff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.92,
+      });
+      marker.bindTooltip(`<strong>${point.unit_name}</strong><br>${point.unit_code}`, {
+        permanent: false,
+        direction: 'top',
+      });
+      marker.on('click', () => {
+        this.selectPoint(point);
+        this.updateLeafletMarkers(this.mapPoints());
+      });
+      this.markerLayer!.addLayer(marker);
+    });
+
+    const bounds = L.latLngBounds(latlngs);
+    this.leafletMap.fitBounds(bounds, { padding: [50, 50] });
   }
 
   onModuleChange(value: string) {
@@ -738,6 +813,13 @@ export class HomeComponent implements OnInit {
           ? nextPoints.find((point) => point.unit_code === current.unit_code) ?? nextPoints[0]
           : nextPoints[0];
         this.selectedPoint.set(nextSelection);
+        setTimeout(() => {
+          if (!this.leafletMap) {
+            this.initLeafletMap();
+          } else {
+            this.updateLeafletMarkers(nextPoints);
+          }
+        }, 50);
       },
       error: () => {
         this.mapPoints.set([]);

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { map, Observable, tap } from 'rxjs';
 import { ApiService } from './api.service';
 import { CacheService, TTL } from './cache.service';
 
@@ -9,6 +9,23 @@ export interface Unit {
     code: string;
     airport: string | null;
     parent: number | null;
+}
+
+export interface SystemAsset {
+    id: number;
+    name: string;
+    system_type: string;
+    is_active: boolean;
+    unit?: Unit | null;
+    unit_id?: number | null;
+    unit_code?: string;
+    report_authenticity_mode_default?: 'vms_propio' | 'hash_preventivo' | 'sin_autenticacion' | 'otro' | '';
+    report_authenticity_detail_default?: string;
+    report_native_hash_algorithms_default?: ('sha1' | 'sha3' | 'sha256' | 'sha512' | 'otro')[];
+    report_native_hash_algorithm_other_default?: string;
+    report_hash_program_default?: string;
+    servers?: any[];
+    camera_count?: number;
 }
 
 export interface SystemFilters {
@@ -59,11 +76,16 @@ export class AssetService {
     getUnits(): Observable<Unit[]> {
         return this.cache.withCache<Unit[]>(
             KEYS.units, TTL.LONG,
-            this.api.get<Unit[]>('api/units/')
+            this.api.get<any>('api/units/').pipe(
+                map((response) => {
+                    const results = response?.results ?? response;
+                    return Array.isArray(results) ? results : [];
+                })
+            )
         );
     }
 
-    getSystems(): Observable<any[]>;
+    getSystems(): Observable<SystemAsset[]>;
     getSystems(filters: SystemFilters): Observable<any>;
     getSystems(filters: SystemFilters = {}): Observable<any> {
         if (this.hasActiveFilters(filters)) {
@@ -71,7 +93,7 @@ export class AssetService {
         }
         return this.cache.withCache<any[]>(
             KEYS.systems, TTL.MEDIUM,
-            this.api.get<any[]>('api/systems/')
+            this.api.get<SystemAsset[]>('api/systems/')
         );
     }
 

@@ -191,7 +191,7 @@ class VideoAnalysisReportApiTests(TestCase):
             "sectores_analizados": "Hall de arribos, cinta 3, migraciones",
             "franja_horaria_analizada": "14:05 a 15:42",
             "tiempo_total_analisis": "1 hora 37 minutos",
-            "sintesis_conclusion": "No se observa manipulacion posterior del bulto",
+            "sintesis": "No se observa manipulacion posterior del bulto",
             "hash_algorithms": ["sha256", "sha512"],
             "hash_program": "HashMyFiles",
             "medida_seguridad_interna": "Auditoria interna del COC",
@@ -286,6 +286,49 @@ class VideoAnalysisReportApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('errors', response.data)
         self.assertIn('hash_algorithms', str(response.data))
+
+    @patch('records.views.IntegrityService.generate_video_analysis_docx')
+    def test_maps_legacy_sintesis_fields_into_unified_sintesis(self, service_mock):
+        service_mock.return_value = (BytesIO(b'docx-data'), 'informe.docx')
+        report_data = {
+            **self.valid_report_data,
+            "sintesis": "",
+            "sintesis_conclusion": "Sintesis legacy para conclusion",
+        }
+
+        response = self.client.post(self.url, {"report_data": report_data, "frames": []}, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        call_payload = service_mock.call_args.args[0]
+        self.assertEqual(
+            call_payload.get("report_data", {}).get("sintesis"),
+            "Sintesis legacy para conclusion"
+        )
+
+    def test_requires_hash_algorithm_other_when_other_is_selected(self):
+        report_data = {
+            **self.valid_report_data,
+            "hash_algorithms": ["otro"],
+            "hash_algorithm_other": "",
+        }
+
+        response = self.client.post(self.url, {"report_data": report_data, "frames": []}, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('hash_algorithm_other', str(response.data))
+
+    def test_requires_native_hash_other_when_other_native_algorithm_is_selected(self):
+        report_data = {
+            **self.valid_report_data,
+            "vms_authenticity_mode": "vms_propio",
+            "vms_native_hash_algorithms": ["otro"],
+            "vms_native_hash_algorithm_other": "",
+        }
+
+        response = self.client.post(self.url, {"report_data": report_data, "frames": []}, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('vms_native_hash_algorithm_other', str(response.data))
 
     def test_requires_vms_authenticity_detail_when_mode_is_otro(self):
         report_data = {
@@ -505,6 +548,7 @@ class IntegrityServiceVideoReportTemplateTests(TestCase):
         payload = {
             "report_data": {
                 "report_date": "2026-03-05",
+                "numero_informe": "0010CREV/2026",
                 "fiscalia": "UFI 1 DESCENTRALIZADA",
                 "fiscal": "Dra. Maria Bello",
                 "prevencion_sumaria": "003BAR/2026",
@@ -512,6 +556,7 @@ class IntegrityServiceVideoReportTemplateTests(TestCase):
                 "denunciante": "AMBAR JUSTBICHER",
                 "aeropuerto": "Terminal B",
                 "fecha_hecho": "05/03/2026",
+                "sintesis": "No se advierte nueva manipulacion del equipaje denunciado",
                 "hash_program": "HashMyFiles",
                 "hash_algorithms": ["sha256", "sha512"],
                 "vms_authenticity_mode": "hash_preventivo",
@@ -523,7 +568,7 @@ class IntegrityServiceVideoReportTemplateTests(TestCase):
         }
 
         out, filename = IntegrityService.generate_video_analysis_docx(payload)
-        self.assertTrue(filename.endswith(".docx"))
+        self.assertEqual(filename, "INFORME CORTO 0010CREV-26 PS 003BAR-26.docx")
 
         from docx import Document
 
