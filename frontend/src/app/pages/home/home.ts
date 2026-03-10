@@ -8,7 +8,6 @@ import { ChartComponent } from 'ng-apexcharts';
 import { UiIconComponent, UiIconName } from '../../components/ui-icon.component';
 import {
   DashboardCard,
-  DashboardMapPoint,
   DashboardModule,
   DashboardModuleResponse,
   DashboardSeriesPoint,
@@ -38,7 +37,22 @@ interface DashboardCardMeta {
   tone: ToneKey;
 }
 
-interface DashboardCardView extends DashboardCard, DashboardCardMeta {}
+interface DashboardCardView extends DashboardCard, DashboardCardMeta { }
+
+interface DashboardMapPoint {
+  unit_code: string;
+  unit_name: string;
+  airport: string | null;
+  lat: number;
+  lon: number;
+  novedades_count: number;
+  hechos_count: number;
+  records_count: number;
+  personnel_count: number;
+  cameras_online: number;
+  cameras_offline: number;
+  last_event_at: string | null;
+}
 
 interface DashboardSeriesView extends DashboardSeriesPoint {
   key: string;
@@ -73,38 +87,33 @@ interface DashboardModuleUiConfig {
 }
 
 const FALLBACK_TONES: ToneKey[] = ['sky', 'amber', 'emerald', 'rose', 'cyan', 'slate'];
+const TONE_HEX: Record<ToneKey, string> = {
+  sky: '#0ea5e9',
+  amber: '#f59e0b',
+  emerald: '#10b981',
+  rose: '#f43f5e',
+  cyan: '#06b6d4',
+  slate: '#475569',
+};
+
+const _now = new Date();
+const _yearStart = `${_now.getFullYear()}-01-01`;
+const _today = _now.toISOString().split('T')[0];
 
 const FILTER_DEFAULTS: Record<DashboardModule, Record<string, string>> = {
   novedades: {
-    search: '',
-    status: '',
-    severity: '',
-    incident_type: '',
-    created_at__gte: '',
-    created_at__lte: '',
+    created_at__gte: _yearStart,
+    created_at__lte: _today,
   },
   hechos: {
-    search: '',
-    category: '',
-    is_solved: '',
-    timestamp__gte: '',
-    timestamp__lte: '',
+    timestamp__gte: _yearStart,
+    timestamp__lte: _today,
   },
   records: {
-    search: '',
-    delivery_status: '',
-    is_integrity_verified: '',
-    has_backup: '',
-    entry_date__gte: '',
-    entry_date__lte: '',
+    entry_date__gte: _yearStart,
+    entry_date__lte: _today,
   },
-  personnel: {
-    search: '',
-    role: '',
-    is_active: '',
-    unit__code: '',
-    guard_group: '',
-  },
+  personnel: {},
 };
 
 const cloneFilters = (module: DashboardModule): Record<string, string> => ({
@@ -122,33 +131,6 @@ const MODULE_CONFIG: Record<DashboardModule, DashboardModuleUiConfig> = {
     primaryTitle: 'Por estado',
     secondaryTitle: 'Por severidad',
     filters: [
-      { key: 'search', label: 'Buscar', type: 'text', icon: 'search', placeholder: 'Incidente, camara o reportante' },
-      {
-        key: 'status',
-        label: 'Estado',
-        type: 'select',
-        icon: 'activity',
-        options: [
-          { value: '', label: 'Todos' },
-          { value: 'OPEN', label: 'Abierta' },
-          { value: 'IN_PROGRESS', label: 'En progreso' },
-          { value: 'CLOSED', label: 'Cerrada' },
-        ],
-      },
-      {
-        key: 'severity',
-        label: 'Severidad',
-        type: 'select',
-        icon: 'warning',
-        options: [
-          { value: '', label: 'Todas' },
-          { value: 'LOW', label: 'Baja' },
-          { value: 'MEDIUM', label: 'Media' },
-          { value: 'HIGH', label: 'Alta' },
-          { value: 'CRITICAL', label: 'Critica' },
-        ],
-      },
-      { key: 'incident_type', label: 'Tipo', type: 'text', icon: 'clipboard', placeholder: 'Conectividad, evento, danio...' },
       { key: 'created_at__gte', label: 'Desde', type: 'date', icon: 'calendar' },
       { key: 'created_at__lte', label: 'Hasta', type: 'date', icon: 'calendar' },
     ],
@@ -196,31 +178,6 @@ const MODULE_CONFIG: Record<DashboardModule, DashboardModuleUiConfig> = {
     primaryTitle: 'Por categoria',
     secondaryTitle: 'Resolucion',
     filters: [
-      { key: 'search', label: 'Buscar', type: 'text', icon: 'search', placeholder: 'Descripcion, sector o referencia' },
-      {
-        key: 'category',
-        label: 'Categoria',
-        type: 'select',
-        icon: 'layers',
-        options: [
-          { value: '', label: 'Todas' },
-          { value: 'POLICIAL', label: 'Policial' },
-          { value: 'OPERATIVO', label: 'Operativo' },
-          { value: 'INFORMATIVO', label: 'Informativo' },
-          { value: 'RELEVAMIENTO', label: 'Relevamiento' },
-        ],
-      },
-      {
-        key: 'is_solved',
-        label: 'Resolucion',
-        type: 'select',
-        icon: 'check-circle',
-        options: [
-          { value: '', label: 'Todas' },
-          { value: 'true', label: 'Resuelto' },
-          { value: 'false', label: 'Pendiente' },
-        ],
-      },
       { key: 'timestamp__gte', label: 'Desde', type: 'date', icon: 'calendar' },
       { key: 'timestamp__lte', label: 'Hasta', type: 'date', icon: 'calendar' },
     ],
@@ -265,43 +222,6 @@ const MODULE_CONFIG: Record<DashboardModule, DashboardModuleUiConfig> = {
     primaryTitle: 'Estado de entrega',
     secondaryTitle: 'Verificacion',
     filters: [
-      { key: 'search', label: 'Buscar', type: 'text', icon: 'search', placeholder: 'Causa, solicitud o camara' },
-      {
-        key: 'delivery_status',
-        label: 'Entrega',
-        type: 'select',
-        icon: 'archive',
-        options: [
-          { value: '', label: 'Todos' },
-          { value: 'PENDIENTE', label: 'Pendiente' },
-          { value: 'ENTREGADO', label: 'Entregado' },
-          { value: 'DERIVADO', label: 'Derivado' },
-          { value: 'FINALIZADO', label: 'Finalizado' },
-          { value: 'ANULADO', label: 'Anulado' },
-        ],
-      },
-      {
-        key: 'is_integrity_verified',
-        label: 'Integridad',
-        type: 'select',
-        icon: 'shield',
-        options: [
-          { value: '', label: 'Todas' },
-          { value: 'true', label: 'Verificado' },
-          { value: 'false', label: 'Pendiente' },
-        ],
-      },
-      {
-        key: 'has_backup',
-        label: 'Backup',
-        type: 'select',
-        icon: 'archive',
-        options: [
-          { value: '', label: 'Todos' },
-          { value: 'true', label: 'Con backup' },
-          { value: 'false', label: 'Sin backup' },
-        ],
-      },
       { key: 'entry_date__gte', label: 'Desde', type: 'date', icon: 'calendar' },
       { key: 'entry_date__lte', label: 'Hasta', type: 'date', icon: 'calendar' },
     ],
@@ -348,35 +268,7 @@ const MODULE_CONFIG: Record<DashboardModule, DashboardModuleUiConfig> = {
     chartColor: '#334155',
     primaryTitle: 'Por rol',
     secondaryTitle: 'Actividad',
-    filters: [
-      { key: 'search', label: 'Buscar', type: 'text', icon: 'search', placeholder: 'Nombre, legajo o jerarquia' },
-      { key: 'unit__code', label: 'Unidad', type: 'text', icon: 'building', placeholder: 'Codigo de unidad' },
-      {
-        key: 'role',
-        label: 'Rol',
-        type: 'select',
-        icon: 'badge',
-        options: [
-          { value: '', label: 'Todos' },
-          { value: 'ADMIN', label: 'Administrador' },
-          { value: 'OP_EXTRACTION', label: 'Operador basico' },
-          { value: 'OP_CONTROL', label: 'Operador de camaras' },
-          { value: 'OP_VIEWER', label: 'Solo visualizacion' },
-        ],
-      },
-      {
-        key: 'is_active',
-        label: 'Estado',
-        type: 'select',
-        icon: 'activity',
-        options: [
-          { value: '', label: 'Todos' },
-          { value: 'true', label: 'Activo' },
-          { value: 'false', label: 'Inactivo' },
-        ],
-      },
-      { key: 'guard_group', label: 'Guardia', type: 'text', icon: 'briefcase', placeholder: 'Grupo o guardia' },
-    ],
+    filters: [],
     shortLabels: {
       ADMIN: 'Administrador',
       OP_EXTRACTION: 'Operador basico',
@@ -402,7 +294,7 @@ const MODULE_CONFIG: Record<DashboardModule, DashboardModuleUiConfig> = {
       inactive: 'rose',
     },
     cardMeta: {
-      total: { icon: 'users', helper: 'Personal dentro de la vista actual.', tone: 'sky' },
+      total: { icon: 'layers', helper: 'Personal dentro de la vista actual.', tone: 'sky' },
       active: { icon: 'check-circle', helper: 'Dotacion activa en servicio.', tone: 'emerald' },
       inactive: { icon: 'clock', helper: 'Personal sin actividad actual.', tone: 'rose' },
     },
@@ -450,6 +342,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   readonly activeModuleConfig = computed(() => MODULE_CONFIG[this.selectedModule()]);
   readonly filterFields = computed(() => this.activeModuleConfig().filters);
+  readonly hasVisibleFilters = computed(() => this.filterFields().length > 0);
   readonly moduleTotal = computed(() => this.moduleData()?.totals.records ?? 0);
   readonly pointCount = computed(() => this.mapPoints().length);
   readonly emptyState = computed(() => this.moduleData()?.empty_state ?? { is_empty: false, message: '' });
@@ -474,16 +367,39 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.decorateSeries(this.moduleData()?.series.distribution_secondary ?? [], 'secondary'),
   );
 
+  readonly primaryPieChart = computed(() =>
+    this.buildDistributionChart(this.primaryRows(), this.activeModuleConfig().primaryTitle),
+  );
+
+  readonly secondaryPieChart = computed(() =>
+    this.buildDistributionChart(this.secondaryRows(), this.activeModuleConfig().secondaryTitle),
+  );
+
+  readonly activeModuleStat = computed<PointDetailStat | null>(() => {
+    const point = this.selectedPoint();
+    if (!point) return null;
+    switch (this.selectedModule()) {
+      case 'novedades': return { label: 'Novedades', value: point.novedades_count, icon: 'alert', tone: 'amber' };
+      case 'hechos': return { label: 'Hechos', value: point.hechos_count, icon: 'clipboard', tone: 'sky' };
+      case 'records': return { label: 'Registros filmicos', value: point.records_count, icon: 'archive', tone: 'emerald' };
+      case 'personnel': return { label: 'Personal activo', value: point.personnel_count, icon: 'users', tone: 'slate' };
+      default: return { label: 'Camaras activas', value: point.cameras_online, icon: 'camera', tone: 'emerald' };
+    }
+  });
+
   readonly selectedPointStats = computed<PointDetailStat[]>(() => {
     const point = this.selectedPoint();
     if (!point) return [];
-    return [
+    const activeLabel = this.activeModuleStat()?.label;
+    const all: PointDetailStat[] = [
       { label: 'Novedades', value: point.novedades_count, icon: 'alert', tone: 'amber' },
       { label: 'Hechos', value: point.hechos_count, icon: 'clipboard', tone: 'sky' },
       { label: 'Registros', value: point.records_count, icon: 'archive', tone: 'emerald' },
+      { label: 'Personal', value: point.personnel_count, icon: 'users', tone: 'slate' },
       { label: 'Camaras activas', value: point.cameras_online, icon: 'camera', tone: 'emerald' },
       { label: 'Camaras inactivas', value: point.cameras_offline, icon: 'warning', tone: 'rose' },
     ];
+    return activeLabel ? all.filter((s) => s.label !== activeLabel) : all;
   });
 
   readonly trendChart = computed(() => {
@@ -494,32 +410,28 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     return {
       series: [{ name: config.label, data: values }],
       chart: {
-        type: 'area' as const,
-        height: 272,
+        type: 'bar' as const,
+        height: 312,
         toolbar: { show: false },
         zoom: { enabled: false },
         foreColor: '#64748b',
-        fontFamily: 'Inter, system-ui, sans-serif',
+        fontFamily: 'system-ui, sans-serif',
         animations: { enabled: true, speed: 350 },
       },
       colors: [config.chartColor],
-      stroke: { curve: 'smooth' as const, width: 3 },
-      fill: {
-        type: 'gradient',
-        gradient: {
-          shadeIntensity: 1,
-          opacityFrom: 0.38,
-          opacityTo: 0.04,
-          stops: [0, 85, 100],
+      stroke: { curve: 'smooth' as const, width: 0 },
+      plotOptions: {
+        bar: {
+          borderRadius: 6,
+          columnWidth: '52%',
         },
       },
-      dataLabels: { enabled: false },
-      markers: {
-        size: values.length ? 4 : 0,
-        strokeColors: '#ffffff',
-        strokeWidth: 2,
-        hover: { size: 6 },
+      fill: {
+        type: 'solid',
+        opacity: 0.95,
       },
+      dataLabels: { enabled: false },
+      markers: { size: 0 },
       grid: {
         borderColor: '#e2e8f0',
         strokeDashArray: 4,
@@ -597,6 +509,20 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  private makeAirportIcon(isSelected: boolean): L.DivIcon {
+    const bg = isSelected ? '#f59e0b' : '#ffffff';
+    const border = isSelected ? '#fbbf24' : '#38bdf8';
+    const textColor = isSelected ? '#ffffff' : '#0f172a';
+    const size = isSelected ? 36 : 30;
+    return L.divIcon({
+      className: '',
+      html: `<div style="width:${size}px;height:${size}px;background:${bg};border:2px solid ${border};border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 4px 14px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);font-size:${isSelected ? 16 : 13}px;line-height:1;color:${textColor};">✈</span></div>`,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size],
+      tooltipAnchor: [0, -size],
+    });
+  }
+
   private updateLeafletMarkers(points: DashboardMapPoint[]): void {
     if (!this.leafletMap || !this.markerLayer) return;
     this.markerLayer.clearLayers();
@@ -611,18 +537,13 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
     points.forEach((point) => {
       const isSelected = selected?.unit_code === point.unit_code;
-      const marker = L.circleMarker([point.lat, point.lon], {
-        radius: isSelected ? 13 : 9,
-        fillColor: isSelected ? '#f59e0b' : '#38bdf8',
-        color: '#ffffff',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.92,
+      const marker = L.marker([point.lat, point.lon], {
+        icon: this.makeAirportIcon(isSelected),
       });
-      marker.bindTooltip(`<strong>${point.unit_name}</strong><br>${point.unit_code}`, {
-        permanent: false,
-        direction: 'top',
-      });
+      marker.bindTooltip(
+        `<strong>${point.unit_name}</strong><br><span style="color:#94a3b8">${point.unit_code} · ${point.airport ?? 'Sin aeropuerto'}</span>`,
+        { direction: 'top', offset: [0, -4] },
+      );
       marker.on('click', () => {
         this.selectPoint(point);
         this.updateLeafletMarkers(this.mapPoints());
@@ -661,6 +582,17 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.selectedPoint.set(point);
   }
 
+  modulePillClasses(moduleValue: string): Record<string, boolean> {
+    const isActive = this.selectedModule() === moduleValue;
+    const tone = MODULE_CONFIG[moduleValue as DashboardModule].tone;
+    const tc = this.toneClasses(tone);
+    return {
+      'dashboard-module-pill-active': isActive,
+      'dashboard-module-pill-idle': !isActive,
+      [tc.badge]: isActive,
+    };
+  }
+
   moduleRoute() {
     const routeMap: Record<DashboardModule, string> = {
       novedades: '/novedades',
@@ -669,50 +601,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       personnel: '/personnel',
     };
     return routeMap[this.selectedModule()];
-  }
-
-  getFilterValue(key: string): string {
-    return this.filtersByModule[this.selectedModule()][key] ?? '';
-  }
-
-  setFilterValue(key: string, value: string) {
-    this.filtersByModule[this.selectedModule()][key] = value;
-    this.applyFilters();
-  }
-
-  formatPercent(value: number): string {
-    if (value <= 0) return '0%';
-    if (value < 1) return '<1%';
-    return `${Math.round(value)}%`;
-  }
-
-  formatLastUpdated(): string {
-    return this.formatDateTime(this.lastUpdated());
-  }
-
-  formatPointEvent(value: string | null): string {
-    if (!value) return 'Sin actividad reciente';
-    return this.formatDateTime(value);
-  }
-
-  mapLeft(point: DashboardMapPoint): number {
-    const points = this.mapPoints();
-    if (points.length <= 1) return 50;
-    const minLon = Math.min(...points.map((item) => item.lon));
-    const maxLon = Math.max(...points.map((item) => item.lon));
-    if (maxLon === minLon) return 50;
-    const normalized = (point.lon - minLon) / (maxLon - minLon);
-    return 12 + normalized * 76;
-  }
-
-  mapTop(point: DashboardMapPoint): number {
-    const points = this.mapPoints();
-    if (points.length <= 1) return 50;
-    const minLat = Math.min(...points.map((item) => item.lat));
-    const maxLat = Math.max(...points.map((item) => item.lat));
-    if (maxLat === minLat) return 50;
-    const normalized = 1 - (point.lat - minLat) / (maxLat - minLat);
-    return 14 + normalized * 72;
   }
 
   toneClasses(tone: ToneKey) {
@@ -765,11 +653,161 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         bar: 'bg-slate-600',
         marker: 'bg-slate-700',
       },
-    }[tone];
+    }[tone] || {
+      badge: '', chip: '', icon: '', rail: '', bar: '', marker: ''
+    };
+  }
+
+  getFilterValue(key: string): string {
+    return this.filtersByModule[this.selectedModule()][key] ?? '';
+  }
+
+  setFilterValue(key: string, value: string) {
+    this.filtersByModule[this.selectedModule()][key] = value;
+    this.applyFilters();
+  }
+
+  formatPercent(value: number): string {
+    if (value <= 0) return '0%';
+    if (value < 1) return '<1%';
+    return `${Math.round(value)}%`;
+  }
+
+  formatLastUpdated(): string {
+    return this.formatDateTime(this.lastUpdated());
+  }
+
+  formatPointEvent(value: string | null): string {
+    if (!value) return 'Sin actividad reciente';
+    return this.formatDateTime(value);
+  }
+
+  currentDateRangeLabel(): string {
+    const dateFields = this.filterFields().filter((field) => field.type === 'date');
+    if (!dateFields.length) return 'Periodo actual';
+
+    const from = dateFields[0] ? this.getFilterValue(dateFields[0].key) : '';
+    const to = dateFields[1] ? this.getFilterValue(dateFields[1].key) : '';
+
+    if (from && to) {
+      return `${this.formatFilterDate(from)} al ${this.formatFilterDate(to)}`;
+    }
+    if (from) {
+      return `Desde ${this.formatFilterDate(from)}`;
+    }
+    if (to) {
+      return `Hasta ${this.formatFilterDate(to)}`;
+    }
+    return 'Periodo actual';
+  }
+
+  private decorateSeries(points: DashboardSeriesPoint[], section: 'primary' | 'secondary'): DashboardSeriesView[] {
+    const config = this.activeModuleConfig();
+    const total = points.reduce((acc, item) => acc + item.value, 0);
+    return points.map((point, index) => {
+      const key = point.key ?? point.label;
+      return {
+        ...point,
+        key,
+        displayLabel: config.shortLabels[key] ?? point.label,
+        icon: config.seriesIcons[key] ?? (section === 'primary' ? config.icon : 'spark'),
+        tone: config.seriesTones[key] ?? FALLBACK_TONES[index % FALLBACK_TONES.length],
+        percent: total ? (point.value / total) * 100 : 0,
+        trackKey: `${section}-${key}-${index}`,
+      };
+    });
+  }
+
+  private buildDistributionChart(rows: DashboardSeriesView[], title: string) {
+    return {
+      series: rows.map((row) => row.value),
+      chart: {
+        type: 'donut' as const,
+        height: 250,
+        toolbar: { show: false },
+        fontFamily: 'system-ui, sans-serif',
+      },
+      labels: rows.map((row) => row.displayLabel),
+      colors: rows.map((row) => TONE_HEX[row.tone]),
+      legend: { show: false },
+      stroke: {
+        width: 2,
+        colors: ['#ffffff'],
+      },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '62%',
+            labels: {
+              show: true,
+              name: {
+                show: true,
+                offsetY: 18,
+                color: '#64748b',
+                fontSize: '11px',
+              },
+              value: {
+                show: true,
+                offsetY: -10,
+                color: '#0f172a',
+                fontSize: '24px',
+                fontWeight: '700',
+                formatter: (value: string) => `${value}`,
+              },
+              total: {
+                show: true,
+                label: title,
+                color: '#94a3b8',
+                formatter: () => `${rows.reduce((acc, row) => acc + row.value, 0)}`,
+              },
+            },
+          },
+        },
+      },
+      dataLabels: { enabled: false },
+      tooltip: {
+        theme: 'light',
+        y: {
+          formatter: (value: number) => `${value} registros`,
+        },
+      },
+      noData: {
+        text: 'Sin datos para el periodo',
+        style: {
+          color: '#94a3b8',
+          fontSize: '12px',
+        },
+      },
+    };
+  }
+
+  private formatTrendLabel(value: string): string {
+    if (!value) return '';
+    const date = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return value;
+    return this.shortDateFormatter.format(date);
+  }
+
+  private formatFilterDate(value: string): string {
+    const date = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return value;
+    return this.shortDateFormatter.format(date);
+  }
+
+  private formatDateTime(value: string | Date | null): string {
+    if (!value) return 'Sin datos';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Sin datos';
+    return this.dateTimeFormatter.format(date);
   }
 
   private currentFilters(): Record<string, string> {
-    return { ...this.filtersByModule[this.selectedModule()] };
+    const base = { ...this.filtersByModule[this.selectedModule()] };
+    const point = this.selectedPoint();
+    if (point) {
+      base['unit_code'] = point.unit_code;
+    }
+    return base;
   }
 
   private loadModule(filters: Record<string, string>) {
@@ -800,7 +838,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private loadMap(filters: Record<string, string>) {
-    this.dashboardService.getMap('ba', filters).subscribe({
+    // Para el mapa NO mandamos el filtro de unidad (queremos ver todas las unidades)
+    const mapFilters = { ...filters };
+    delete mapFilters['unit_code'];
+
+    this.dashboardService.getMap('ba', mapFilters).subscribe({
       next: ({ points }) => {
         const current = this.selectedPoint();
         const nextPoints = points ?? [];
@@ -818,6 +860,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
             this.initLeafletMap();
           } else {
             this.updateLeafletMarkers(nextPoints);
+            this.leafletMap.invalidateSize();
           }
         }, 50);
       },
@@ -826,36 +869,5 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         this.selectedPoint.set(null);
       },
     });
-  }
-
-  private decorateSeries(points: DashboardSeriesPoint[], section: 'primary' | 'secondary'): DashboardSeriesView[] {
-    const config = this.activeModuleConfig();
-    const total = points.reduce((acc, item) => acc + item.value, 0);
-    return points.map((point, index) => {
-      const key = point.key ?? point.label;
-      return {
-        ...point,
-        key,
-        displayLabel: config.shortLabels[key] ?? point.label,
-        icon: config.seriesIcons[key] ?? (section === 'primary' ? config.icon : 'spark'),
-        tone: config.seriesTones[key] ?? FALLBACK_TONES[index % FALLBACK_TONES.length],
-        percent: total ? (point.value / total) * 100 : 0,
-        trackKey: `${section}-${key}-${index}`,
-      };
-    });
-  }
-
-  private formatTrendLabel(value: string): string {
-    if (!value) return '';
-    const date = new Date(`${value}T00:00:00`);
-    if (Number.isNaN(date.getTime())) return value;
-    return this.shortDateFormatter.format(date);
-  }
-
-  private formatDateTime(value: string | Date | null): string {
-    if (!value) return 'Sin datos';
-    const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Sin datos';
-    return this.dateTimeFormatter.format(date);
   }
 }

@@ -29,5 +29,13 @@
             "connectString": "postgresql://postgres:WtrsPcmhpYVeieplYSJrPnKGiKAnuawI@switchyard.proxy.rlwy.net:17507/railway",
             "group": "PSA"
         }
-    ]
+    ],
+    "python.analysis.extraPaths": [
+        "./backend"
+    ],
+    "python.autoComplete.extraPaths": [
+        "./backend"
+    ],
+    "python.defaultInterpreterPath": "backend\\.venv\\Scripts\\python.exe",
+    "python.terminal.activateEnvInSelectedTerminal": true
 }

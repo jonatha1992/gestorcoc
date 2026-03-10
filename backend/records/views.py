@@ -171,19 +171,35 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
         Body: JSON con los campos del informe.
         """
         film_record = self.get_object()
+        payload = request.data if isinstance(request.data, dict) else {}
+        form_data = payload.get('form_data', payload)
+        status_value = payload.get('status') or 'BORRADOR'
+        numero_informe = payload.get('numero_informe') or form_data.get('numero_informe', '')
+        report_date = payload.get('report_date') or form_data.get('report_date')
+
         report, created = VideoAnalysisReport.objects.get_or_create(
             film_record=film_record,
-            defaults={'form_data': request.data}
+            defaults={
+                'numero_informe': numero_informe or '',
+                'report_date': report_date or None,
+                'status': status_value,
+                'form_data': form_data,
+            }
         )
         if not created:
-            # Update existing form data
-            report.form_data = request.data
+            if report.status == 'FINALIZADO':
+                return Response(
+                    {'detail': 'Un informe finalizado no puede ser modificado.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            report.numero_informe = numero_informe or report.numero_informe
+            report.report_date = report_date or report.report_date
+            report.status = status_value
+            report.form_data = form_data
             report.save()
-            
-        return Response({
-            'message': 'Borrador guardado exitosamente',
-            'report_id': report.id
-        }, status=status.HTTP_200_OK)
+
+        serializer = VideoAnalysisReportSerializer(report)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class CatalogViewSet(viewsets.ModelViewSet):
     queryset = Catalog.objects.all()
@@ -197,16 +213,22 @@ class VideoAnalysisReportViewSet(viewsets.ModelViewSet):
     filterset_fields = {'film_record': ['exact']}
 
     def update(self, request, *args, **kwargs):
-        return Response(
-            {'detail': 'Un informe ya generado no puede ser modificado.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+        instance = self.get_object()
+        if instance.status == 'FINALIZADO':
+            return Response(
+                {'detail': 'Un informe finalizado no puede ser modificado.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
-        return Response(
-            {'detail': 'Un informe ya generado no puede ser modificado.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+        instance = self.get_object()
+        if instance.status == 'FINALIZADO':
+            return Response(
+                {'detail': 'Un informe finalizado no puede ser modificado.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().partial_update(request, *args, **kwargs)
 
 class IntegrityReportView(views.APIView):
     parser_classes = (MultiPartParser, FormParser)
@@ -307,18 +329,18 @@ class VideoAnalysisReportView(views.APIView):
                 filename=filename,
                 content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             )
+        except ValidationError as exc:
+            return Response({"errors": exc.detail}, status=status.HTTP_400_BAD_REQUEST)
+        except RequestDataTooBig:
+            return Response(
+                {"error": "El tamaño total del informe excede el máximo permitido."},
+                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
+            )
+        except FileNotFoundError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except RuntimeError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as exc:
-            if isinstance(exc, RequestDataTooBig):
-                return Response(
-                    {"error": "El tamaño total del informe excede el máximo permitido."},
-                    status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
-                )
-            if isinstance(exc, ValidationError):
-                return Response({"errors": exc.detail}, status=status.HTTP_400_BAD_REQUEST)
-            if isinstance(exc, FileNotFoundError):
-                return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            if isinstance(exc, RuntimeError):
-                return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return Response({"error": f"Error al generar informe: {str(exc)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -346,14 +368,14 @@ class VideoAnalysisImproveTextView(views.APIView):
                 preferred_provider=serializer.validated_data.get('preferred_provider', ''),
             )
             return Response(improved_text, status=status.HTTP_200_OK)
+        except ValidationError as exc:
+            return Response({"errors": exc.detail}, status=status.HTTP_400_BAD_REQUEST)
+        except RuntimeError as exc:
+            message = str(exc)
+            if message.startswith("No se configuro AI_TEXT_"):
+                return Response({"error": message}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response({"error": message}, status=status.HTTP_502_BAD_GATEWAY)
         except Exception as exc:
-            if isinstance(exc, ValidationError):
-                return Response({"errors": exc.detail}, status=status.HTTP_400_BAD_REQUEST)
-            if isinstance(exc, RuntimeError):
-                message = str(exc)
-                if message.startswith("No se configuro AI_TEXT_"):
-                    return Response({"error": message}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-                return Response({"error": message}, status=status.HTTP_502_BAD_GATEWAY)
             return Response({"error": f"Error al mejorar texto con IA: {str(exc)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -421,14 +443,14 @@ class DashboardStatsView(views.APIView):
         # recibe siempre un string (evita TypeError al llamar .startsWith sobre null)
         return Response({
             'monthly': {
-                'records': [{'month': str(r['month'])[:10], 'count': r['count']} for r in monthly_records if r['month']],
-                'hechos': [{'month': str(r['month'])[:10], 'count': r['count']} for r in monthly_hechos if r['month']],
-                'novedades': [{'month': str(r['month'])[:10], 'count': r['count']} for r in monthly_novedades if r['month']],
+                'records': [{'month': r['month'].strftime('%Y-%m-%d') if r['month'] else None, 'count': r['count']} for r in monthly_records],
+                'hechos': [{'month': r['month'].strftime('%Y-%m-%d') if r['month'] else None, 'count': r['count']} for r in monthly_hechos],
+                'novedades': [{'month': r['month'].strftime('%Y-%m-%d') if r['month'] else None, 'count': r['count']} for r in monthly_novedades],
             },
             'daily': {
-                'records': [{'day': str(r['day'])[:10], 'count': r['count']} for r in daily_records if r['day']],
-                'hechos': [{'day': str(r['day'])[:10], 'count': r['count']} for r in daily_hechos if r['day']],
-                'novedades': [{'day': str(r['day'])[:10], 'count': r['count']} for r in daily_novedades if r['day']],
+                'records': [{'day': r['day'].strftime('%Y-%m-%d') if r['day'] else None, 'count': r['count']} for r in daily_records],
+                'hechos': [{'day': r['day'].strftime('%Y-%m-%d') if r['day'] else None, 'count': r['count']} for r in daily_hechos],
+                'novedades': [{'day': r['day'].strftime('%Y-%m-%d') if r['day'] else None, 'count': r['count']} for r in daily_novedades],
             }
         })
 
@@ -461,15 +483,17 @@ class DashboardQueryMixin:
         return base
 
     def _trend(self, rows, field_name, days=30):
-        cutoff = timezone.now() - timedelta(days=days)
+        scoped_rows = rows
+        if days is not None:
+            cutoff = timezone.now() - timedelta(days=days)
+            scoped_rows = scoped_rows.filter(**{f"{field_name}__gte": cutoff})
         data = (
-            rows.filter(**{f"{field_name}__gte": cutoff})
-            .annotate(day=TruncDate(field_name))
+            scoped_rows.annotate(day=TruncDate(field_name))
             .values("day")
             .annotate(value=Count("id"))
             .order_by("day")
         )
-        return [{"label": str(row["day"])[:10], "value": row["value"]} for row in data if row["day"]]
+        return [{"label": row["day"].strftime('%Y-%m-%d') if row["day"] else "SIN_FECHA", "value": row["value"]} for row in data]
 
     def _distribution(self, rows, field_name, fallback="SIN_DATO"):
         data = rows.values(field_name).annotate(value=Count("id")).order_by("-value")
@@ -511,10 +535,21 @@ class DashboardQueryMixin:
             qs = qs.filter(created_at__gte=gte)
         if lte:
             qs = qs.filter(created_at__lte=lte)
+            
+        # Filtro por unidad (desde el mapa)
+        unit_code = p.get("unit_code")
+        if unit_code:
+            qs = qs.filter(
+                Q(camera__server__system__unit__code=unit_code) |
+                Q(server__system__unit__code=unit_code) |
+                Q(system__unit__code=unit_code)
+            )
+            
         return qs
 
     def _apply_hechos_filters(self, request):
         from hechos.models import Hecho
+        from django.db.models import Q
 
         qs = Hecho.objects.select_related("camera__server__system__unit")
         p = request.query_params
@@ -540,9 +575,18 @@ class DashboardQueryMixin:
             qs = qs.filter(timestamp__gte=gte)
         if lte:
             qs = qs.filter(timestamp__lte=lte)
+            
+        # Filtro por unidad (desde el mapa)
+        unit_code = p.get("unit_code")
+        if unit_code:
+            qs = qs.filter(camera__server__system__unit__code=unit_code)
+            
         return qs
 
     def _apply_records_filters(self, request):
+        from records.models import FilmRecord
+        from django.db.models import Q
+
         qs = FilmRecord.objects.select_related("received_by", "verified_by_crev")
         p = request.query_params
         search = (p.get("search") or "").strip()
@@ -570,6 +614,12 @@ class DashboardQueryMixin:
             qs = qs.filter(entry_date__gte=date_from)
         if date_to:
             qs = qs.filter(entry_date__lte=date_to)
+            
+        # Filtro por unidad (desde el mapa)
+        unit_code = p.get("unit_code")
+        if unit_code:
+            qs = qs.filter(generator_unit__code=unit_code)
+            
         return qs
 
     def _apply_personnel_filters(self, request):
@@ -592,7 +642,7 @@ class DashboardQueryMixin:
             value = p.get(field)
             if value not in (None, ""):
                 qs = qs.filter(**{field: value})
-        unit_code = p.get("unit__code") or p.get("unit")
+        unit_code = p.get("unit_code") or p.get("unit__code") or p.get("unit")
         if unit_code not in (None, ""):
             qs = qs.filter(unit__code=unit_code)
         active = self._to_bool(p.get("is_active"))
@@ -615,7 +665,7 @@ class DashboardNovedadesView(DashboardQueryMixin, views.APIView):
             "module": "novedades",
             "cards": cards,
             "series": {
-                "trend": self._trend(rows, "created_at"),
+                "trend": self._trend(rows, "created_at", days=None),
                 "distribution_primary": self._distribution(rows, "status"),
                 "distribution_secondary": self._distribution(rows, "severity"),
             },
@@ -638,7 +688,7 @@ class DashboardHechosView(DashboardQueryMixin, views.APIView):
             "module": "hechos",
             "cards": cards,
             "series": {
-                "trend": self._trend(rows, "timestamp"),
+                "trend": self._trend(rows, "timestamp", days=None),
                 "distribution_primary": self._distribution(rows, "category"),
                 "distribution_secondary": [
                     {"label": "Resueltos", "value": rows.filter(is_solved=True).count()},
@@ -664,7 +714,7 @@ class DashboardRecordsView(DashboardQueryMixin, views.APIView):
             "module": "records",
             "cards": cards,
             "series": {
-                "trend": self._trend(rows, "created_at"),
+                "trend": self._trend(rows, "entry_date", days=None),
                 "distribution_primary": self._distribution(rows, "delivery_status"),
                 "distribution_secondary": [
                     {"label": "Verificados", "value": rows.filter(is_integrity_verified=True).count()},
@@ -684,7 +734,6 @@ class DashboardPersonnelView(DashboardQueryMixin, views.APIView):
             {"id": "total", "label": "Total Personal", "value": total},
             {"id": "active", "label": "Activos", "value": rows.filter(is_active=True).count()},
             {"id": "inactive", "label": "Inactivos", "value": rows.filter(is_active=False).count()},
-
         ]
         return Response({
             "module": "personnel",
@@ -713,20 +762,29 @@ class DashboardMapView(DashboardQueryMixin, views.APIView):
         novedades_base = self._apply_novedades_filters(request)
         hechos_base = self._apply_hechos_filters(request)
         records_base = self._apply_records_filters(request)
+        
         points = []
         for unit in units:
             if unit.latitude is None or unit.longitude is None:
                 continue
+            
             novedades = novedades_base.filter(
                 Q(camera__server__system__unit=unit) | Q(server__system__unit=unit) | Q(system__unit=unit)
             )
             hechos = hechos_base.filter(camera__server__system__unit=unit)
             records = records_base.filter(generator_unit=unit)
+            personnel_count = unit.personnel.filter(is_active=True).count()
             cameras = Camera.objects.filter(server__system__unit=unit)
+            
             last_event = max(
-                [val for val in [novedades.aggregate(v=Max("created_at"))["v"], hechos.aggregate(v=Max("timestamp"))["v"], records.aggregate(v=Max("created_at"))["v"]] if val is not None],
+                [val for val in [
+                    novedades.aggregate(v=Max("created_at"))["v"], 
+                    hechos.aggregate(v=Max("timestamp"))["v"], 
+                    records.aggregate(v=Max("created_at"))["v"]
+                ] if val is not None],
                 default=None,
             )
+            
             points.append({
                 "unit_code": unit.code,
                 "unit_name": unit.name,
@@ -736,6 +794,7 @@ class DashboardMapView(DashboardQueryMixin, views.APIView):
                 "novedades_count": novedades.count(),
                 "hechos_count": hechos.count(),
                 "records_count": records.count(),
+                "personnel_count": personnel_count,
                 "cameras_online": cameras.filter(status="ONLINE").count(),
                 "cameras_offline": cameras.exclude(status="ONLINE").count(),
                 "last_event_at": last_event.isoformat() if last_event else None,

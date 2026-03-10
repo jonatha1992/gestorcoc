@@ -52,7 +52,7 @@ class Command(BaseCommand):
         self.seed = options["seed"]
         self.dry_run = options["dry_run"]
         self.created = {k: 0 for k in ["units", "systems", "servers", "cameras", "gear", "personnel", "film_records", "novedades", "hechos", "catalogs"]}
-        self.normalized = {k: 0 for k in ["records_entry_date", "records_request_type", "records_delivery_status", "records_backup_flag", "records_verified_by_crev", "novedades_shape", "hechos_category", "person_guard_group"]}
+        self.normalized = {k: 0 for k in ["records_entry_date", "records_request_type", "records_delivery_status", "records_backup_flag", "records_verified_by_crev", "records_generator_unit", "novedades_shape", "hechos_category", "person_guard_group"]}
         self.fake = Faker("es_AR")
         self.fake.seed_instance(self.seed)
         random.seed(self.seed)
@@ -542,6 +542,15 @@ class Command(BaseCommand):
                 self.normalized["hechos_category"] += 1
 
         self.normalized["person_guard_group"] += Person.objects.filter(guard_group="").update(guard_group=None)
+
+        # Backfill generator_unit for records where it's null — distribuye entre las unidades del mapa
+        map_units = list(Unit.objects.filter(map_enabled=True))
+        if map_units:
+            null_records = list(FilmRecord.objects.filter(generator_unit__isnull=True))
+            for i, record in enumerate(null_records):
+                record.generator_unit = map_units[i % len(map_units)]
+                record.save(update_fields=["generator_unit"])
+                self.normalized["records_generator_unit"] += 1
 
     def _distribution(self, qs, field):
         return list(qs.values(field).annotate(count=Count("id")).order_by("-count"))

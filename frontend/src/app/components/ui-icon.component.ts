@@ -25,6 +25,7 @@ export type UiIconName =
   | 'eye'
   | 'refresh'
   | 'filter-off'
+  | 'pie-chart'
   | 'route';
 
 @Component({
@@ -196,6 +197,12 @@ export type UiIconName =
         <svg [attr.class]="iconClass()" viewBox="0 0 24 24" fill="none" stroke="currentColor" [attr.stroke-width]="strokeWidth()" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M4 5h16l-6 7v5l-4 2v-7L4 5Z" />
           <path d="m3 3 18 18" />
+        </svg>
+      }
+      @case ('pie-chart') {
+        <svg [attr.class]="iconClass()" viewBox="0 0 24 24" fill="none" stroke="currentColor" [attr.stroke-width]="strokeWidth()" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12A9 9 0 1 1 12 3" />
+          <path d="M12 3v9h9" />
         </svg>
       }
       @case ('route') {

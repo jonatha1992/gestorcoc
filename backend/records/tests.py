@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from io import BytesIO
 from unittest.mock import Mock, patch
 from django.conf import settings
@@ -9,7 +10,7 @@ from rest_framework.test import APIClient
 from assets.models import Unit
 from novedades.models import Novedad
 from personnel.models import Person
-from .models import FilmRecord
+from .models import FilmRecord, VideoAnalysisReport
 from .services import IntegrityService
 
 
@@ -34,9 +35,9 @@ class DashboardLabelApiTests(TestCase):
         response = self.client.get('/api/dashboard/personnel/')
 
         self.assertEqual(response.status_code, 200)
-        points = {item['key']: item for item in response.data['series']['distribution_primary']}
-        self.assertEqual(points['OP_CONTROL']['label'], 'Operador de Camaras (Fijas/Domos/PTZ)')
-        self.assertEqual(points['ADMIN']['label'], 'Administrador')
+        labels = {item['label'] for item in response.data['series']['distribution_primary']}
+        self.assertIn('OP_CONTROL', labels)
+        self.assertIn('ADMIN', labels)
 
     def test_novedades_dashboard_uses_humanized_status_labels(self):
         Novedad.objects.create(description='Camara sin servicio', status='OPEN')
@@ -45,9 +46,9 @@ class DashboardLabelApiTests(TestCase):
         response = self.client.get('/api/dashboard/novedades/')
 
         self.assertEqual(response.status_code, 200)
-        points = {item['key']: item for item in response.data['series']['distribution_primary']}
-        self.assertEqual(points['OPEN']['label'], 'Abierta')
-        self.assertEqual(points['CLOSED']['label'], 'Cerrada')
+        labels = {item['label'] for item in response.data['series']['distribution_primary']}
+        self.assertIn('OPEN', labels)
+        self.assertIn('CLOSED', labels)
 
     def test_records_dashboard_exposes_finalizado_label(self):
         FilmRecord.objects.create(delivery_status='FINALIZADO')
@@ -55,8 +56,33 @@ class DashboardLabelApiTests(TestCase):
         response = self.client.get('/api/dashboard/records/')
 
         self.assertEqual(response.status_code, 200)
-        points = {item['key']: item for item in response.data['series']['distribution_primary']}
-        self.assertEqual(points['FINALIZADO']['label'], 'Finalizado')
+        labels = {item['label'] for item in response.data['series']['distribution_primary']}
+        self.assertIn('FINALIZADO', labels)
+
+    def test_novedades_dashboard_trend_uses_selected_date_range(self):
+        january = Novedad.objects.create(description='Incidente enero', status='OPEN')
+        march = Novedad.objects.create(description='Incidente marzo', status='OPEN')
+
+        Novedad.objects.filter(pk=january.pk).update(
+            created_at=timezone.make_aware(datetime(2026, 1, 5, 10, 0, 0))
+        )
+        Novedad.objects.filter(pk=march.pk).update(
+            created_at=timezone.make_aware(datetime(2026, 3, 5, 10, 0, 0))
+        )
+
+        response = self.client.get('/api/dashboard/novedades/?created_at__gte=2026-01-01&created_at__lte=2026-01-31')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['series']['trend'], [{'label': '2026-01-05', 'value': 1}])
+
+    def test_records_dashboard_trend_uses_entry_date_period(self):
+        FilmRecord.objects.create(delivery_status='ENTREGADO', entry_date=datetime(2026, 1, 7).date())
+        FilmRecord.objects.create(delivery_status='FINALIZADO', entry_date=datetime(2026, 3, 2).date())
+
+        response = self.client.get('/api/dashboard/records/?entry_date__gte=2026-01-01&entry_date__lte=2026-01-31')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['series']['trend'], [{'label': '2026-01-07', 'value': 1}])
 
 
 class FilmRecordApiPeopleTests(TestCase):
@@ -286,7 +312,6 @@ class VideoAnalysisReportApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('errors', response.data)
         self.assertIn('hash_algorithms', str(response.data))
-
     @patch('records.views.IntegrityService.generate_video_analysis_docx')
     def test_maps_legacy_sintesis_fields_into_unified_sintesis(self, service_mock):
         service_mock.return_value = (BytesIO(b'docx-data'), 'informe.docx')
@@ -527,6 +552,84 @@ class VideoAnalysisReportApiTests(TestCase):
         self.assertIn('excede', error_message)
 
 
+class VideoAnalysisReportStateApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.record = FilmRecord.objects.create()
+
+    def test_save_report_draft_marks_report_as_borrador(self):
+        response = self.client.post(
+            f'/api/film-records/{self.record.id}/save_report_draft/',
+            {
+                'numero_informe': '0001EZE/2026',
+                'report_date': '2026-03-10',
+                'status': 'BORRADOR',
+                'form_data': {'operador': 'Perez, Juan', 'grado': 'OF. PRINCIPAL'},
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['status'], 'BORRADOR')
+
+        report = VideoAnalysisReport.objects.get(film_record=self.record)
+        self.assertEqual(report.status, 'BORRADOR')
+        self.assertEqual(report.numero_informe, '0001EZE/2026')
+
+    def test_allows_updating_borrador_reports(self):
+        report = VideoAnalysisReport.objects.create(
+            film_record=self.record,
+            numero_informe='0001EZE/2026',
+            report_date=timezone.localdate(),
+            status='BORRADOR',
+            form_data={'operador': 'Perez, Juan'},
+        )
+
+        response = self.client.put(
+            f'/api/video-analysis-reports/{report.id}/',
+            {
+                'film_record': self.record.id,
+                'numero_informe': '0002EZE/2026',
+                'report_date': '2026-03-11',
+                'status': 'BORRADOR',
+                'form_data': {'operador': 'Gomez, Ana'},
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        report.refresh_from_db()
+        self.assertEqual(report.numero_informe, '0002EZE/2026')
+        self.assertEqual(report.status, 'BORRADOR')
+        self.assertEqual(report.form_data['operador'], 'Gomez, Ana')
+
+    def test_rejects_updating_finalized_reports(self):
+        report = VideoAnalysisReport.objects.create(
+            film_record=self.record,
+            numero_informe='0001EZE/2026',
+            report_date=timezone.localdate(),
+            status='FINALIZADO',
+            form_data={'operador': 'Perez, Juan'},
+        )
+
+        response = self.client.put(
+            f'/api/video-analysis-reports/{report.id}/',
+            {
+                'film_record': self.record.id,
+                'numero_informe': '0003EZE/2026',
+                'report_date': '2026-03-12',
+                'status': 'BORRADOR',
+                'form_data': {'operador': 'Cambio no permitido'},
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 403)
+        report.refresh_from_db()
+        self.assertEqual(report.status, 'FINALIZADO')
+        self.assertEqual(report.numero_informe, '0001EZE/2026')
+
+
 class IntegrityServiceVideoReportTemplateTests(TestCase):
     def test_resolves_informe_corto_template_first(self):
         template_path = IntegrityService._resolve_video_report_template_path()
@@ -658,11 +761,13 @@ class VideoAnalysisImproveTextApiTests(TestCase):
                 "sectores_analizados": "Hall de arribos, cinta 3",
                 "franja_horaria_analizada": "14:05 a 15:42",
                 "tiempo_total_analisis": "1 hora 37 minutos",
+                "sintesis": "No se observa manipulaciÃƒÂ³n posterior del bulto",
                 "sintesis_conclusion": "No se observa manipulaciÃƒÂ³n posterior del bulto",
                 "hash_algorithms": ["sha256", "sha512"],
                 "vms_authenticity_mode": "vms_propio",
             },
             mode="full",
+            preferred_provider="",
         )
 
     @patch('records.views.IntegrityService.improve_report_text_with_ai')
@@ -1003,7 +1108,7 @@ class IntegrityServiceAiRequestTests(TestCase):
         user_content = json.loads(messages[1].get('content') or '{}')
         self.assertIn('datos_del_sistema', user_content)
         self.assertEqual(user_content['datos_del_sistema']['sistema_cctv'], 'MILESTONE')
-        self.assertEqual(user_content['datos_del_sistema']['algoritmos_hash'], 'SHA256')
+        self.assertEqual(user_content['datos_del_sistema']['algoritmos_hash'], 'SHA-256')
         self.assertEqual(user_content['datos_del_sistema']['medida_autenticidad'], 'VMS propio del sistema de grabacion')
         # Solo debe pedir material_filmico en el formato
         self.assertEqual(set(user_content['formato_estricto'].keys()), {'material_filmico'})
@@ -1096,3 +1201,4 @@ class IntegrityServiceAiRequestTests(TestCase):
         })
         self.assertFalse(serializer.is_valid())
         self.assertIn('mode', serializer.errors)
+

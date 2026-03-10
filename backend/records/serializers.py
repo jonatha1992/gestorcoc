@@ -455,7 +455,7 @@ class VideoReportPayloadSerializer(serializers.Serializer):
 class VideoAnalysisReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = VideoAnalysisReport
-        fields = ['id', 'film_record', 'numero_informe', 'report_date', 'form_data', 'created_at', 'updated_at']
+        fields = ['id', 'film_record', 'numero_informe', 'report_date', 'status', 'form_data', 'created_at', 'updated_at']
 
 
 AI_IMPROVE_MODE_CHOICES = ('material_filmico', 'desarrollo', 'conclusion', 'full')
@@ -490,4 +490,5 @@ class VideoReportImproveTextSerializer(serializers.Serializer):
                 "o bien completar 'material_context' para mejorar con IA."
             )
         return attrs
+
 

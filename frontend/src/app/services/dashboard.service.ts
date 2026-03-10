@@ -40,6 +40,7 @@ export interface DashboardMapPoint {
   novedades_count: number;
   hechos_count: number;
   records_count: number;
+  personnel_count: number;
   cameras_online: number;
   cameras_offline: number;
   last_event_at: string | null;
@@ -49,7 +50,7 @@ export interface DashboardMapPoint {
   providedIn: 'root',
 })
 export class DashboardService {
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService) { }
 
   getNovedades(filters: Record<string, unknown> = {}): Observable<DashboardModuleResponse> {
     return this.api.get<DashboardModuleResponse>(`api/dashboard/novedades/?${this.buildQuery(filters)}`);

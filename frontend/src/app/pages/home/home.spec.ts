@@ -16,8 +16,11 @@ class MockChartComponent {
   @Input() series: unknown;
   @Input() chart: unknown;
   @Input() colors: unknown;
+  @Input() labels: unknown;
+  @Input() legend: unknown;
   @Input() stroke: unknown;
   @Input() fill: unknown;
+  @Input() plotOptions: unknown;
   @Input() dataLabels: unknown;
   @Input() markers: unknown;
   @Input() grid: unknown;
@@ -121,28 +124,34 @@ describe('HomeComponent', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    const selectOptions = Array.from(fixture.nativeElement.querySelectorAll('option') as NodeListOf<HTMLOptionElement>).map(
-      (option) => option.textContent?.trim(),
-    );
+    const dateInputs = fixture.nativeElement.querySelectorAll('input[type="date"]');
 
     expect(text).toContain('Operador de camaras');
     expect(text).toContain('Solo visualizacion');
     expect(text).not.toContain('OP_CONTROL');
-    expect(selectOptions).toContain('Operador basico');
-    expect(selectOptions).toContain('Administrador');
+    expect(dateInputs.length).toBe(0);
   });
 
-  it('shows Finalizado in the records filter options', () => {
+  it('shows only date filters for modules with period filtering', () => {
     const fixture = TestBed.createComponent(HomeComponent);
     fixture.detectChanges();
 
     fixture.componentInstance.onModuleChange('records');
     fixture.detectChanges();
 
-    const selectOptions = Array.from(fixture.nativeElement.querySelectorAll('option') as NodeListOf<HTMLOptionElement>).map(
-      (option) => option.textContent?.trim(),
-    );
+    const dateInputs = fixture.nativeElement.querySelectorAll('input[type="date"]');
+    const text = fixture.nativeElement.textContent as string;
 
-    expect(selectOptions).toContain('Finalizado');
+    expect(dateInputs.length).toBe(2);
+    expect(text).not.toContain('Filtros del modulo');
+  });
+
+  it('uses bar trend and donut distribution charts', () => {
+    const fixture = TestBed.createComponent(HomeComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.trendChart().chart.type).toBe('bar');
+    expect(fixture.componentInstance.primaryPieChart().chart.type).toBe('donut');
+    expect(fixture.componentInstance.secondaryPieChart().chart.type).toBe('donut');
   });
 });

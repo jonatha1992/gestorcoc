@@ -42,7 +42,14 @@
       "mcp__puppeteer__puppeteer_navigate",
       "mcp__puppeteer__puppeteer_screenshot",
       "mcp__puppeteer__puppeteer_evaluate",
-      "Bash(node -e \"const d=require\\(''./node_modules/leaflet/package.json''\\); console.log\\(''leaflet version:'', d.version\\)\")"
+      "Bash(node -e \"const d=require\\(''./node_modules/leaflet/package.json''\\); console.log\\(''leaflet version:'', d.version\\)\")",
+      "Bash(..venvScriptspython.exe manage.py runserver)",
+      "Bash(npm start)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(pip install faker --quiet)",
+      "Bash(/c/Repositorio/gestorcoc/backend/.venv/Scripts/python.exe /c/Repositorio/gestorcoc/backend/manage.py seed_data --mode fill_missing)",
+      "Bash(/c/Repositorio/gestorcoc/backend/.venv/Scripts/pip.exe install faker --quiet)",
+      "Bash(ping -n 2 switchyard.proxy.rlwy.net)"
     ]
   }
 }

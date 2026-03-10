@@ -15,7 +15,23 @@
     }
     <form (ngSubmit)="generateReport()" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6"
         [class.opacity-70]="isReadOnly()" [class.pointer-events-none]="isReadOnly()">
-        <h2 class="text-xl font-bold text-slate-800">Informe de Analisis de Video</h2>
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <h2 class="text-xl font-bold text-slate-800">Informe de Analisis de Video</h2>
+            <div class="flex items-center gap-3 flex-wrap">
+                <button *ngIf="!isReadOnly()" type="button" (click)="fillSampleData()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold transition-colors">
+                    <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Llenar datos hasta Sectores Analizados
+                </button>
+                <span
+                    class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Estado: {{ getReportStatusLabel() }}
+                </span>
+            </div>
+        </div>
         <div *ngIf="validationMessage"
             class="w-full text-base font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-2xl px-5 py-4 mb-4 animate-slide-in">
             {{ validationMessage }}
@@ -26,43 +42,48 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div class="col-span-1">
                     <div class="flex items-center gap-1 mb-1.5">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">OPERADOR *</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">OPERADOR
+                            *</label>
                     </div>
-                    <input [ngModel]="form.operador" (ngModelChange)="onOperatorInputChange($event)"
-                        name="operador" type="text" list="operator-options" placeholder="Apellido, Nombre"
+                    <input [ngModel]="form.operador" (ngModelChange)="onOperatorInputChange($event)" name="operador"
+                        type="text" list="operator-options" placeholder="Apellido, Nombre"
                         [attr.data-invalid]="isFieldInvalid('operador') ? 'true' : null"
                         class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     <datalist id="operator-options">
                         <option *ngFor="let p of personnelOptions" [value]="getPersonDisplayName(p)"></option>
                     </datalist>
                     <p class="text-[11px] text-slate-400 mt-1">
-                        {{ personnelOptions.length > 0 ? 'Escribi o selecciona un operador cargado en la base.' : 'Si el personal no carga, completa este dato manualmente.' }}
+                        {{ personnelOptions.length > 0 ? 'Escribi o selecciona un operador cargado en la base.' : 'Si el
+                        personal no carga, completa este dato manualmente.' }}
                     </p>
                 </div>
                 <div class="col-span-1">
                     <div class="flex items-center gap-1 mb-1.5">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">JERARQUIA *</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">JERARQUIA
+                            *</label>
                     </div>
-                    <select [(ngModel)]="form.grado" (ngModelChange)="onOperatorGradeChange($event)"
-                        name="grado"
+                    <select [(ngModel)]="form.grado" (ngModelChange)="onOperatorGradeChange($event)" name="grado"
                         [attr.data-invalid]="isFieldInvalid('grado') ? 'true' : null"
                         class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+                        <option [ngValue]="''">Seleccione jerarquia...</option>
                         <option *ngFor="let gradoOption of gradeOptions" [ngValue]="gradoOption">{{ gradoOption }}
                         </option>
                     </select>
                 </div>
                 <div class="col-span-1">
                     <div class="flex items-center gap-1 mb-1.5">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">NÚMERO DE LEGAJO *</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">NÚMERO DE
+                            LEGAJO *</label>
                     </div>
-                    <input [(ngModel)]="form.lup" (ngModelChange)="onOperatorLupChange($event)"
-                        name="lup" type="number" placeholder="506896" min="100000"
-                        max="999999" [attr.data-invalid]="isFieldInvalid('lup') ? 'true' : null"
+                    <input [(ngModel)]="form.lup" (ngModelChange)="onOperatorLupChange($event)" name="lup" type="number"
+                        placeholder="506896" min="100000" max="999999"
+                        [attr.data-invalid]="isFieldInvalid('lup') ? 'true' : null"
                         class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                 </div>
                 <div class="col-span-1">
                     <div class="flex items-center gap-1 mb-1.5">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">FECHA DEL INFORME *</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">FECHA DEL
+                            INFORME *</label>
                     </div>
                     <input [(ngModel)]="form.report_date" (ngModelChange)="markDirty('report_date')" name="report_date"
                         type="date" [attr.data-invalid]="isFieldInvalid('report_date') ? 'true' : null"
@@ -70,7 +91,8 @@
                 </div>
                 <div class="col-span-1">
                     <div class="flex items-center gap-1 mb-1.5">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">NUMERO DE INFORME *</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">NUMERO DE
+                            INFORME *</label>
                     </div>
                     <input [(ngModel)]="form.numero_informe" (ngModelChange)="onNumeroInformeChange($event)"
                         name="numero_informe" type="text" placeholder="0001EZE/2026"
@@ -79,7 +101,8 @@
                 </div>
                 <div class="col-span-1">
                     <div class="flex items-center gap-1 mb-1.5">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">UNIDAD *</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">UNIDAD
+                            *</label>
                     </div>
                     <select [(ngModel)]="form.unidad" (ngModelChange)="onUnidadChange($event)" name="unidad"
                         [attr.data-invalid]="isFieldInvalid('unidad') ? 'true' : null"
@@ -90,12 +113,14 @@
                         </option>
                     </select>
                     <p class="text-[11px] text-slate-400 mt-1">
-                        {{ unidadOptions.length > 0 ? 'Unidades cargadas desde la base de datos.' : 'No hay unidades disponibles desde la base de datos.' }}
+                        {{ unidadOptions.length > 0 ? 'Unidades cargadas desde la base de datos.' : 'No hay unidades
+                        disponibles desde la base de datos.' }}
                     </p>
                 </div>
                 <div class="col-span-2 lg:col-span-12">
                     <div class="flex items-center gap-2 mb-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">FIRMA DIGITAL</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">FIRMA
+                            DIGITAL</label>
                         <input type="checkbox" [(ngModel)]="incluirFirma" name="incluirFirma" (change)="markDirty()"
                             class="rounded text-indigo-600 focus:ring-indigo-500">
                         <span class="text-xs text-slate-500">¿Incluir firma digital?</span>
@@ -314,8 +339,7 @@
                         </div>
                         <div class="relative">
                             <input [(ngModel)]="form.aeropuerto" (ngModelChange)="onAirportSelect($event)"
-                                (focus)="showAirportDropdown = true" (blur)="onAirportInputBlur()"
-                                name="aeropuerto"
+                                (focus)="showAirportDropdown = true" (blur)="onAirportInputBlur()" name="aeropuerto"
                                 placeholder="Ej: Aeropuerto Internacional Mtro. Pistarini / Plataforma Norte"
                                 [attr.data-invalid]="isFieldInvalid('aeropuerto') ? 'true' : null"
                                 class="w-full px-2 py-1.5 pr-8 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
@@ -354,7 +378,9 @@
                                     <option [ngValue]="'otro'">Otro sistema / dispositivo</option>
                                 </select>
                                 <p class="text-[11px] text-slate-400 mt-1">
-                                    {{ isLoadingSourceSystems ? 'Cargando sistemas activos desde la base...' : 'Se muestran los sistemas activos cargados en la base, priorizando la unidad seleccionada.' }}
+                                    {{ isLoadingSourceSystems ? 'Cargando sistemas activos desde la base...' : 'Se
+                                    muestran los sistemas activos cargados en la base, priorizando la unidad
+                                    seleccionada.' }}
                                 </p>
                             </div>
                             <div *ngIf="selectedSourceSystemOption === 'otro'; else selectedSystemHint">
@@ -363,12 +389,16 @@
                                     placeholder="Ej: Milestone XProtect, BMS aeroportuario, otro dispositivo..."
                                     [attr.data-invalid]="isFieldInvalid('sistema') ? 'true' : null"
                                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                                <p class="text-[11px] text-slate-400 mt-1">Completa manualmente el origen si no existe en inventario.</p>
+                                <p class="text-[11px] text-slate-400 mt-1">Completa manualmente el origen si no existe
+                                    en inventario.</p>
                             </div>
                             <ng-template #selectedSystemHint>
-                                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                                    <span *ngIf="form.sistema; else emptySystemHint">Sistema aplicado al informe: <strong>{{ form.sistema }}</strong></span>
-                                    <ng-template #emptySystemHint>Selecciona un sistema de la base o elige <strong>Otro</strong>.</ng-template>
+                                <div
+                                    class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                                    <span *ngIf="form.sistema; else emptySystemHint">Sistema aplicado al informe:
+                                        <strong>{{ form.sistema }}</strong></span>
+                                    <ng-template #emptySystemHint>Selecciona un sistema de la base o elige
+                                        <strong>Otro</strong>.</ng-template>
                                 </div>
                             </ng-template>
                         </div>
@@ -460,8 +490,8 @@
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Especificar
                                     algoritmo *</label>
                                 <input [(ngModel)]="form.hash_algorithm_other"
-                                    (ngModelChange)="markDirty('hash_algorithm_other')"
-                                    name="hash_algorithm_other" type="text" placeholder="Ej: BLAKE3"
+                                    (ngModelChange)="markDirty('hash_algorithm_other')" name="hash_algorithm_other"
+                                    type="text" placeholder="Ej: BLAKE3"
                                     [attr.data-invalid]="isFieldInvalid('hash_algorithm_other') ? 'true' : null"
                                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                             </div>
@@ -533,8 +563,7 @@
             <div class="shadow-sm p-4 rounded-xl bg-sky-50/60 border border-sky-100 space-y-3">
                 <h4 class="text-sm font-bold text-sky-900">Contexto</h4>
                 <p class="text-xs text-slate-600">
-                    Completá estos datos para que la IA genere texto de mayor calidad. Si redactás el desarrollo y
-                    conclusión manualmente, podés omitirlos.
+                    Estos datos complementan el informe y ayudan a ordenar la redacción manual del análisis.
                 </p>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <div class="md:col-span-2">
@@ -554,8 +583,7 @@
                         <input [(ngModel)]="form.franja_horaria_analizada"
                             (ngModelChange)="markDirty('franja_horaria_analizada')" name="franja_horaria_analizada"
                             type="text" placeholder="Auto: 15/02/2026 14:05 a 02/03/2026 09:30"
-                            [readonly]="!!hora_inicio && !!hora_fin"
-                            [class.bg-slate-50]="!!hora_inicio && !!hora_fin"
+                            [readonly]="!!hora_inicio && !!hora_fin" [class.bg-slate-50]="!!hora_inicio && !!hora_fin"
                             class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     </div>
                     <div class="md:col-span-2">
@@ -564,8 +592,7 @@
                         <input [(ngModel)]="form.tiempo_total_analisis"
                             (ngModelChange)="markDirty('tiempo_total_analisis')" name="tiempo_total_analisis"
                             type="text" placeholder="Auto: 15 días 19 horas 25 minutos"
-                            [readonly]="!!hora_inicio && !!hora_fin"
-                            [class.bg-slate-50]="!!hora_inicio && !!hora_fin"
+                            [readonly]="!!hora_inicio && !!hora_fin" [class.bg-slate-50]="!!hora_inicio && !!hora_fin"
                             class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
                     </div>
                     <div>
@@ -655,15 +682,15 @@
                 </div>
             </div>
 
-            <!-- Texto del Informe (generado por IA) -->
+            <!-- Texto del Informe -->
             <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1 mt-2">Texto del Informe</h3>
-            <p class="text-xs text-slate-500">Completado por IA — usá el botón de abajo para generar el texto de los tres campos.</p>
+            <p class="text-xs text-slate-500">Podés completar estos tres campos manualmente o generar una primera
+                versión con el asistente.</p>
 
-            <!-- Opciones globales de IA -->
-            <div
+            <div *ngIf="false"
                 class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div class="flex flex-col gap-1 w-full md:w-auto">
-                    <label class="text-xs font-bold text-slate-600 uppercase">Proveedor de IA</label>
+                    <label class="text-xs font-bold text-slate-600 uppercase">Proveedor IA</label>
                     <select [(ngModel)]="selectedAiProvider" name="aiProvider"
                         class="px-3 py-2 text-sm border border-indigo-200 rounded-xl bg-white text-indigo-900 shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400">
                         <option value="gemini">Gemini</option>
@@ -672,20 +699,21 @@
                     </select>
                 </div>
 
-                <button type="button" (click)="generateFullReportWithAi()" [disabled]="isGeneratingFullReport || !canGenerateFullReport()"
+                <button type="button" (click)="generateFullReportWithAi()"
+                    [disabled]="isGeneratingFullReport || !canGenerateFullReport()"
                     class="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md text-white text-sm font-bold shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
                     <span *ngIf="isGeneratingFullReport"
                         class="w-4 h-4 rounded-full border-2 border-indigo-200 border-t-white animate-spin"></span>
-                    ✨ {{ isGeneratingFullReport ? 'Generando todo el informe...' : 'Completar Todo el Informe con IA' }}
+                    ✨ {{ isGeneratingFullReport ? 'Generando todo el informe...' : 'Completar Todo el Informe' }}
                 </button>
             </div>
 
-            <div *ngIf="isGeneratingFullReport"
+            <div *ngIf="false && isGeneratingFullReport"
                 class="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-cyan-50 to-indigo-50 px-3 py-2">
                 <div class="flex items-center justify-between text-xs text-slate-700">
                     <span class="inline-flex items-center gap-2 font-medium">
                         <span class="ai-status-dot"></span>
-                        {{ aiProgressLabel || 'Analizando con IA' }}
+                        {{ aiProgressLabel || 'Analizando informe' }}
                     </span>
                     <span class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">Procesando</span>
                 </div>
@@ -698,43 +726,123 @@
 
             <div>
                 <div class="flex items-center gap-1 mb-1">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Introducción / Material Fílmico Analizado</label>
-                    <span class="text-[10px] text-indigo-500 font-semibold ml-1">✨ IA</span>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Introducción / Material Fílmico
+                        Analizado</label>
+                    <span class="text-[10px] text-indigo-500 font-semibold ml-1">IA</span>
                     <button type="button" data-help-trigger (click)="toggleHelp('material_filmico', $event)"
                         class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
                         aria-label="Ayuda Material Filmico">?</button>
                 </div>
-                <p class="text-[10px] text-slate-400 mb-1">La IA genera este campo automáticamente con los datos del formulario (sistema, caso, hash, operador, etc.).</p>
+                <p class="text-[10px] text-slate-400 mb-1">Podés generarlo desde los datos del formulario y luego
+                    ajustarlo manualmente si hace falta.</p>
                 <textarea [ngModel]="form.material_filmico" (ngModelChange)="onMaterialFilmicoChange($event)"
                     name="material_filmico" rows="5"
-                    placeholder="La IA completará este campo al usar el botón ✨ — no es necesario escribirlo."
+                    placeholder="Completá la introducción y el detalle del material fílmico analizado."
                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
             </div>
             <div>
                 <div class="flex items-center gap-1 mb-1">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Desarrollo</label>
+                    <span class="text-[10px] text-indigo-500 font-semibold ml-1">IA</span>
                     <button type="button" data-help-trigger (click)="toggleHelp('desarrollo', $event)"
                         class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
                         aria-label="Ayuda Desarrollo">?</button>
                 </div>
                 <textarea [ngModel]="form.desarrollo" (ngModelChange)="onDesarrolloChange($event)" name="desarrollo"
-                    rows="6" placeholder="Completado por IA — describirá cronológicamente lo observado en las cámaras..."
+                    rows="6" placeholder="Completá el desarrollo cronológico de lo observado."
                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
             </div>
             <div>
                 <div class="flex items-center gap-1 mb-1">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Conclusion</label>
+                    <span class="text-[10px] text-indigo-500 font-semibold ml-1">IA</span>
                     <button type="button" data-help-trigger (click)="toggleHelp('conclusion', $event)"
                         class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
                         aria-label="Ayuda Conclusion">?</button>
                 </div>
                 <textarea [ngModel]="form.conclusion" (ngModelChange)="onConclusionChange($event)" name="conclusion"
-                    rows="5" placeholder="Completado por IA — indicará el resultado final del análisis..."
+                    rows="5" placeholder="Completá la conclusión y el resultado final del análisis."
                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
             </div>
         </div>
 
-        <div class="flex flex-col md:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-200">
+        <div class="space-y-3 pt-4 border-t border-slate-200" data-report-actions>
+            <div *ngIf="isGeneratingFullReport"
+                class="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-cyan-50 to-indigo-50 px-3 py-2">
+                <div class="flex items-center justify-between text-xs text-slate-700">
+                    <span class="inline-flex items-center gap-2 font-medium">
+                        <span class="ai-status-dot"></span>
+                        {{ aiProgressLabel || 'Analizando informe' }}
+                    </span>
+                    <span class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">Procesando</span>
+                </div>
+                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-indigo-100">
+                    <div
+                        class="ai-progress-bar h-full w-1/3 rounded-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div
+                    class="flex flex-col gap-1 rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 xl:min-w-[220px]">
+                    <label class="text-xs font-bold text-slate-600 uppercase">Proveedor IA</label>
+                    <select [(ngModel)]="selectedAiProvider" name="aiProvider"
+                        class="px-3 py-2 text-sm border border-indigo-200 rounded-xl bg-white text-indigo-900 shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400">
+                        <option value="gemini">Gemini</option>
+                        <option value="groq">Groq</option>
+                        <option value="openrouter">OpenRouter</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col md:flex-row items-stretch md:items-center justify-end gap-3">
+                    <button type="button" (click)="saveReportToDatabase()" [disabled]="isGenerating || isReadOnly()"
+                        class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-semibold transition-colors shadow-sm disabled:opacity-60"
+                        style="pointer-events: auto !important;">
+                        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/>
+                            <polyline points="17 21 17 13 7 13 7 21"/>
+                            <polyline points="7 3 7 8 15 8"/>
+                        </svg>
+                        Guardar Borrador
+                    </button>
+                    <button type="button" (click)="generateFullReportWithAi()"
+                        [disabled]="isGeneratingFullReport || !canUseAiCompletion()" data-ai-complete-button
+                        class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md text-white text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                        style="pointer-events: auto !important;">
+                        <span *ngIf="isGeneratingFullReport"
+                            class="w-4 h-4 rounded-full border-2 border-indigo-200 border-t-white animate-spin"></span>
+                        <svg *ngIf="!isGeneratingFullReport" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="m13 2 1.5 4.5L19 8l-4.5 1.5L13 14l-1.5-4.5L7 8l4.5-1.5L13 2Z"/>
+                            <path d="m6 14 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"/>
+                        </svg>
+                        {{ isGeneratingFullReport ? 'Generando todo el informe...' : 'Completar Todo el Informe' }}
+                    </button>
+                    <button type="button" (click)="finalizeReportInDatabase()" [disabled]="isGenerating || isReadOnly()"
+                        class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 border border-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold transition-colors shadow-sm disabled:opacity-60"
+                        style="pointer-events: auto !important;">
+                        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <path d="m9 12 2 2 4-4"/>
+                        </svg>
+                        Finalizar y Guardar
+                    </button>
+                    <button type="submit" [disabled]="isGenerating"
+                        class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-semibold transition-colors shadow-sm"
+                        style="pointer-events: auto !important;">
+                        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                        {{ isGenerating ? 'Generando...' : (isReadOnly() ? 'Volver a descargar (DOC)' : 'Generar Informe (DOC)') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div *ngIf="false" class="flex flex-col md:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-200">
             <button type="button" (click)="saveReportToDatabase()" [disabled]="isGenerating || isReadOnly()"
                 class="px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-semibold transition-colors shadow-sm disabled:opacity-60"
                 style="pointer-events: auto !important;">

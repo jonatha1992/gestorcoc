@@ -9,6 +9,8 @@ import {
   ImproveVideoTextMode,
   ImproveVideoTextResponse,
   MaterialSpeechContext,
+  VideoAnalysisReportRecord,
+  VideoAnalysisReportStatus,
   VideoReportFormData,
   VideoReportFrame,
   VideoReportHashAlgorithm,
@@ -28,6 +30,18 @@ type FieldHelpContent = {
   ejemplo: string;
 };
 
+const FIXED_GRADE_OPTIONS = [
+  'OF. AYUDATE',
+  'OF. PRINCIPAL',
+  'OF. MAYOR',
+  'OF. JEFE',
+  'SUBINSPECTOR',
+  'INSPECTOR',
+  'COM. MAYOR',
+  'COM. GENERAL',
+  'CIVIL',
+] as const;
+
 @Component({
   selector: 'app-informes',
   standalone: true,
@@ -45,6 +59,7 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   existingReportId = signal<number | null>(null);
   linkedRecordId = signal<number | null>(null);
+  reportStatus = signal<VideoAnalysisReportStatus>('PENDIENTE');
   isReadOnly = signal(false);
 
   readonly MAX_FRAMES = 30;
@@ -115,9 +130,11 @@ export class InformesComponent implements OnInit, OnDestroy {
   unidadOptions: string[] = [];
   airportOptions: string[] = [];
   readonly hashAlgorithmOptions: { value: VideoReportHashAlgorithm; label: string }[] = [
+    { value: 'sha1', label: 'SHA-1' },
     { value: 'sha3', label: 'SHA-3' },
     { value: 'sha256', label: 'SHA-256' },
     { value: 'sha512', label: 'SHA-512' },
+    { value: 'md5', label: 'MD5' },
     { value: 'otro', label: 'Otro' },
   ];
 
@@ -132,6 +149,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     sha3: 'SHA-3',
     sha256: 'SHA-256',
     sha512: 'SHA-512',
+    md5: 'MD5',
     otro: 'OTRO',
   };
 
@@ -160,10 +178,11 @@ export class InformesComponent implements OnInit, OnDestroy {
       if (!isNaN(id)) {
         this.informeService.getReport(id).subscribe({
           next: (informe) => {
+            return this.applyLoadedReport(informe);
             this.existingReportId.set(informe.id);
             this.isReadOnly.set(true);
             if (informe.film_record != null) {
-              this.linkedRecordId.set(informe.film_record);
+              this.linkedRecordId.set(informe.film_record ?? null);
             }
             if (informe.form_data && typeof informe.form_data === 'object') {
               this.applyLoadedFormData(informe.form_data);
@@ -180,6 +199,7 @@ export class InformesComponent implements OnInit, OnDestroy {
         this.informeService.getReportByRecord(id).subscribe({
           next: (informes) => {
             if (informes.length > 0) {
+              return this.applyLoadedReport(informes[0]);
               const informe = informes[0];
               this.existingReportId.set(informe.id);
               this.isReadOnly.set(true);
@@ -204,6 +224,8 @@ export class InformesComponent implements OnInit, OnDestroy {
     if (!http) return;
     (http.get(`${baseUrl}/api/film-records/${recordId}/`) as import('rxjs').Observable<any>).subscribe({
       next: (record: any) => {
+        this.reportStatus.set('PENDIENTE');
+        this.isReadOnly.set(false);
         const involvedPeople = this.mapRecordInvolvedPeople(record?.involved_people);
         const involvedPeopleSummary = this.buildInvolvedPeopleSummary(involvedPeople);
         const mainComplainant = this.pickMainComplainant(involvedPeople);
@@ -432,6 +454,8 @@ export class InformesComponent implements OnInit, OnDestroy {
       sha256: 'sha256',
       sha512: 'sha512',
       sha3: 'sha3',
+      sha1: 'sha1',
+      md5: 'md5',
     };
 
     const formAlgorithm = algorithmMap[detectedAlgorithm];
@@ -460,6 +484,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     if (length === 128) return 'sha512';
     if (length === 64) return 'sha256'; // También podría ser SHA-3 (256), pero asumimos SHA-256
     if (length === 40) return 'sha1';
+    if (length === 32) return 'md5';
     return '';
   }
 
@@ -536,9 +561,6 @@ export class InformesComponent implements OnInit, OnDestroy {
       next: (people) => {
         const results = Array.isArray((people as any)?.results) ? (people as any).results : people;
         this.personnelOptions = Array.isArray(results) ? results : [];
-        for (const person of this.personnelOptions) {
-          this.registerGradeOption((person?.rank || '').trim());
-        }
         this.syncSelectedOperatorFromCurrentForm();
       },
       error: (err) => {
@@ -552,37 +574,51 @@ export class InformesComponent implements OnInit, OnDestroy {
   onOperatorChange(personId: number | null) {
     if (!personId) {
       this.form.operador = '';
-      this.form.grado = '';
       this.form.lup = '';
       this.selectedOperatorId = null;
       this.markDirty('operador');
+      this.markDirty('lup');
       return;
     }
 
     const person = this.personnelOptions.find(p => p.id === personId);
     if (person) {
+      this.selectedOperatorId = person.id;
       this.form.operador = this.getPersonDisplayName(person);
-      this.form.grado = this.normalizeGrade((person.rank || '').trim());
       this.form.lup = person.badge_number || '';
 
-      const personUnitCode = String(person.unit || '').trim().toUpperCase();
-      if (personUnitCode) {
-        const matchedUnit = Object.entries(this.unitCodeByName).find(
-          ([, code]) => code === personUnitCode
-        );
-        if (matchedUnit) {
-          this.form.unidad = matchedUnit[0];
-          this.scheduleUnitContextRefresh();
-          this.markDirty('unidad');
-          this.markDirty('numero_informe');
-          this.markDirty('aeropuerto');
-        }
-      }
-
       this.markDirty('operador');
-      this.markDirty('grado');
       this.markDirty('lup');
     }
+  }
+
+  private applyLoadedReport(report: VideoAnalysisReportRecord): void {
+    this.existingReportId.set(report.id);
+    this.reportStatus.set(report.status || 'PENDIENTE');
+    this.isReadOnly.set((report.status || 'PENDIENTE') === 'FINALIZADO');
+    if (report.film_record != null) {
+      this.linkedRecordId.set(report.film_record ?? null);
+    }
+    if (report.form_data && typeof report.form_data === 'object') {
+      this.applyLoadedFormData(report.form_data);
+    }
+    if (this.isReadOnly()) {
+      this.toastService.show('Informe finalizado en modo lectura.', 'info');
+      return;
+    }
+    if (this.reportStatus() === 'BORRADOR') {
+      this.toastService.show('Borrador cargado. Puedes seguir editando el informe.', 'info');
+    }
+  }
+
+  getReportStatusLabel(): string {
+    if (this.reportStatus() === 'BORRADOR') {
+      return 'Borrador';
+    }
+    if (this.reportStatus() === 'FINALIZADO') {
+      return 'Finalizado';
+    }
+    return 'Pendiente';
   }
 
   onOperatorInputChange(value: string): void {
@@ -622,6 +658,8 @@ export class InformesComponent implements OnInit, OnDestroy {
           ? Number(sourceSystemId)
           : null;
 
+    this.form.grado = this.normalizeGrade(this.normalizeText(formData['grado']));
+    this.ensureGradeOptionVisible(this.form.grado);
     this.form.sintesis = this.resolvePreferredSintesis(formData);
     this.ensureAirportOption(this.form.aeropuerto || '');
     this.syncAirportManualOverride();
@@ -683,6 +721,7 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   onOperatorGradeChange(value: string) {
     this.form.grado = this.normalizeGrade(value || '');
+    this.ensureGradeOptionVisible(this.form.grado);
     this.markDirty('grado');
   }
 
@@ -694,30 +733,44 @@ export class InformesComponent implements OnInit, OnDestroy {
   private normalizeGrade(value: string): string {
     const normalized = (value || '').trim();
     if (!normalized) {
-      return 'CIVIL';
+      return '';
     }
 
-    this.registerGradeOption(normalized);
+    const aliasKey = this.normalizeGradeAliasKey(normalized);
+    const canonical = this.gradeAliasMap[aliasKey];
+    if (canonical) {
+      return canonical;
+    }
 
-    const existingOption = this.gradeOptions.find(
-      (option) => option.toUpperCase() === normalized.toUpperCase()
-    );
+    const existingOption = this.gradeOptions.find((option) => option.toUpperCase() === normalized.toUpperCase());
     return existingOption || normalized;
   }
 
-  private registerGradeOption(value: string): void {
+  private ensureGradeOptionVisible(value: string): void {
     const normalized = (value || '').trim();
     if (!normalized) {
       return;
     }
 
-    const exists = this.gradeOptions.some(
-      (option) => option.toUpperCase() === normalized.toUpperCase()
-    );
+    if (FIXED_GRADE_OPTIONS.includes(normalized as (typeof FIXED_GRADE_OPTIONS)[number])) {
+      return;
+    }
+
+    const exists = this.gradeOptions.some((option) => option.toUpperCase() === normalized.toUpperCase());
 
     if (!exists) {
       this.gradeOptions = [...this.gradeOptions, normalized];
     }
+  }
+
+  private normalizeGradeAliasKey(value: string): string {
+    return (value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[._-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   onUnidadChange(_val: string) {
@@ -1127,19 +1180,28 @@ export class InformesComponent implements OnInit, OnDestroy {
       a.localeCompare(b, 'es', { sensitivity: 'base' })
     );
   }
-
-
-  gradeOptions: string[] = [
-    'OF. AYUDATE',
-    'OF. PRINCIPAL',
-    'OF. MAYOR',
-    'OF. JEFE',
-    'SUBINSPECTOR',
-    'INSPECTOR',
-    'COM. MAYOR',
-    'COM. GENERAL',
-    'CIVIL',
-  ];
+  gradeOptions: string[] = [...FIXED_GRADE_OPTIONS];
+  private readonly gradeAliasMap: Record<string, string> = {
+    'OF AYUDATE': 'OF. AYUDATE',
+    'OF AYTE': 'OF. AYUDATE',
+    'OFICIAL AYUDANTE': 'OF. AYUDATE',
+    'OFICIAL AYTE': 'OF. AYUDATE',
+    'OF PRINCIPAL': 'OF. PRINCIPAL',
+    'OF PPAL': 'OF. PRINCIPAL',
+    'OFICIAL PRINCIPAL': 'OF. PRINCIPAL',
+    'OF MAYOR': 'OF. MAYOR',
+    'OFICIAL MAYOR': 'OF. MAYOR',
+    'OF JEFE': 'OF. JEFE',
+    'OFICIAL JEFE': 'OF. JEFE',
+    SUBINSPECTOR: 'SUBINSPECTOR',
+    INSPECTOR: 'INSPECTOR',
+    'COM MAYOR': 'COM. MAYOR',
+    'COMISIONADO MAYOR': 'COM. MAYOR',
+    'COM GENERAL': 'COM. GENERAL',
+    'COM GRAL': 'COM. GENERAL',
+    'COMISIONADO GENERAL': 'COM. GENERAL',
+    CIVIL: 'CIVIL',
+  };
 
   form: VideoReportFormData = {
     report_date: new Date().toISOString().slice(0, 10),
@@ -1971,7 +2033,7 @@ export class InformesComponent implements OnInit, OnDestroy {
       this.form.vms_authenticity_mode === 'vms_propio'
         ? ((this.form.vms_native_hash_algorithms || []).length > 0
           ? `hashes nativos: ${nativeAlgos}`
-          : 'autenticación propietaria del sistema')
+          : 'autenticacion propietaria del sistema')
         : nativeAlgos;
     const autenticidad = this.getVmsAuthenticityLabel(this.form.vms_authenticity_mode || '');
     const cantidad = (this.form.cantidad_observada || '').trim();
@@ -1987,7 +2049,7 @@ export class InformesComponent implements OnInit, OnDestroy {
           ? `no aplicado (${motivoSinHash})`
           : 'no aplicado';
     const hashProgram = (this.form.hash_program || '').trim() || 'programa de hash no consignado';
-    const quantityText = cantidad ? ` Se consignó cantidad observada: ${cantidad}.` : '';
+    const quantityText = cantidad ? ` Se consigno cantidad observada: ${cantidad}.` : '';
     const sectorText = sectores ? ` Sectores analizados: ${sectores}.` : '';
     const timingText =
       franja || tiempo
@@ -1996,26 +2058,12 @@ export class InformesComponent implements OnInit, OnDestroy {
 
     const hashDetail =
       hashLabels.length > 0
-        ? `Verificación mediante ${hashProgram} bajo ${hashText}.`
+        ? `Verificacion mediante ${hashProgram} bajo ${hashText}.`
         : motivoSinHash
           ? `Hash no efectuado (${motivoSinHash}).`
           : 'Hash no efectuado.';
 
-    return `Material obtenido del sistema ${sistema}, con origen en ${lugar}. Método de autenticidad: ${autenticidad} (${nativeHashPart}). ${hashDetail}${quantityText}${sectorText}${timingText}`;
-  }
-
-  private hasStructuredSpeechContext(): boolean {
-    const values = [
-      this.form.cantidad_observada,
-      this.form.sectores_analizados,
-      this.form.franja_horaria_analizada,
-      this.form.tiempo_total_analisis,
-      this.form.sistema,
-      this.form.aeropuerto,
-      (this.form.vms_native_hash_algorithms || []).join(','),
-      this.form.vms_authenticity_mode,
-    ];
-    return values.some((value) => !!(value || '').trim());
+    return `Material obtenido del sistema ${sistema}, con origen en ${lugar}. Metodo de autenticidad: ${autenticidad} (${nativeHashPart}). ${hashDetail}${quantityText}${sectorText}${timingText}`;
   }
 
   private buildDesarrolloSeedFromContext(): string {
@@ -2168,15 +2216,56 @@ export class InformesComponent implements OnInit, OnDestroy {
     return `En virtud del analisis efectuado sobre el material del sistema **${sistema}**, con origen en **${origen}**, y respecto de **${objeto}**, se concluye que ${cantidadPart}.${peoplePart} La valoracion juridica del contenido corresponde a la autoridad competente.`;
   }
 
+  canUseAiCompletion(): boolean {
+    const narrativeFields = [
+      this.form.material_filmico,
+      this.form.desarrollo,
+      this.form.conclusion,
+    ];
+    if (narrativeFields.some((value) => !!(value || '').trim())) {
+      return true;
+    }
+
+    const materialContext = this.buildMaterialSpeechContext();
+    return Object.values(materialContext).some((value) => {
+      if (typeof value === 'string') {
+        return !!value.trim();
+      }
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+      return false;
+    });
+  }
+
   canGenerateFullReport(): boolean {
     return this.buildValidationResult().invalid.size === 0;
+  }
+
+  fillSampleData(): void {
+    const year = new Date().getFullYear();
+    this.form.operador = 'GARCIA, Juan';
+    this.form.grado = 'INSPECTOR';
+    this.form.lup = '506896';
+    this.form.report_date = new Date().toISOString().slice(0, 10);
+    this.form.numero_informe = `0001EZE/${year}`;
+    this.form.tipo_informe = 'Informe de análisis de videos';
+    this.form.destinatarios = 'JEFATURA DE SEGURIDAD AEROPORTUARIA';
+    this.form.aeropuerto = 'Aeropuerto Internacional Ministro Pistarini - EZE';
+    this.form.sistema = 'HONEYWELL';
+    this.form.cantidad_observada = '2 personas';
+    this.form.sectores_analizados = 'Hall de Arribos, Cinta 3, Plataforma Norte';
+    this.form.franja_horaria_analizada = '08:00 a 12:00';
+    this.form.tiempo_total_analisis = '04:00:00';
+    this.form.sintesis = 'Se analiza material de video del sistema de seguridad aeroportuaria a solicitud de autoridad competente.';
+    this.toastService.show('Datos de prueba cargados hasta Sectores Analizados.', 'success');
   }
 
   async generateFullReportWithAi(): Promise<void> {
     if (this.isGeneratingFullReport) return;
 
-    if (!this.canGenerateFullReport()) {
-      this.toastService.warning('Completa todos los campos requeridos antes de generar el informe con IA.');
+    if (!this.canUseAiCompletion()) {
+      this.toastService.warning('Completa algun texto o datos del contexto antes de usar IA.');
       return;
     }
 
@@ -2191,7 +2280,7 @@ export class InformesComponent implements OnInit, OnDestroy {
 
     const materialContext = this.buildMaterialSpeechContext();
     this.isGeneratingFullReport = true;
-    this.startAiFeedback('Completando todo el informe con IA');
+    this.startAiFeedback('Completando todo el informe');
 
     let deferredSuccess = false;
     try {
@@ -2228,16 +2317,16 @@ export class InformesComponent implements OnInit, OnDestroy {
 
         this.cdr.detectChanges();
         if (response.ai_applied === false) {
-          this.toastService.warning(`Proceso IA finalizado en ${elapsedSeconds}s sin cambios en el texto.`);
+          this.toastService.warning(`Proceso finalizado en ${elapsedSeconds}s sin cambios en el texto.`);
         } else {
-          this.toastService.success(`Informe completado con IA en ${elapsedSeconds}s.`);
+          this.toastService.success(`Informe completado en ${elapsedSeconds}s.`);
         }
         this.isGeneratingFullReport = false;
         this.stopAiFeedback();
       }, 50);
     } catch (error) {
       this.toastService.error(
-        this.getSimpleApiErrorMessage(error as HttpErrorResponse, 'No se pudo generar el informe completo con IA.')
+        this.getSimpleApiErrorMessage(error as HttpErrorResponse, 'No se pudo generar el informe completo.')
       );
     } finally {
       if (!deferredSuccess) {
@@ -2272,8 +2361,6 @@ export class InformesComponent implements OnInit, OnDestroy {
       link.click();
       window.URL.revokeObjectURL(url);
       this.toastService.success('Informe DOCX generado.');
-      this.isDirty = false;
-      this.persistReportToDB(payload);
     } catch (error) {
       const message = await this.getReportGenerationErrorMessage(error);
       this.toastService.error(message);
@@ -2332,34 +2419,67 @@ export class InformesComponent implements OnInit, OnDestroy {
     return defaultMessage;
   }
 
-  private persistReportToDB(payload: VideoReportPayload): void {
+  private saveCurrentReport(status: VideoAnalysisReportStatus): void {
     if (this.isReadOnly()) {
       return;
     }
 
-    const formDataToSave = { ...payload.report_data };
+    const payload = this.buildPayload();
     const reportData = {
       film_record: this.linkedRecordId() ?? null,
-      numero_informe: this.form.numero_informe || '',
-      report_date: this.form.report_date || undefined,
-      form_data: formDataToSave,
+      numero_informe: payload.report_data.numero_informe || '',
+      report_date: payload.report_data.report_date || undefined,
+      status,
+      form_data: { ...payload.report_data },
+    };
+
+    const onSuccess = (saved: VideoAnalysisReportRecord): void => {
+      this.existingReportId.set(saved.id);
+      this.reportStatus.set(saved.status || status);
+      this.isReadOnly.set((saved.status || status) === 'FINALIZADO');
+      if (saved.film_record != null) {
+        this.linkedRecordId.set(saved.film_record ?? null);
+      }
+      this.isDirty = false;
+      this.toastService.success(
+        (saved.status || status) === 'FINALIZADO'
+          ? 'Informe finalizado y guardado en la base de datos.'
+          : 'Borrador del informe guardado en la base de datos exitosamente.'
+      );
+    };
+
+    const onError = (err: HttpErrorResponse): void => {
+      this.toastService.error(
+        this.getSimpleApiErrorMessage(
+          err,
+          status === 'FINALIZADO'
+            ? 'Error al finalizar el informe.'
+            : 'Error al guardar el borrador del informe.'
+        )
+      );
     };
 
     const existingId = this.existingReportId();
     if (existingId) {
       this.informeService.updateReport(existingId, reportData).subscribe({
-        next: () => { },
-        error: () => { }
+        next: onSuccess,
+        error: onError
       });
-    } else {
-      this.informeService.saveReport(reportData).subscribe({
-        next: (saved) => {
-          this.existingReportId.set(saved.id);
-          this.isReadOnly.set(true);
-        },
-        error: () => { }
-      });
+      return;
     }
+
+    if (status === 'BORRADOR' && this.linkedRecordId()) {
+      this.informeService.saveReportDraft(this.linkedRecordId()!, reportData).subscribe({
+        next: onSuccess,
+        error: onError
+      });
+      return;
+    }
+
+    this.informeService.saveReport(reportData).subscribe({
+      next: onSuccess,
+      error: onError
+    });
   }
 
   private async getLogoBase64(): Promise<string> {
@@ -2547,6 +2667,11 @@ export class InformesComponent implements OnInit, OnDestroy {
   }
 
   saveReportToDatabase(): void {
+    if (this.isReadOnly()) {
+      return;
+    }
+    this.saveCurrentReport('BORRADOR');
+    return;
     if (!this.linkedRecordId()) {
       this.toastService.warning('No hay un registro fílmico vinculado para guardar el borrador.');
       return;
@@ -2554,8 +2679,8 @@ export class InformesComponent implements OnInit, OnDestroy {
 
     const currentData = this.buildPayload().report_data;
 
-    this.informeService.saveReportDraft(this.linkedRecordId()!, currentData).subscribe({
-      next: (res) => {
+    this.informeService.saveReportDraft(this.linkedRecordId()!, currentData as any).subscribe({
+      next: (res: any) => {
         this.toastService.success('Borrador del informe guardado en la base de datos exitosamente.');
         if (res.report_id && !this.existingReportId()) {
           this.existingReportId.set(res.report_id);
@@ -2567,6 +2692,13 @@ export class InformesComponent implements OnInit, OnDestroy {
         );
       }
     });
+  }
+
+  finalizeReportInDatabase(): void {
+    if (!this.validate(true)) {
+      return;
+    }
+    this.saveCurrentReport('FINALIZADO');
   }
 
   private escapeHtml(value: string): string {
@@ -2628,6 +2760,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     return fallback;
   }
 }
+
 
 
 

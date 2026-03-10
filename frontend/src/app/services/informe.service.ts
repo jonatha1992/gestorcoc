@@ -3,13 +3,14 @@ import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export type VideoReportHashAlgorithm = 'sha1' | 'sha3' | 'sha256' | 'sha512' | 'otro';
+export type VideoReportHashAlgorithm = 'sha1' | 'sha3' | 'sha256' | 'sha512' | 'md5' | 'otro';
 // Removed VideoReportExportFormat
 export type VideoReportVmsAuthenticityMode =
     | 'vms_propio'
     | 'hash_preventivo'
     | 'sin_autenticacion'
     | 'otro';
+export type VideoAnalysisReportStatus = 'PENDIENTE' | 'BORRADOR' | 'FINALIZADO';
 
 export interface VideoReportInvolvedPerson {
     role?: string;
@@ -110,6 +111,17 @@ export interface VideoReportPayload {
     frames: VideoReportFrame[];
 }
 
+export interface VideoAnalysisReportRecord {
+    id: number;
+    film_record?: number | null;
+    numero_informe?: string;
+    report_date?: string;
+    form_data?: Partial<VideoReportFormData>;
+    status: VideoAnalysisReportStatus;
+    created_at?: string;
+    updated_at?: string;
+}
+
 export type ImproveVideoTextMode = 'material_filmico' | 'desarrollo' | 'conclusion' | 'full';
 
 export interface ImproveVideoTextPayload {
@@ -148,27 +160,50 @@ export class InformeService {
         return this.http.post<ImproveVideoTextResponse>(`${this.baseUrl}/api/video-analysis-improve-text/`, payload);
     }
 
-    saveReportDraft(filmRecordId: number, formData: any): Observable<any> {
-        return this.http.post<any>(`${this.baseUrl}/api/film-records/${filmRecordId}/save_report_draft/`, formData);
+    saveReportDraft(
+        filmRecordId: number,
+        data: {
+            numero_informe?: string;
+            report_date?: string;
+            form_data?: Partial<VideoReportFormData>;
+            status?: VideoAnalysisReportStatus;
+        }
+    ): Observable<VideoAnalysisReportRecord> {
+        return this.http.post<VideoAnalysisReportRecord>(`${this.baseUrl}/api/film-records/${filmRecordId}/save_report_draft/`, data);
     }
 
-    saveReport(data: { film_record?: number | null; numero_informe?: string; report_date?: string; form_data?: any }): Observable<any> {
-        return this.http.post<any>(`${this.baseUrl}/api/video-analysis-reports/`, data);
+    saveReport(data: {
+        film_record?: number | null;
+        numero_informe?: string;
+        report_date?: string;
+        form_data?: Partial<VideoReportFormData>;
+        status?: VideoAnalysisReportStatus;
+    }): Observable<VideoAnalysisReportRecord> {
+        return this.http.post<VideoAnalysisReportRecord>(`${this.baseUrl}/api/video-analysis-reports/`, data);
     }
 
-    updateReport(id: number, data: any): Observable<any> {
-        return this.http.put<any>(`${this.baseUrl}/api/video-analysis-reports/${id}/`, data);
+    updateReport(
+        id: number,
+        data: {
+            film_record?: number | null;
+            numero_informe?: string;
+            report_date?: string;
+            form_data?: Partial<VideoReportFormData>;
+            status?: VideoAnalysisReportStatus;
+        }
+    ): Observable<VideoAnalysisReportRecord> {
+        return this.http.put<VideoAnalysisReportRecord>(`${this.baseUrl}/api/video-analysis-reports/${id}/`, data);
     }
 
-    getReportByRecord(filmRecordId: number): Observable<any[]> {
-        return this.http.get<any[]>(`${this.baseUrl}/api/video-analysis-reports/?film_record=${filmRecordId}`);
+    getReportByRecord(filmRecordId: number): Observable<VideoAnalysisReportRecord[]> {
+        return this.http.get<VideoAnalysisReportRecord[]>(`${this.baseUrl}/api/video-analysis-reports/?film_record=${filmRecordId}`);
     }
 
-    getReport(id: number): Observable<any> {
-        return this.http.get<any>(`${this.baseUrl}/api/video-analysis-reports/${id}/`);
+    getReport(id: number): Observable<VideoAnalysisReportRecord> {
+        return this.http.get<VideoAnalysisReportRecord>(`${this.baseUrl}/api/video-analysis-reports/${id}/`);
     }
 
-    listReports(): Observable<any[]> {
-        return this.http.get<any[]>(`${this.baseUrl}/api/video-analysis-reports/`);
+    listReports(): Observable<VideoAnalysisReportRecord[]> {
+        return this.http.get<VideoAnalysisReportRecord[]>(`${this.baseUrl}/api/video-analysis-reports/`);
     }
 }

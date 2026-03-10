@@ -202,6 +202,12 @@ class Catalog(TimeStampedModel):
 class VideoAnalysisReport(TimeStampedModel):
     """Persiste los datos del wizard de informes. Puede estar vinculado a un FilmRecord o ser independiente."""
 
+    STATUS_CHOICES = [
+        ('PENDIENTE', 'Pendiente'),
+        ('BORRADOR', 'Borrador'),
+        ('FINALIZADO', 'Finalizado'),
+    ]
+
     film_record = models.OneToOneField(
         FilmRecord,
         on_delete=models.SET_NULL,
@@ -211,6 +217,7 @@ class VideoAnalysisReport(TimeStampedModel):
     )
     numero_informe = models.CharField(max_length=100, blank=True)
     report_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDIENTE')
     form_data = models.JSONField(default=dict)
 
     class Meta:
