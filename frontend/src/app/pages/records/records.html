@@ -293,10 +293,9 @@
 
             <form (ngSubmit)="saveRecord()" #recordForm="ngForm" class="overflow-y-auto flex-1 px-6 py-5 space-y-6">
 
-                <div
-                    class="rounded-xl border border-red-200 bg-red-50/80 px-3 py-2 text-[11px] text-red-700 font-semibold">
-                    Datos minimos obligatorios para registrar solicitud: Motivo, Nro. Asunto, Caratula, Nro. Causa
-                    Judicial, Juzgado/Fiscalia, Unidad Generadora y Responsable.
+                <div *ngIf="validationMessage"
+                    class="w-full text-sm font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-2xl px-5 py-4 mb-4 animate-slide-in">
+                    {{ validationMessage }}
                 </div>
 
                 <div>
@@ -316,11 +315,10 @@
                                 class="field-control-compact">
                         </div>
                         <div class="space-y-1.5">
-                            <label class="field-label-compact">Denuncia / Procedimiento <span
-                                    class="text-red-500">*</span></label>
+                            <label class="field-label-compact uppercase">Denuncia / Procedimiento *</label>
                             <select name="request_kind" [(ngModel)]="newRecord.request_kind"
                                 class="field-control-compact transition-colors"
-                                [class.border-red-500]="!newRecord.request_kind" required>
+                                [attr.data-invalid]="isFieldInvalid('request_kind') ? 'true' : null" required>
                                 <option value="">- Seleccione -</option>
                                 <option value="DENUNCIA">DENUNCIA</option>
                                 <option value="PROCEDIMIENTO">PROCEDIMIENTO</option>
@@ -341,10 +339,10 @@
                             </select>
                         </div>
                         <div class="space-y-1.5">
-                            <label class="field-label-compact">Nro. Asunto <span class="text-red-500">*</span></label>
+                            <label class="field-label-compact uppercase">Nro. Asunto *</label>
                             <input type="text" name="issue_number" [(ngModel)]="newRecord.issue_number"
                                 class="field-control-compact transition-colors" 
-                                [class.border-red-500]="!newRecord.issue_number"
+                                [attr.data-invalid]="isFieldInvalid('issue_number') ? 'true' : null"
                                 placeholder="Ej: INT-2026/032" required>
                         </div>
                         <div class="space-y-1.5">
@@ -478,19 +476,17 @@
                     </h4>
                     <div class="grid grid-cols-3 gap-3">
                         <div class="space-y-1.5">
-                            <label class="field-label-compact">Nro. Causa Judicial <span
-                                    class="text-red-500">*</span></label>
+                            <label class="field-label-compact uppercase">Nro. Causa Judicial *</label>
                             <input type="text" name="judicial_case_number" [(ngModel)]="newRecord.judicial_case_number"
                                 class="field-control-compact transition-colors"
-                                [class.border-red-500]="!newRecord.judicial_case_number"
+                                [attr.data-invalid]="isFieldInvalid('judicial_case_number') ? 'true' : null"
                                 placeholder="Ej: C-12345/2026" required>
                         </div>
                         <div class="space-y-1.5">
-                            <label class="field-label-compact">Juzgado / Fiscalía <span
-                                    class="text-red-500">*</span></label>
+                            <label class="field-label-compact uppercase">Juzgado / Fiscalía *</label>
                             <input type="text" name="judicial_office" [(ngModel)]="newRecord.judicial_office"
                                 class="field-control-compact transition-colors"
-                                [class.border-red-500]="!newRecord.judicial_office"
+                                [attr.data-invalid]="isFieldInvalid('judicial_office') ? 'true' : null"
                                 placeholder="Si falta, se guarda N/C" required>
                         </div>
                         <div class="space-y-1.5">
@@ -504,10 +500,10 @@
                                 class="field-control-compact" placeholder="Si falta, se guarda N/C">
                         </div>
                         <div class="space-y-1.5 col-span-2">
-                            <label class="field-label-compact">Carátula <span class="text-red-500">*</span></label>
+                            <label class="field-label-compact uppercase">Carátula *</label>
                             <input type="text" name="case_title" [(ngModel)]="newRecord.case_title"
                                 class="field-control-compact transition-colors"
-                                [class.border-red-500]="!newRecord.case_title"
+                                [attr.data-invalid]="isFieldInvalid('case_title') ? 'true' : null"
                                 placeholder="Ej: DENUNCIA S/ HURTO" required>
                         </div>
                     </div>
@@ -520,11 +516,10 @@
                     </h4>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-1.5">
-                            <label class="field-label-compact">Unidad Generadora <span
-                                    class="text-red-500">*</span></label>
+                            <label class="field-label-compact uppercase">Unidad Generadora *</label>
                             <select name="generator_unit" [(ngModel)]="newRecord.generator_unit"
                                 class="field-control-compact transition-colors"
-                                [class.border-red-500]="!newRecord.generator_unit" required>
+                                [attr.data-invalid]="isFieldInvalid('generator_unit') ? 'true' : null" required>
                                 <option [ngValue]="''">- Sin especificar -</option>
                                 @for (unit of units(); track unit.id) {
                                 <option [ngValue]="unit.id">{{ unit.name }} ({{ unit.code }})</option>
@@ -542,11 +537,10 @@
                             </select>
                         </div>
                         <div class="space-y-1.5">
-                            <label class="field-label-compact">Responsable a Cargo <span
-                                    class="text-red-500">*</span></label>
+                            <label class="field-label-compact uppercase">Responsable a Cargo *</label>
                             <select name="operator" [(ngModel)]="newRecord.operator" required 
                                 class="field-control-compact transition-colors"
-                                [class.border-red-500]="!newRecord.operator">
+                                [attr.data-invalid]="isFieldInvalid('operator') ? 'true' : null">
                                 <option [ngValue]="''" disabled>Seleccione operador...</option>
                                 @for (person of people(); track person.id) {
                                 <option [ngValue]="person.id">{{ person.last_name }}, {{ person.first_name }}</option>
