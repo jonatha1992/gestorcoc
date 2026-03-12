@@ -8,16 +8,60 @@ import { HashComponent } from './pages/hash/hash';
 import { HechosComponent } from './pages/hechos/hechos';
 import { InformesComponent } from './pages/informes/informes';
 import { SettingsComponent } from './pages/settings/settings';
+import { LoginComponent } from './pages/login/login';
+import { authGuard, loginRedirectGuard, permissionGuard } from './guards/auth.guard';
+import { PermissionCodes } from './auth/auth.models';
 
 export const routes: Routes = [
-    { path: '', component: HomeComponent },
-    { path: 'assets', component: AssetsComponent },
-    { path: 'novedades', component: NovedadesComponent },
-    { path: 'personnel', component: PersonnelComponent },
-    { path: 'records', component: RecordsComponent },
-    { path: 'hechos', component: HechosComponent },
-    { path: 'integrity', component: HashComponent },
-    { path: 'informes', component: InformesComponent },
-    { path: 'settings', component: SettingsComponent },
+    { path: 'login', component: LoginComponent, canActivate: [loginRedirectGuard] },
+    {
+        path: '',
+        component: HomeComponent,
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.VIEW_DASHBOARD] }
+    },
+    {
+        path: 'assets',
+        component: AssetsComponent,
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.VIEW_ASSETS] }
+    },
+    {
+        path: 'novedades',
+        component: NovedadesComponent,
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.VIEW_NOVEDADES] }
+    },
+    {
+        path: 'personnel',
+        component: PersonnelComponent,
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.VIEW_PERSONNEL] }
+    },
+    {
+        path: 'records',
+        component: RecordsComponent,
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.VIEW_RECORDS] }
+    },
+    {
+        path: 'hechos',
+        component: HechosComponent,
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.VIEW_HECHOS] }
+    },
+    {
+        path: 'integrity',
+        component: HashComponent,
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.USE_INTEGRITY] }
+    },
+    {
+        path: 'informes',
+        component: InformesComponent,
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.USE_REPORTS] }
+    },
+    { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },
     { path: '**', redirectTo: '' }
 ];

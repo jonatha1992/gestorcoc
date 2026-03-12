@@ -14,7 +14,7 @@
                     placeholder="Buscar novedad...">
             </div>
             <div class="flex items-center justify-end">
-                <button (click)="openForm()"
+                <button (click)="openForm()" [class.hidden]="!canManageNovedades"
                     class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
@@ -194,16 +194,16 @@
                     <button type="button" (click)="closeForm()"
                         class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3.5 px-6 rounded-xl transition-all">Cancelar</button>
                     @if (isEditing) {
-                    <button type="submit" (click)="setGenerateActaAfterSave(false)"
+                    <button type="submit" (click)="setGenerateActaAfterSave(false)" [class.hidden]="!canManageNovedades"
                         class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-indigo-100 transition-all">
                         Actualizar
                     </button>
                     } @else {
-                    <button type="submit" (click)="setGenerateActaAfterSave(false)"
+                    <button type="submit" (click)="setGenerateActaAfterSave(false)" [class.hidden]="!canManageNovedades"
                         class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-indigo-100 transition-all">
                         Guardar
                     </button>
-                    <button type="submit" (click)="setGenerateActaAfterSave(true)"
+                    <button type="submit" (click)="setGenerateActaAfterSave(true)" [class.hidden]="!canManageNovedades"
                         class="flex-1 bg-slate-700 hover:bg-slate-800 text-white font-bold py-3.5 px-6 rounded-xl shadow-sm transition-all">
                         Guardar y Generar Acta
                     </button>
@@ -339,14 +339,14 @@
                         </td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-2">
-                                <button (click)="editNovedad(novedad)"
+                                <button (click)="editNovedad(novedad)" [class.hidden]="!canManageNovedades"
                                     class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Editar">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
                                 </button>
-                                <button (click)="deleteNovedad(novedad.id)"
+                                <button (click)="deleteNovedad(novedad.id)" [class.hidden]="!canManageNovedades"
                                     class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Eliminar">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

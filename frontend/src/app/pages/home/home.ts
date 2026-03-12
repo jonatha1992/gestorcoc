@@ -309,25 +309,28 @@ const MODULE_CONFIG: Record<string, DashboardModuleUiConfig> = {
     filters: [],
     shortLabels: {
       ADMIN: 'Administrador',
-      OP_EXTRACTION: 'Operador basico',
-      OP_CONTROL: 'Operador de camaras',
-      OP_VIEWER: 'Solo visualizacion',
+      OPERADOR: 'Operador',
+      COORDINADOR_COC: 'Coordinador COC',
+      CREV: 'CREV',
+      COORDINADOR_CREV: 'Coordinador CREV',
       active: 'Activos',
       inactive: 'Inactivos',
     },
     seriesIcons: {
       ADMIN: 'shield',
-      OP_EXTRACTION: 'eye',
-      OP_CONTROL: 'camera',
-      OP_VIEWER: 'badge',
+      OPERADOR: 'eye',
+      COORDINADOR_COC: 'users',
+      CREV: 'camera',
+      COORDINADOR_CREV: 'badge',
       active: 'check-circle',
       inactive: 'clock',
     },
     seriesTones: {
       ADMIN: 'sky',
-      OP_EXTRACTION: 'cyan',
-      OP_CONTROL: 'amber',
-      OP_VIEWER: 'slate',
+      OPERADOR: 'cyan',
+      COORDINADOR_COC: 'amber',
+      CREV: 'emerald',
+      COORDINADOR_CREV: 'slate',
       active: 'emerald',
       inactive: 'rose',
     },
@@ -930,7 +933,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     return 'Periodo actual';
   }
 
-  private decorateSeries(points: DashboardSeriesPoint[], section: 'primary' | 'secondary', moduleName: 'novedades' | 'hechos'): DashboardSeriesView[] {
+  private decorateSeries(
+    points: DashboardSeriesPoint[],
+    section: 'primary' | 'secondary',
+    moduleName: DashboardModule | 'general',
+  ): DashboardSeriesView[] {
     const config = MODULE_CONFIG[moduleName] || MODULE_CONFIG['novedades'];
     const total = points.reduce((acc, item) => acc + item.value, 0);
     return points.map((point, index) => {

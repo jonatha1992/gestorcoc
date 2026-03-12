@@ -62,6 +62,10 @@ export class RecordsService {
         return this.api.delete<any>(`api/film-records/${id}/`);
     }
 
+    verifyByCrev(id: number, observations = ''): Observable<any> {
+        return this.api.post<any>(`api/film-records/${id}/verify_by_crev/`, { observations });
+    }
+
     getCatalogs(): Observable<any[]> {
         return this.api.get<any[]>('api/catalogs/');
     }

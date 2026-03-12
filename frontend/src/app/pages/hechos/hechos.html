@@ -14,7 +14,7 @@
                     placeholder="Buscar hecho...">
             </div>
 
-            <button (click)="openForm()"
+            <button (click)="openForm()" [class.hidden]="!canManageHechos"
                 class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-100 hover:scale-[1.02]">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
@@ -159,7 +159,7 @@
                         </td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-1">
-                                <button (click)="editHecho(hecho)"
+                                <button (click)="editHecho(hecho)" [class.hidden]="!canManageHechos"
                                     class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                                     title="Editar">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
@@ -168,7 +168,7 @@
                                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
                                 </button>
-                                <button (click)="deleteHecho(hecho.id)"
+                                <button (click)="deleteHecho(hecho.id)" [class.hidden]="!canManageHechos"
                                     class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
                                     title="Eliminar">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
@@ -362,7 +362,7 @@
                 <div class="pt-4 flex gap-3 border-t border-slate-100">
                     <button type="button" (click)="closeForm()"
                         class="flex-1 bg-white hover:bg-slate-50 text-slate-600 font-bold py-2.5 rounded-xl border border-slate-200 transition-all text-xs">Cancelar</button>
-                    <button type="submit"
+                    <button type="submit" [class.hidden]="!canManageHechos"
                         class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-100 hover:shadow-xl hover:scale-[1.01] text-xs">
                         Guardar Registro
                     </button>

@@ -1,6 +1,9 @@
 from rest_framework import viewsets, filters
 from rest_framework.filters import OrderingFilter
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from personnel.access import PermissionCode
+from personnel.permissions import ActionPermissionMixin, HasNamedPermission
 from .models import System, Server, Camera, CameramanGear, Unit
 from .serializers import (
     SystemSerializer, ServerSerializer, CameraSerializer,
@@ -8,9 +11,21 @@ from .serializers import (
 )
 
 
-class UnitViewSet(viewsets.ModelViewSet):
+ASSET_ACTION_PERMISSIONS = {
+    'list': [PermissionCode.VIEW_ASSETS],
+    'retrieve': [PermissionCode.VIEW_ASSETS],
+    'create': [PermissionCode.MANAGE_ASSETS],
+    'update': [PermissionCode.MANAGE_ASSETS],
+    'partial_update': [PermissionCode.MANAGE_ASSETS],
+    'destroy': [PermissionCode.MANAGE_ASSETS],
+}
+
+
+class UnitViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
     queryset = Unit.objects.all()
     serializer_class = UnitSerializer
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    action_permissions = ASSET_ACTION_PERMISSIONS
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, OrderingFilter]
     filterset_fields = {'parent': ['exact']}
     search_fields = ['name', 'code']
@@ -18,12 +33,14 @@ class UnitViewSet(viewsets.ModelViewSet):
     ordering = ['name']
 
 
-class SystemViewSet(viewsets.ModelViewSet):
+class SystemViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
     queryset = System.objects.select_related('unit').prefetch_related(
         'servers',
         'servers__cameras',
     ).all()
     serializer_class = SystemSerializer
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    action_permissions = ASSET_ACTION_PERMISSIONS
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, OrderingFilter]
     filterset_fields = {
         'unit': ['exact'],
@@ -36,9 +53,11 @@ class SystemViewSet(viewsets.ModelViewSet):
     ordering = ['name']
 
 
-class ServerViewSet(viewsets.ModelViewSet):
+class ServerViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
     queryset = Server.objects.all()
     serializer_class = ServerSerializer
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    action_permissions = ASSET_ACTION_PERMISSIONS
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, OrderingFilter]
     filterset_fields = {
         'system': ['exact'],
@@ -49,10 +68,12 @@ class ServerViewSet(viewsets.ModelViewSet):
     ordering = ['name']
 
 
-class CameraViewSet(viewsets.ModelViewSet):
+class CameraViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
     # select_related evita N+1 queries: el serializer accede a server.name, server.system.name y server.system.id
     queryset = Camera.objects.select_related('server', 'server__system').all()
     serializer_class = CameraSerializer
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    action_permissions = ASSET_ACTION_PERMISSIONS
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, OrderingFilter]
     filterset_fields = {
         'server': ['exact'],
@@ -63,9 +84,11 @@ class CameraViewSet(viewsets.ModelViewSet):
     ordering = ['name']
 
 
-class CameramanGearViewSet(viewsets.ModelViewSet):
+class CameramanGearViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
     queryset = CameramanGear.objects.all()
     serializer_class = CameramanGearSerializer
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    action_permissions = ASSET_ACTION_PERMISSIONS
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, OrderingFilter]
     filterset_fields = {
         'condition': ['exact'],

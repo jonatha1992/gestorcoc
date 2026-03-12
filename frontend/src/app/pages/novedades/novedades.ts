@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { NovedadService } from '../../services/novedad.service';
 import { AssetService } from '../../services/asset.service';
 import { ToastService } from '../../services/toast.service';
+import { AuthService } from '../../services/auth.service';
+import { PermissionCodes } from '../../auth/auth.models';
 import { environment } from '../../../environments/environment';
 import {
   getFirstDayOfCurrentMonthInputValue,
@@ -48,6 +50,7 @@ export class NovedadesComponent implements OnInit {
   private novedadService = inject(NovedadService);
   private assetService = inject(AssetService);
   private toastService = inject(ToastService);
+  readonly authService = inject(AuthService);
 
   @ViewChild('sigPad') sigPad!: ElementRef<HTMLCanvasElement>;
 
@@ -105,6 +108,18 @@ export class NovedadesComponent implements OnInit {
   generateActaAfterSave = false;
 
   newNovedad: any = this.getEmptyNovedad();
+
+  get canManageNovedades(): boolean {
+    return this.authService.hasPermission(PermissionCodes.MANAGE_NOVEDADES);
+  }
+
+  private requireManageNovedades(): boolean {
+    if (this.canManageNovedades) {
+      return true;
+    }
+    this.toastService.error('No tiene permiso para modificar novedades.');
+    return false;
+  }
 
   ngOnInit() {
     this.loadData();
@@ -197,6 +212,9 @@ export class NovedadesComponent implements OnInit {
   }
 
   openForm() {
+    if (!this.requireManageNovedades()) {
+      return;
+    }
     this.showForm = true;
     this.isEditing = false;
     this.newNovedad = this.getEmptyNovedad();
@@ -211,6 +229,9 @@ export class NovedadesComponent implements OnInit {
   }
 
   editNovedad(novedad: any) {
+    if (!this.requireManageNovedades()) {
+      return;
+    }
     this.isEditing = true;
     this.newNovedad = { ...novedad };
     this.showForm = true;
@@ -278,7 +299,6 @@ export class NovedadesComponent implements OnInit {
       description: '',
       severity: 'MEDIUM',
       incident_type: 'FALLA_TECNICA',
-      reported_by: 'Jonatan D.',
       status: 'OPEN',
     };
   }
@@ -366,6 +386,10 @@ export class NovedadesComponent implements OnInit {
   saveNovedad(event: Event) {
     event.preventDefault();
 
+    if (!this.requireManageNovedades()) {
+      return;
+    }
+
     if (this.selectedAssets.length === 0) {
       this.toastService.error('Debe seleccionar al menos un activo afectado');
       return;
@@ -375,7 +399,6 @@ export class NovedadesComponent implements OnInit {
       description: this.newNovedad.description,
       severity: this.newNovedad.severity,
       incident_type: this.newNovedad.incident_type,
-      reported_by: this.newNovedad.reported_by,
       status: this.newNovedad.status,
     };
 
@@ -764,6 +787,9 @@ export class NovedadesComponent implements OnInit {
   }
 
   deleteNovedad(id: number) {
+    if (!this.requireManageNovedades()) {
+      return;
+    }
     if (!confirm('¿Está seguro de eliminar esta novedad?')) return;
 
     this.novedadService.deleteNovedad(id).subscribe({

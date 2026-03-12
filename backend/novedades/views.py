@@ -1,15 +1,27 @@
 from rest_framework import viewsets
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from personnel.access import PermissionCode
+from personnel.permissions import ActionPermissionMixin, HasNamedPermission
 from .models import Novedad
 from .serializers import NovedadSerializer
 
 
-class NovedadViewSet(viewsets.ModelViewSet):
+class NovedadViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
     queryset = Novedad.objects.select_related(
         'camera', 'server', 'system', 'cameraman_gear'
     )
     serializer_class = NovedadSerializer
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    action_permissions = {
+        "list": [PermissionCode.VIEW_NOVEDADES],
+        "retrieve": [PermissionCode.VIEW_NOVEDADES],
+        "create": [PermissionCode.MANAGE_NOVEDADES],
+        "update": [PermissionCode.MANAGE_NOVEDADES],
+        "partial_update": [PermissionCode.MANAGE_NOVEDADES],
+        "destroy": [PermissionCode.MANAGE_NOVEDADES],
+    }
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = {
         'status': ['exact'],
@@ -49,3 +61,10 @@ class NovedadViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(cameraman_gear__isnull=False)
 
         return queryset
+
+    def perform_create(self, serializer):
+        person = getattr(self.request.user, "person", None)
+        if person is not None and not serializer.validated_data.get("reported_by"):
+            serializer.save(reported_by=person, reporter_name="")
+            return
+        serializer.save()
