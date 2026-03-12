@@ -257,7 +257,7 @@ Person "0..1" <-- "0..*" Novedad : reported_by
 Person "0..1" <-- "0..*" Hecho : reported_by
 Person "0..1" <-- "0..*" FilmRecord : received_by
 Person "0..1" <-- "0..*" FilmRecord : verified_by_crev
-Person "0..1" <-- "0..*" Person : unit (revista en)
+Unit "0..1" <-- "0..*" Person : unit (revista en)
 Person "0..*" <--> "0..*" System : assigned_systems (M2M)
 
 Unit "0..1" <-- "0..*" FilmRecord : generator_unit

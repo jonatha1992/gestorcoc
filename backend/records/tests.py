@@ -1,17 +1,21 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 from unittest.mock import Mock, patch
 from django.conf import settings
 from django.core.exceptions import RequestDataTooBig
-from django.test import TestCase, override_settings
+from django.db import connection
+from django.test import RequestFactory, TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APIClient
-from assets.models import Unit
+from assets.models import Camera, Server, System, Unit
+from hechos.models import Hecho
 from novedades.models import Novedad
 from personnel.models import Person
 from .models import FilmRecord, VideoAnalysisReport
 from .services import IntegrityService
+from .views import DashboardMapView, DashboardNovedadesView
 
 
 class DashboardLabelApiTests(TestCase):
@@ -83,6 +87,126 @@ class DashboardLabelApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['series']['trend'], [{'label': '2026-01-07', 'value': 1}])
+
+    def test_personnel_dashboard_uses_selected_date_range(self):
+        january = Person.objects.create(
+            first_name='Ana',
+            last_name='Enero',
+            badge_number='323456',
+            role='OP_CONTROL',
+        )
+        march = Person.objects.create(
+            first_name='Luis',
+            last_name='Marzo',
+            badge_number='323457',
+            role='ADMIN',
+        )
+
+        Person.objects.filter(pk=january.pk).update(
+            created_at=timezone.make_aware(datetime(2026, 1, 10, 9, 0, 0))
+        )
+        Person.objects.filter(pk=march.pk).update(
+            created_at=timezone.make_aware(datetime(2026, 3, 10, 9, 0, 0))
+        )
+
+        response = self.client.get('/api/dashboard/personnel/?created_at__gte=2026-01-01&created_at__lte=2026-01-31')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['totals']['records'], 1)
+        self.assertEqual(response.data['series']['trend'], [{'label': '2026-01-10', 'value': 1}])
+
+
+class DashboardQueryPerformanceTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.unit = Unit.objects.create(
+            name='Ezeiza',
+            code='EZE',
+            airport='Ministro Pistarini',
+            latitude='-34.8222',
+            longitude='-58.5358',
+            map_enabled=True,
+        )
+        system = System.objects.create(name='SYS-EZE', unit=self.unit)
+        server = Server.objects.create(system=system, name='SRV-EZE', ip_address='10.0.0.10')
+        camera = Camera.objects.create(server=server, name='CAM-EZE', ip_address='10.0.0.11')
+
+        Novedad.objects.create(description='Novedad 1', status='OPEN', severity='HIGH', camera=camera)
+        Novedad.objects.create(description='Novedad 2', status='CLOSED', severity='LOW', system=system)
+        Hecho.objects.create(timestamp=timezone.now(), description='Hecho 1', camera=camera)
+        FilmRecord.objects.create(generator_unit=self.unit, entry_date=timezone.localdate())
+        Person.objects.create(
+            first_name='Ana',
+            last_name='Mapa',
+            badge_number='555001',
+            unit=self.unit,
+            role='OP_CONTROL',
+        )
+
+    def test_novedades_dashboard_uses_a_small_fixed_number_of_queries(self):
+        request = self.factory.get('/api/dashboard/novedades/')
+        view = DashboardNovedadesView.as_view()
+
+        with CaptureQueriesContext(connection) as context:
+            response = view(request)
+            response.render()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertLessEqual(len(context.captured_queries), 4)
+
+    def test_map_dashboard_does_not_execute_queries_inside_the_unit_loop(self):
+        request = self.factory.get('/api/dashboard/map/?scope=ba')
+        view = DashboardMapView.as_view()
+
+        with CaptureQueriesContext(connection) as context:
+            response = view(request)
+            response.render()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertLessEqual(len(context.captured_queries), 2)
+
+
+class HechoFutureDateValidationApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        unit = Unit.objects.create(name='Unidad Hechos', code='UHT')
+        system = System.objects.create(name='SYS-UHT', unit=unit)
+        server = Server.objects.create(system=system, name='SRV-UHT', ip_address='10.0.1.10')
+        self.camera = Camera.objects.create(server=server, name='CAM-UHT', ip_address='10.0.1.11')
+
+    def test_rejects_future_timestamp(self):
+        future_timestamp = (timezone.now() + timedelta(days=1)).isoformat()
+
+        response = self.client.post(
+            '/api/hechos/',
+            {
+                'timestamp': future_timestamp,
+                'description': 'Hecho futuro',
+                'camera_id': self.camera.id,
+                'category': 'OPERATIVO',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('timestamp', response.data)
+
+    def test_rejects_future_end_time(self):
+        now = timezone.now()
+        response = self.client.post(
+            '/api/hechos/',
+            {
+                'timestamp': now.isoformat(),
+                'end_time': (now + timedelta(hours=2)).isoformat(),
+                'description': 'Hecho con cierre futuro',
+                'camera_id': self.camera.id,
+                'category': 'OPERATIVO',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('end_time', response.data)
 
 
 class FilmRecordApiPeopleTests(TestCase):
@@ -200,6 +324,70 @@ class FilmRecordApiPeopleTests(TestCase):
         self.assertEqual(response.data['requester'], 'N/C')
 
 
+class FilmRecordFutureDateValidationApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.records_url = '/api/film-records/'
+        self.unit = Unit.objects.create(name='Unidad Test', code='UTF')
+
+    def _build_payload(self):
+        return {
+            "request_number": "SOL-2026-0001",
+            "request_kind": "DENUNCIA",
+            "request_type": "OFICIO",
+            "judicial_case_number": "C-123/2026",
+            "case_title": "DENUNCIA S/ HURTO DE EQUIPAJE",
+            "judicial_office": "Fiscalia Nro. 1",
+            "judicial_secretary": "",
+            "judicial_holder": "",
+            "criminal_problematic": "Hurto de equipaje",
+            "incident_modality": "Sustraccion en cinta",
+            "incident_place": "Hall de arribos",
+            "incident_sector": "Cinta 3",
+            "incident_time": "14:05",
+            "generator_unit": self.unit.id,
+            "operator": "Perez, Juan",
+            "involved_people": [
+                {
+                    "role": "DENUNCIANTE",
+                    "last_name": "Perez",
+                    "first_name": "Ana",
+                    "document_type": "DNI",
+                    "document_number": "30111222",
+                    "nationality": "Argentina",
+                    "birth_date": "1990-06-10",
+                }
+            ],
+        }
+
+    def test_rejects_future_entry_date(self):
+        payload = self._build_payload()
+        payload['entry_date'] = str(timezone.localdate() + timedelta(days=1))
+
+        response = self.client.post(self.records_url, payload, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('entry_date', response.data)
+
+    def test_rejects_future_start_time(self):
+        payload = self._build_payload()
+        payload['start_time'] = (timezone.now() + timedelta(hours=3)).isoformat()
+
+        response = self.client.post(self.records_url, payload, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('start_time', response.data)
+
+    def test_rejects_future_birth_date_for_involved_people(self):
+        payload = self._build_payload()
+        payload['involved_people'][0]['birth_date'] = str(timezone.localdate() + timedelta(days=5))
+
+        response = self.client.post(self.records_url, payload, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('involved_people', response.data)
+
+
 class VideoAnalysisReportApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -262,7 +450,7 @@ class VideoAnalysisReportApiTests(TestCase):
             "file_name": f"frame{index}.jpg",
             "mime_type": "image/jpeg",
             "content_base64": content_base64,
-            "frame_time": "2026-03-12T15:00",
+            "frame_time": (timezone.localtime() - timedelta(minutes=5)).strftime('%Y-%m-%dT%H:%M'),
             "description": f"Frame {index}",
             "order": index
         }
@@ -339,6 +527,32 @@ class VideoAnalysisReportApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('errors', response.data)
         self.assertIn('hash_algorithms', str(response.data))
+
+    def test_rejects_future_report_date(self):
+        report_data = {
+            **self.valid_report_data,
+            "report_date": str(timezone.localdate() + timedelta(days=1)),
+        }
+
+        response = self.client.post(self.url, {"report_data": report_data, "frames": []}, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('errors', response.data)
+        self.assertIn('report_date', str(response.data))
+
+    def test_rejects_future_frame_time(self):
+        frame = self._build_frame(index=0)
+        frame["frame_time"] = (timezone.localtime() + timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M')
+
+        response = self.client.post(
+            self.url,
+            {"report_data": self.valid_report_data, "frames": [frame]},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('errors', response.data)
+        self.assertIn('frame_time', str(response.data))
     @patch('records.views.IntegrityService.generate_video_analysis_docx')
     def test_maps_legacy_sintesis_fields_into_unified_sintesis(self, service_mock):
         service_mock.return_value = (BytesIO(b'docx-data'), 'informe.docx')
@@ -667,6 +881,21 @@ class VideoAnalysisReportStateApiTests(TestCase):
         report.refresh_from_db()
         self.assertEqual(report.status, 'FINALIZADO')
         self.assertEqual(report.numero_informe, '0001EZE/2026')
+
+    def test_rejects_future_report_date_when_saving_draft(self):
+        response = self.client.post(
+            f'/api/film-records/{self.record.id}/save_report_draft/',
+            {
+                'numero_informe': '0001EZE/2026',
+                'report_date': str(timezone.localdate() + timedelta(days=1)),
+                'status': 'BORRADOR',
+                'form_data': {'report_date': str(timezone.localdate() + timedelta(days=1))},
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('report_date', str(response.data))
 
 
 class IntegrityServiceVideoReportTemplateTests(TestCase):

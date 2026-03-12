@@ -33,6 +33,7 @@ backend/staticfiles/
 *.log
 build_err.txt
 build_output.log
+.tmp/
 
 # Scripts de debug temporales (no deben comitearse)
 check_*.py

@@ -29,12 +29,14 @@
             <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fecha desde</label>
                 <input type="date" [(ngModel)]="filterDateFrom" (ngModelChange)="onFilterChange()"
+                    [attr.max]="maxDate"
                     class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
                     title="Fecha desde">
             </div>
             <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fecha hasta</label>
                 <input type="date" [(ngModel)]="filterDateTo" (ngModelChange)="onFilterChange()"
+                    [attr.max]="maxDate"
                     class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
                     title="Fecha hasta">
             </div>

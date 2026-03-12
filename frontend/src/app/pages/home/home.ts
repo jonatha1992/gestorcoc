@@ -1,10 +1,9 @@
+import { Component, OnInit, ViewChild, ElementRef, inject, TemplateRef, AfterViewInit, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
-import { forkJoin } from 'rxjs';
-import { FormsModule } from '@angular/forms';
-
-import * as L from 'leaflet';
 import { ChartComponent } from 'ng-apexcharts';
+import * as L from 'leaflet';
+import { FormsModule } from '@angular/forms';
+import { LayoutService } from '../../services/layout.service';
 
 import { UiIconComponent, UiIconName } from '../../components/ui-icon.component';
 import {
@@ -14,6 +13,10 @@ import {
   DashboardSeriesPoint,
   DashboardService,
 } from '../../services/dashboard.service';
+import {
+  getFirstDayOfCurrentMonthInputValue,
+  getTodayDateInputValue,
+} from '../../utils/date-inputs';
 
 type DashboardFilterType = 'text' | 'select' | 'date';
 type ToneKey = 'sky' | 'amber' | 'emerald' | 'rose' | 'cyan' | 'slate';
@@ -97,22 +100,28 @@ const TONE_HEX: Record<ToneKey, string> = {
   slate: '#475569',
 };
 
-const _now = new Date();
-const _yearStart = `${_now.getFullYear()}-01-01`;
-const _today = _now.toISOString().split('T')[0];
+const _monthStart = getFirstDayOfCurrentMonthInputValue();
+const _today = getTodayDateInputValue();
 
 const FILTER_DEFAULTS: Record<string, string> = {
-  created_at__gte: _yearStart,
+  from_date: _monthStart,
+  to_date: _today,
+  created_at__gte: _monthStart,
   created_at__lte: _today,
-  timestamp__gte: _yearStart,
+  timestamp__gte: _monthStart,
   timestamp__lte: _today,
-  entry_date__gte: _yearStart,
+  entry_date__gte: _monthStart,
   entry_date__lte: _today,
 };
 
 const cloneFilters = (): Record<string, string> => ({
   ...FILTER_DEFAULTS,
 });
+
+const SHARED_DATE_FILTERS: DashboardFilterField[] = [
+  { key: 'from_date', label: 'Desde', type: 'date', icon: 'calendar' },
+  { key: 'to_date', label: 'Hasta', type: 'date', icon: 'calendar' },
+];
 
 const MODULE_CONFIG: Record<string, DashboardModuleUiConfig> = {
   general: {
@@ -338,6 +347,14 @@ const MODULE_CONFIG: Record<string, DashboardModuleUiConfig> = {
   styleUrl: './home.css',
 })
 export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('chartRadar') chartRadar!: ChartComponent;
+  @ViewChild('headerFilters') headerFilters!: TemplateRef<any>;
+  
+  private layoutService = inject(LayoutService);
+
+  // Filtros
+  selectedPeriod = 'semana';
+  selectedRegion = 'todas';
   private readonly dashboardService = inject(DashboardService);
   private readonly dateTimeFormatter = new Intl.DateTimeFormat('es-AR', {
     dateStyle: 'short',
@@ -347,12 +364,38 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     day: '2-digit',
     month: '2-digit',
   });
+  private readonly moduleCacheKeys: Record<DashboardModule, string | null> = {
+    novedades: null,
+    hechos: null,
+    records: null,
+    personnel: null,
+  };
+  private readonly moduleRequestIds: Record<DashboardModule, number> = {
+    novedades: 0,
+    hechos: 0,
+    records: 0,
+    personnel: 0,
+  };
+  private mapRequestId = 0;
 
   @ViewChild('leafletMap') leafletMapRef!: ElementRef<HTMLDivElement>;
   private leafletMap: L.Map | null = null;
   private markerLayer: L.LayerGroup | null = null;
 
-  loading = signal(false);
+  readonly todayDate = getTodayDateInputValue();
+  moduleLoadingState = signal<Record<DashboardModule, boolean>>({
+    novedades: false,
+    hechos: false,
+    records: false,
+    personnel: false,
+  });
+  moduleErrorState = signal<Record<DashboardModule, boolean>>({
+    novedades: false,
+    hechos: false,
+    records: false,
+    personnel: false,
+  });
+  mapLoading = signal(false);
   novedadesData = signal<DashboardModuleResponse | null>(null);
   hechosData = signal<DashboardModuleResponse | null>(null);
   recordsData = signal<DashboardModuleResponse | null>(null);
@@ -362,59 +405,31 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   lastUpdated = signal<Date | null>(null);
   expandedChart = signal<string | null>(null);
   
-  modules = signal(['General', 'Novedades', 'Hechos', 'Registros', 'Personal']);
-  selectedModule = signal('General');
+  modules = signal(['Novedades', 'Registros', 'Hechos', 'Personal']);
+  selectedModule = signal('Novedades');
+  globalFilters = signal<Record<string, string>>(cloneFilters());
 
-  globalFilters = signal<Record<string, string>>((() => {
-    const now = new Date();
-    const firstDayOfYear = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
-    const today = now.toISOString().split('T')[0];
-    
-    return {
-      'created_at__gte': firstDayOfYear,
-      'timestamp__gte': firstDayOfYear,
-      'entry_date__gte': firstDayOfYear,
-      'created_at__lte': today,
-      'timestamp__lte': today,
-      'entry_date__lte': today,
-      'from_date': firstDayOfYear,
-      'to_date': today,
-    };
-  })());
-
-  readonly filterFields = computed<DashboardFilterField[]>(() => [
-    { key: 'from_date', label: 'Desde', type: 'date', icon: 'calendar' },
-    { key: 'to_date', label: 'Hasta', type: 'date', icon: 'calendar' },
-  ]);
-  readonly activeModuleKey = computed(() => {
+  readonly filterFields = computed<DashboardFilterField[]>(() => SHARED_DATE_FILTERS);
+  readonly activeModuleKey = computed<DashboardModule>(() => {
     const map: Record<string, string> = {
-      'General': 'general',
       'Novedades': 'novedades',
-      'Hechos': 'hechos',
       'Registros': 'records',
+      'Hechos': 'hechos',
       'Personal': 'personnel'
     };
-    return map[this.selectedModule()] || 'novedades';
+    return (map[this.selectedModule()] || 'novedades') as DashboardModule;
   });
+  readonly loading = computed(() => this.moduleLoadingState()[this.activeModuleKey()]);
 
   readonly activeModuleData = computed(() => {
     const key = this.activeModuleKey();
-    if (key === 'general') return this.buildGeneralAggregate();
     if (key === 'hechos') return this.hechosData();
     if (key === 'records') return this.recordsData();
     if (key === 'personnel') return this.personnelData();
     return this.novedadesData();
   });
 
-  readonly moduleTotal = computed(() => {
-    if (this.selectedModule() === 'General') {
-      return (this.novedadesData()?.totals.records ?? 0) +
-             (this.hechosData()?.totals.records ?? 0) +
-             (this.recordsData()?.totals.records ?? 0) +
-             (this.personnelData()?.totals.records ?? 0);
-    }
-    return this.activeModuleData()?.totals.records ?? 0;
-  });
+  readonly moduleTotal = computed(() => this.activeModuleData()?.totals.records ?? 0);
   readonly pointCount = computed(() => this.mapPoints().length);
   readonly emptyState = computed(() => this.activeModuleData()?.empty_state ?? { is_empty: false, message: '' });
 
@@ -524,7 +539,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     
     // Función para obtener el valor de una unidad según módulo activo
     const getUnitValue = (p: DashboardMapPoint): number => {
-      if (key === 'general') return p.novedades_count + p.hechos_count + p.records_count + p.personnel_count;
       if (key === 'hechos') return p.hechos_count;
       if (key === 'records') return p.records_count;
       if (key === 'personnel') return p.personnel_count;
@@ -574,7 +588,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   readonly activeModuleConfig = computed((): DashboardModuleUiConfig => {
     const key = this.activeModuleKey();
-    return MODULE_CONFIG[key] || MODULE_CONFIG['general'];
+    return MODULE_CONFIG[key] || MODULE_CONFIG['novedades'];
   });
 
   readonly activeModuleStat = computed<PointDetailStat | null>(() => {
@@ -582,9 +596,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!point) return null;
     const config = this.activeModuleConfig();
     const key = this.activeModuleKey();
-    const value = key === 'general'
-      ? point.novedades_count + point.hechos_count + point.records_count + point.personnel_count
-      : key === 'hechos' ? point.hechos_count
+    const value = key === 'hechos' ? point.hechos_count
       : key === 'records' ? point.records_count
       : key === 'personnel' ? point.personnel_count
       : point.novedades_count;
@@ -603,6 +615,12 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     ];
   });
 
+  readonly mapCoverageLabel = computed(() => {
+    const point = this.selectedPoint();
+    if (!point) return 'Cobertura por CREV';
+    return `Cobertura por unidad · ${point.unit_code}`;
+  });
+
   readonly trendChart = computed(() => {
     const config = this.activeModuleConfig();
     const points = this.activeModuleData()?.series.trend ?? [];
@@ -610,7 +628,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     const values = points.map((point) => point.value);
     
     // Etiqueta dinámica según módulo
-    const seriesLabel = this.selectedModule() === 'General' ? 'Total' : this.selectedModule();
+    const seriesLabel = this.selectedModule();
 
     return {
       series: [
@@ -665,15 +683,17 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     };
   });
 
-  ngOnInit(): void {
-    this.refresh();
+  ngOnInit() {
+    this.loadAllModules(this.currentFilters());
   }
 
-  ngAfterViewInit(): void {
-    // Map init is deferred until loadMap resolves (DOM not ready yet at this point)
+  ngAfterViewInit() {
+    this.layoutService.setHeaderContent(this.headerFilters);
+    this.loadMap(this.currentFilters());
   }
 
   ngOnDestroy(): void {
+    this.layoutService.clearHeaderContent();
     this.leafletMap?.remove();
     this.leafletMap = null;
   }
@@ -749,9 +769,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   refresh() {
-    this.loading.set(true);
     const filters = this.currentFilters();
-    this.loadData(filters);
+    this.loadAllModules(filters);
     this.loadMap(filters);
   }
 
@@ -764,9 +783,17 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.refresh();
   }
 
+  onModuleChange(module: string) {
+    this.selectModule(module);
+  }
+
   selectModule(module: string) {
     this.selectedModule.set(module);
-    this.refresh();
+    const moduleKey = this.activeModuleKey();
+    const filters = this.currentFilters();
+    if (!this.moduleLoadingState()[moduleKey] && !this.isModuleCacheValid(moduleKey, filters)) {
+      this.fetchModule(moduleKey, filters);
+    }
   }
 
   selectPoint(point: DashboardMapPoint) {
@@ -787,7 +814,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
 
   toneClasses(tone: ToneKey) {
-    return {
+    const config: Record<ToneKey, any> = {
       sky: {
         badge: 'border-sky-200 bg-sky-50 text-sky-700',
         chip: 'bg-sky-100 text-sky-700',
@@ -795,6 +822,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         rail: 'bg-sky-100',
         bar: 'bg-sky-500',
         marker: 'bg-sky-500',
+        border: 'border-b-sky-500',
       },
       amber: {
         badge: 'border-amber-200 bg-amber-50 text-amber-700',
@@ -803,6 +831,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         rail: 'bg-amber-100',
         bar: 'bg-amber-500',
         marker: 'bg-amber-500',
+        border: 'border-b-amber-500',
       },
       emerald: {
         badge: 'border-emerald-200 bg-emerald-50 text-emerald-700',
@@ -811,6 +840,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         rail: 'bg-emerald-100',
         bar: 'bg-emerald-500',
         marker: 'bg-emerald-500',
+        border: 'border-b-emerald-500',
       },
       rose: {
         badge: 'border-rose-200 bg-rose-50 text-rose-700',
@@ -819,6 +849,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         rail: 'bg-rose-100',
         bar: 'bg-rose-500',
         marker: 'bg-rose-500',
+        border: 'border-b-rose-500',
       },
       cyan: {
         badge: 'border-cyan-200 bg-cyan-50 text-cyan-700',
@@ -827,6 +858,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         rail: 'bg-cyan-100',
         bar: 'bg-cyan-500',
         marker: 'bg-cyan-500',
+        border: 'border-b-cyan-500',
       },
       slate: {
         badge: 'border-slate-200 bg-slate-100 text-slate-700',
@@ -835,10 +867,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         rail: 'bg-slate-200',
         bar: 'bg-slate-600',
         marker: 'bg-slate-700',
+        border: 'border-b-slate-500',
       },
-    }[tone] || {
-      badge: '', chip: '', icon: '', rail: '', bar: '', marker: ''
     };
+    return config[tone] || config.slate;
   }
 
   getFilterValue(key: string): string {
@@ -848,13 +880,17 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   setFilterValue(key: string, value: string) {
     const filters = { ...this.globalFilters() };
     if (key === 'from_date') {
+      filters['from_date'] = value;
       filters['created_at__gte'] = value;
       filters['timestamp__gte'] = value;
       filters['entry_date__gte'] = value;
-    } else {
+    } else if (key === 'to_date') {
+      filters['to_date'] = value;
       filters['created_at__lte'] = value;
       filters['timestamp__lte'] = value;
       filters['entry_date__lte'] = value;
+    } else {
+      filters[key] = value;
     }
     this.globalFilters.set(filters);
     this.applyFilters();
@@ -1003,28 +1039,37 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     return base;
   }
 
-  private loadData(filters: Record<string, string>) {
-    forkJoin({
-      novedades: this.dashboardService.getNovedades(filters),
-      hechos: this.dashboardService.getHechos(filters),
-      records: this.dashboardService.getRecords(filters),
-      personnel: this.dashboardService.getPersonnel(filters),
-    }).subscribe({
-      next: (res) => {
-        this.novedadesData.set(res.novedades);
-        this.hechosData.set(res.hechos);
-        this.recordsData.set(res.records);
-        this.personnelData.set(res.personnel);
+  private loadAllModules(filters: Record<string, string>) {
+    const modules: DashboardModule[] = ['novedades', 'hechos', 'records', 'personnel'];
+    modules.forEach((moduleKey) => this.fetchModule(moduleKey, filters));
+  }
+
+  private fetchModule(moduleKey: DashboardModule, filters: Record<string, string>) {
+    const requestId = this.moduleRequestIds[moduleKey] + 1;
+    const filtersKey = this.serializeFilters(filters);
+    this.moduleRequestIds[moduleKey] = requestId;
+    this.updateModuleLoading(moduleKey, true);
+    this.updateModuleError(moduleKey, false);
+
+    this.getModuleRequest(moduleKey, filters).subscribe({
+      next: (response) => {
+        if (this.moduleRequestIds[moduleKey] !== requestId) {
+          return;
+        }
+        this.setModuleData(moduleKey, response);
+        this.moduleCacheKeys[moduleKey] = filtersKey;
+        this.updateModuleLoading(moduleKey, false);
         this.lastUpdated.set(new Date());
-        this.loading.set(false);
       },
       error: () => {
-        this.novedadesData.set(null);
-        this.hechosData.set(null);
-        this.recordsData.set(null);
-        this.personnelData.set(null);
-        this.loading.set(false);
-      }
+        if (this.moduleRequestIds[moduleKey] !== requestId) {
+          return;
+        }
+        this.setModuleData(moduleKey, null);
+        this.moduleCacheKeys[moduleKey] = null;
+        this.updateModuleError(moduleKey, true);
+        this.updateModuleLoading(moduleKey, false);
+      },
     });
   }
 
@@ -1099,20 +1144,29 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     // Para el mapa NO mandamos el filtro de unidad (queremos ver todas las unidades)
     const mapFilters = { ...filters };
     delete mapFilters['unit_code'];
+    const requestId = this.mapRequestId + 1;
+    this.mapRequestId = requestId;
+    this.mapLoading.set(true);
 
     this.dashboardService.getMap('ba', mapFilters).subscribe({
       next: ({ points }) => {
+        if (this.mapRequestId !== requestId) {
+          return;
+        }
         const current = this.selectedPoint();
         const nextPoints = points ?? [];
         this.mapPoints.set(nextPoints);
         if (!nextPoints.length) {
           this.selectedPoint.set(null);
+          this.mapLoading.set(false);
           return;
         }
         const nextSelection = current
-          ? nextPoints.find((point) => point.unit_code === current.unit_code) ?? nextPoints[0]
-          : nextPoints[0];
+          ? nextPoints.find((point) => point.unit_code === current.unit_code) ?? null
+          : null;
         this.selectedPoint.set(nextSelection);
+        this.mapLoading.set(false);
+        this.lastUpdated.set(new Date());
         setTimeout(() => {
           if (!this.leafletMap) {
             this.initLeafletMap();
@@ -1123,9 +1177,63 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         }, 50);
       },
       error: () => {
+        if (this.mapRequestId !== requestId) {
+          return;
+        }
         this.mapPoints.set([]);
         this.selectedPoint.set(null);
+        this.mapLoading.set(false);
       },
     });
+  }
+
+  private getModuleRequest(moduleKey: DashboardModule, filters: Record<string, string>) {
+    if (moduleKey === 'hechos') {
+      return this.dashboardService.getHechos(filters);
+    }
+    if (moduleKey === 'records') {
+      return this.dashboardService.getRecords(filters);
+    }
+    if (moduleKey === 'personnel') {
+      return this.dashboardService.getPersonnel(filters);
+    }
+    return this.dashboardService.getNovedades(filters);
+  }
+
+  private setModuleData(moduleKey: DashboardModule, value: DashboardModuleResponse | null) {
+    if (moduleKey === 'hechos') {
+      this.hechosData.set(value);
+      return;
+    }
+    if (moduleKey === 'records') {
+      this.recordsData.set(value);
+      return;
+    }
+    if (moduleKey === 'personnel') {
+      this.personnelData.set(value);
+      return;
+    }
+    this.novedadesData.set(value);
+  }
+
+  private updateModuleLoading(moduleKey: DashboardModule, value: boolean) {
+    this.moduleLoadingState.update((state) => ({ ...state, [moduleKey]: value }));
+  }
+
+  private updateModuleError(moduleKey: DashboardModule, value: boolean) {
+    this.moduleErrorState.update((state) => ({ ...state, [moduleKey]: value }));
+  }
+
+  private isModuleCacheValid(moduleKey: DashboardModule, filters: Record<string, string>): boolean {
+    const filtersKey = this.serializeFilters(filters);
+    return this.moduleCacheKeys[moduleKey] === filtersKey && !this.moduleErrorState()[moduleKey];
+  }
+
+  private serializeFilters(filters: Record<string, string>): string {
+    return Object.entries(filters)
+      .filter(([, value]) => value !== undefined && value !== null && value !== '')
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, value]) => `${key}:${value}`)
+      .join('|');
   }
 }

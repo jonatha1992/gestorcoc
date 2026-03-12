@@ -5,6 +5,10 @@ import { NovedadService } from '../../services/novedad.service';
 import { AssetService } from '../../services/asset.service';
 import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
+import {
+  getFirstDayOfCurrentMonthInputValue,
+  getTodayDateInputValue,
+} from '../../utils/date-inputs';
 
 type NovedadSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 type NovedadStatus = 'OPEN' | 'IN_PROGRESS' | 'CLOSED';
@@ -66,8 +70,8 @@ export class NovedadesComponent implements OnInit {
   filterSeverity = '';
   filterIncidentType = '';
   filterAssetType = '';
-  filterDateFrom = '';
-  filterDateTo = '';
+  filterDateFrom = getFirstDayOfCurrentMonthInputValue();
+  filterDateTo = getTodayDateInputValue();
   filterReportedBy = '';
   private searchTimer: any;
 
@@ -343,8 +347,8 @@ export class NovedadesComponent implements OnInit {
   }
 
   clearFilters() {
-    this.filterDateFrom = '';
-    this.filterDateTo = '';
+    this.filterDateFrom = getFirstDayOfCurrentMonthInputValue();
+    this.filterDateTo = getTodayDateInputValue();
     this.filterAssetType = '';
     this.filterSeverity = '';
     this.filterIncidentType = '';
@@ -743,6 +747,10 @@ export class NovedadesComponent implements OnInit {
   private toEndOfDayIso(dateValue: string): string | undefined {
     if (!dateValue) return undefined;
     return `${dateValue}T23:59:59`;
+  }
+
+  get maxDate(): string {
+    return getTodayDateInputValue();
   }
 
   getSeverityLabel(severity: string): string {
