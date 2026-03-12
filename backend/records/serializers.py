@@ -4,6 +4,7 @@ import binascii
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_datetime
 from rest_framework import serializers
 
 from personnel.models import Person
@@ -37,6 +38,36 @@ def _bytes_to_mb_label(size_bytes):
     return f"{mb:.1f}".rstrip('0').rstrip('.')
 
 
+def _is_future_date(value):
+    return bool(value and value > timezone.localdate())
+
+
+def _is_future_datetime(value):
+    if not value:
+        return False
+    current_value = value
+    if timezone.is_naive(current_value):
+        current_value = timezone.make_aware(current_value, timezone.get_current_timezone())
+    return current_value > timezone.now()
+
+
+def _parse_local_datetime_string(value):
+    raw = str(value or '').strip()
+    if not raw:
+        return None
+
+    normalized = raw.replace(' ', 'T')
+    if len(normalized) == 16:
+        normalized = f'{normalized}:00'
+
+    parsed = parse_datetime(normalized)
+    if parsed is None:
+        return None
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
+    return parsed
+
+
 class FilmRecordInvolvedPersonSerializer(serializers.ModelSerializer):
     age = serializers.SerializerMethodField(read_only=True)
 
@@ -62,6 +93,11 @@ class FilmRecordInvolvedPersonSerializer(serializers.ModelSerializer):
         years = today.year - obj.birth_date.year
         before_birthday = (today.month, today.day) < (obj.birth_date.month, obj.birth_date.day)
         return years - int(before_birthday)
+
+    def validate_birth_date(self, value):
+        if _is_future_date(value):
+            raise serializers.ValidationError('La fecha de nacimiento no puede ser futura.')
+        return value
 
 
 class FilmRecordSerializer(serializers.ModelSerializer):
@@ -163,6 +199,42 @@ class FilmRecordSerializer(serializers.ModelSerializer):
         # Default server-side para alta.
         if not instance and not data.get('entry_date'):
             data['entry_date'] = timezone.localdate()
+
+        errors = {}
+        date_field_messages = {
+            'entry_date': 'La fecha del requerimiento no puede ser futura.',
+            'incident_date': 'La fecha del hecho no puede ser futura.',
+            'delivery_date': 'La fecha de entrega no puede ser futura.',
+        }
+        datetime_field_messages = {
+            'start_time': 'La hora de inicio no puede ser futura.',
+            'end_time': 'La hora de fin no puede ser futura.',
+        }
+
+        for field_name, message in date_field_messages.items():
+            value = data.get(field_name, getattr(instance, field_name, None) if instance else None)
+            if _is_future_date(value):
+                errors[field_name] = message
+
+        for field_name, message in datetime_field_messages.items():
+            value = data.get(field_name, getattr(instance, field_name, None) if instance else None)
+            if _is_future_datetime(value):
+                errors[field_name] = message
+
+        start_time = data.get('start_time', getattr(instance, 'start_time', None) if instance else None)
+        end_time = data.get('end_time', getattr(instance, 'end_time', None) if instance else None)
+        if start_time and end_time:
+            normalized_start = start_time
+            normalized_end = end_time
+            if timezone.is_naive(normalized_start):
+                normalized_start = timezone.make_aware(normalized_start, timezone.get_current_timezone())
+            if timezone.is_naive(normalized_end):
+                normalized_end = timezone.make_aware(normalized_end, timezone.get_current_timezone())
+            if normalized_end < normalized_start:
+                errors['end_time'] = 'La hora de fin no puede ser anterior a la hora de inicio.'
+
+        if errors:
+            raise serializers.ValidationError(errors)
 
         return data
 
@@ -363,14 +435,16 @@ class VideoReportDataSerializer(serializers.Serializer):
         mode = (attrs.get('vms_authenticity_mode') or '').strip()
         detail = (attrs.get('vms_authenticity_detail') or '').strip()
         hash_algorithms = attrs.get('hash_algorithms') or []
+        errors = {}
+
+        if _is_future_date(attrs.get('report_date')):
+            errors['report_date'] = 'La fecha del informe no puede ser futura.'
         if mode == 'otro' and not detail:
-            raise serializers.ValidationError({
-                'vms_authenticity_detail': "Debe completar detalle cuando autenticidad = 'otro'."
-            })
+            errors['vms_authenticity_detail'] = "Debe completar detalle cuando autenticidad = 'otro'."
         if 'otro' in hash_algorithms and not (attrs.get('hash_algorithm_other') or '').strip():
-            raise serializers.ValidationError({
-                'hash_algorithm_other': "Debe completar el nombre del algoritmo cuando selecciona 'otro'."
-            })
+            errors['hash_algorithm_other'] = "Debe completar el nombre del algoritmo cuando selecciona 'otro'."
+        if errors:
+            raise serializers.ValidationError(errors)
         return attrs
 
 
@@ -405,6 +479,17 @@ class VideoReportFrameSerializer(serializers.Serializer):
                 f"Cada fotograma no puede superar {_bytes_to_mb_label(max_frame_size)} MB."
             )
         return value
+
+    def validate_frame_time(self, value):
+        if not value:
+            return value
+
+        parsed = _parse_local_datetime_string(value)
+        if parsed is None:
+            raise serializers.ValidationError('Formato de fecha y hora invalido.')
+        if parsed > timezone.now():
+            raise serializers.ValidationError('La fecha y hora del fotograma no puede ser futura.')
+        return value.replace(' ', 'T')[:16]
 
 
 class VideoReportPayloadSerializer(serializers.Serializer):
@@ -448,6 +533,38 @@ class VideoAnalysisReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = VideoAnalysisReport
         fields = ['id', 'film_record', 'numero_informe', 'report_date', 'status', 'form_data', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        errors = {}
+        report_date = attrs.get('report_date', getattr(self.instance, 'report_date', None) if self.instance else None)
+        form_data = attrs.get('form_data', getattr(self.instance, 'form_data', {}) if self.instance else {})
+        form_data = form_data if isinstance(form_data, dict) else {}
+        raw_form_report_date = form_data.get('report_date')
+        parsed_form_report_date = None
+
+        if raw_form_report_date:
+            if hasattr(raw_form_report_date, 'isoformat'):
+                parsed_form_report_date = raw_form_report_date
+            else:
+                parsed_form_report_date = parse_date(str(raw_form_report_date))
+
+        if report_date is None and parsed_form_report_date is not None:
+            report_date = parsed_form_report_date
+            attrs['report_date'] = parsed_form_report_date
+
+        if _is_future_date(report_date):
+            errors['report_date'] = 'La fecha del informe no puede ser futura.'
+
+        if parsed_form_report_date and _is_future_date(parsed_form_report_date):
+            errors['form_data'] = {'report_date': 'La fecha del informe no puede ser futura.'}
+
+        if report_date and isinstance(form_data, dict):
+            attrs['form_data'] = {**form_data, 'report_date': report_date.isoformat()}
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return attrs
 
 
 AI_IMPROVE_MODE_CHOICES = ('material_filmico', 'desarrollo', 'conclusion', 'full')

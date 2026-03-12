@@ -147,6 +147,7 @@
             (ngModelChange)="markDirty('report_date')"
             name="report_date"
             type="date"
+            [attr.max]="maxDate"
             [attr.data-invalid]="isFieldInvalid('report_date') ? 'true' : null"
             class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
           />
@@ -477,6 +478,7 @@
               (ngModelChange)="markDirty('fecha_hecho')"
               name="fecha_hecho"
               type="date"
+              [attr.max]="maxDate"
               lang="es-AR"
               class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
             />
@@ -877,6 +879,7 @@
               (ngModelChange)="onTimeChange()"
               name="hora_inicio"
               type="datetime-local"
+              [attr.max]="maxDateTime"
               class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
             />
           </div>
@@ -889,6 +892,7 @@
               (ngModelChange)="onTimeChange()"
               name="hora_fin"
               type="datetime-local"
+              [attr.max]="maxDateTime"
               class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
             />
           </div>
@@ -1043,6 +1047,7 @@
                 [name]="'frame_time_' + frame.id_temp"
                 type="datetime-local"
                 step="60"
+                [attr.max]="maxDateTime"
                 class="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-slate-50"
               />
               <p class="mt-1 text-[11px] text-slate-400">Seleccioná la fecha y hora del fotograma.</p>

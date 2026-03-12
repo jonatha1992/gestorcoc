@@ -1,22 +1,35 @@
-# Core Django
-Django>=5.1,<6.0
-django-cors-headers
-djangorestframework
-django-filter
-drf-spectacular
-
-# Base de datos
-psycopg2-binary  # soporte Postgres (Railway/cloud)
-dj-database-url
-
-# Servidor de producción
-gunicorn
-whitenoise
-
-# Generación de documentos
-reportlab
-python-docx
-Pillow
-
-# HTTP
-requests
+asgiref==3.11.0
+attrs==25.4.0
+certifi==2026.1.4
+cffi==2.0.0
+charset-normalizer==3.4.4
+cryptography==46.0.4
+dj-database-url==2.6.0
+Django==5.2
+django-cors-headers==4.9.0
+django-filter==26.0
+djangorestframework==3.16.1
+drf-spectacular==0.29.0
+gunicorn==24.0.0
+idna==3.12
+jsonschema==4.33.0
+jsonschema-specifications==2025.9.1
+lxml==6.0.2
+oracledb==3.4.2
+packaging==26.0
+Pillow==12.1.0
+psycopg2-binary==2.9.11
+pycparser==3.0
+pytailwindcss==0.3.0
+python-docx==1.2.0
+PyYAML==6.0.3
+referencing==0.37.0
+reportlab==4.4.9
+requests==2.32.5
+rpds-py==0.30.0
+sqlparse==0.5.5
+typing_extensions==4.15.0
+tzdata==2025.3
+uritemplate==4.2.0
+urllib3==2.6.3
+whitenoise==6.12.0

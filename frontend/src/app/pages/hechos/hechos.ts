@@ -4,6 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { HechosService, Hecho } from '../../services/hechos';
 import { AssetService } from '../../services/asset.service';
 import { ToastService } from '../../services/toast.service';
+import {
+  getFirstDayOfCurrentMonthInputValue,
+  getNowDateTimeLocalInputValue,
+  getTodayDateInputValue,
+  toDateTimeLocalInputValue,
+} from '../../utils/date-inputs';
 
 @Component({
   selector: 'app-hechos',
@@ -34,13 +40,13 @@ export class HechosComponent implements OnInit {
   filterCamera = '';
   filterCocIntervention = '';
   filterGeneratedCause = '';
-  filterDateFrom = '';
-  filterDateTo = '';
+  filterDateFrom = getFirstDayOfCurrentMonthInputValue();
+  filterDateTo = getTodayDateInputValue();
   private searchTimer: any;
 
   currentHecho: Partial<Hecho> = {
     category: 'OPERATIVO',
-    timestamp: new Date().toISOString().slice(0, 16),
+    timestamp: getNowDateTimeLocalInputValue(),
   };
 
   ngOnInit() {
@@ -83,8 +89,8 @@ export class HechosComponent implements OnInit {
   }
 
   clearFilters() {
-    this.filterDateFrom = '';
-    this.filterDateTo = '';
+    this.filterDateFrom = getFirstDayOfCurrentMonthInputValue();
+    this.filterDateTo = getTodayDateInputValue();
     this.filterCategory = '';
     this.filterCamera = '';
     this.filterCocIntervention = '';
@@ -123,7 +129,7 @@ export class HechosComponent implements OnInit {
   openForm() {
     this.currentHecho = {
       category: 'OPERATIVO',
-      timestamp: new Date().toISOString().slice(0, 16),
+      timestamp: getNowDateTimeLocalInputValue(),
       is_solved: false,
       coc_intervention: false,
       generated_cause: false,
@@ -134,8 +140,8 @@ export class HechosComponent implements OnInit {
   editHecho(hecho: Hecho) {
     this.currentHecho = {
       ...hecho,
-      timestamp: hecho.timestamp ? hecho.timestamp.slice(0, 16) : '',
-      end_time: hecho.end_time ? hecho.end_time.slice(0, 16) : '',
+      timestamp: toDateTimeLocalInputValue(hecho.timestamp),
+      end_time: toDateTimeLocalInputValue(hecho.end_time),
     };
     this.showForm.set(true);
   }
@@ -185,5 +191,13 @@ export class HechosComponent implements OnInit {
         this.toastService.show('Error al guardar hecho', 'error');
       },
     });
+  }
+
+  get maxDate(): string {
+    return getTodayDateInputValue();
+  }
+
+  get maxDateTime(): string {
+    return getNowDateTimeLocalInputValue();
   }
 }

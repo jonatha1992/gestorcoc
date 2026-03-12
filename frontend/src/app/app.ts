@@ -1,9 +1,10 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, inject } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs';
 import { SpinnerComponent } from './components/spinner.component';
 import { ToastComponent } from './components/toast.component';
+import { LayoutService } from './services/layout.service';
 
 @Component({
   selector: 'app-root',
@@ -17,6 +18,7 @@ export class App {
   pageTitle = 'Panel operativo';
   isSidebarCollapsed = false;
   private hasInitializedViewport = false;
+  readonly layoutService = inject(LayoutService);
 
   constructor(private router: Router) {
     this.syncSidebarWithViewport();

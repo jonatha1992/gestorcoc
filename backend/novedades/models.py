@@ -28,7 +28,8 @@ class Novedad(TimeStampedModel):
     
     reported_by = models.ForeignKey(
         'personnel.Person', on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='novedades_reportadas'
+        null=True, blank=True, related_name='novedades_reportadas',
+        db_index=True
     )
     reporter_name = models.CharField(max_length=100, blank=True, help_text="Nombre libre (legado)")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN', db_index=True)

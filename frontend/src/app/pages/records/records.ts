@@ -9,6 +9,11 @@ import { InformeService } from '../../services/informe.service';
 import { PersonnelService } from '../../services/personnel.service';
 import { RecordsService } from '../../services/records.service';
 import { ToastService } from '../../services/toast.service';
+import {
+  getFirstDayOfCurrentMonthInputValue,
+  getTodayDateInputValue,
+  toDateTimeLocalInputValue,
+} from '../../utils/date-inputs';
 
 export interface FilmRecord {
   id: number;
@@ -102,8 +107,8 @@ export class RecordsComponent implements OnInit {
   filterVerified = '';
   filterHasBackup = '';
   filterOperator = '';
-  filterDateFrom = '';
-  filterDateTo = '';
+  filterDateFrom = getFirstDayOfCurrentMonthInputValue();
+  filterDateTo = getTodayDateInputValue();
   private searchTimer: any;
 
   newRecord: any = this.createEmptyRecord();
@@ -155,8 +160,8 @@ export class RecordsComponent implements OnInit {
   }
 
   clearFilters() {
-    this.filterDateFrom = '';
-    this.filterDateTo = '';
+    this.filterDateFrom = getFirstDayOfCurrentMonthInputValue();
+    this.filterDateTo = getTodayDateInputValue();
     this.filterOperator = '';
     this.filterVerified = '';
     this.filterHasBackup = '';
@@ -559,16 +564,7 @@ export class RecordsComponent implements OnInit {
   }
 
   private toDateTimeLocal(value: string | null | undefined): string {
-    if (!value) {
-      return '';
-    }
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return '';
-    }
-    const offsetMinutes = date.getTimezoneOffset();
-    const local = new Date(date.getTime() - offsetMinutes * 60_000);
-    return local.toISOString().slice(0, 16);
+    return toDateTimeLocalInputValue(value);
   }
 
   private toTimeInput(value: string | null | undefined): string {
@@ -582,9 +578,11 @@ export class RecordsComponent implements OnInit {
   }
 
   private getTodayDate(): string {
-    const now = new Date();
-    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
-    return local.toISOString().slice(0, 10);
+    return getTodayDateInputValue();
+  }
+
+  get maxDate(): string {
+    return getTodayDateInputValue();
   }
 
   private createEmptyInvolvedPerson() {
