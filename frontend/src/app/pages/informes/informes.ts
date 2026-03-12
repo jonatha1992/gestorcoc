@@ -1,4 +1,14 @@
-import { Component, HostListener, OnDestroy, OnInit, inject, signal, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  inject,
+  signal,
+  ViewChild,
+  ElementRef,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -30,6 +40,18 @@ type FieldHelpContent = {
   ejemplo: string;
 };
 
+type LocalVideoReportDraftSnapshot = {
+  version: 1;
+  savedAt: string;
+  form: VideoReportFormData;
+  incluirFirma: boolean;
+  incluirDatosVuelo: boolean;
+  hora_inicio: string;
+  hora_fin: string;
+  selectedAiProvider: string;
+  integritySectionCollapsed: boolean;
+};
+
 const FIXED_GRADE_OPTIONS = [
   'OF. AYUDATE',
   'OF. PRINCIPAL',
@@ -46,7 +68,7 @@ const FIXED_GRADE_OPTIONS = [
   selector: 'app-informes',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './informes.html'
+  templateUrl: './informes.html',
 })
 export class InformesComponent implements OnInit, OnDestroy {
   private informeService = inject(InformeService);
@@ -79,14 +101,17 @@ export class InformesComponent implements OnInit, OnDestroy {
   sourceSystemOptions: SystemAsset[] = [];
   selectedSourceSystemOption: number | 'otro' | null = null;
   isLoadingSourceSystems = false;
+  integritySectionCollapsed = false;
 
   get filteredAirportOptions(): string[] {
     const q = (this.form.aeropuerto || '').toLowerCase();
-    return this.airportOptions.filter(o => o.toLowerCase().includes(q));
+    return this.airportOptions.filter((o) => o.toLowerCase().includes(q));
   }
 
   onAirportInputBlur(): void {
-    setTimeout(() => { this.showAirportDropdown = false; }, 150);
+    setTimeout(() => {
+      this.showAirportDropdown = false;
+    }, 150);
   }
 
   selectAirportOption(opt: string): void {
@@ -98,6 +123,8 @@ export class InformesComponent implements OnInit, OnDestroy {
   isGenerating = false;
   isGeneratingFullReport = false;
   isProcessingFrames = false;
+  frameProcessingTotal = 0;
+  frameProcessingCompleted = 0;
   utilizoHash = false;
   isDirty = false;
   aiProgressLabel = '';
@@ -121,9 +148,14 @@ export class InformesComponent implements OnInit, OnDestroy {
   personnelOptions: any[] = [];
   selectedOperatorId: number | null = null;
   invalidFields = new Set<keyof VideoReportFormData>();
+  invalidFrameDescriptionIds = new Set<string>();
   validationMessage = '';
   private lastSuggestedReportNumber = '';
   private readonly numeroInformePattern = /^\d{4}[A-Z]{3,4}\/\d{4}$/;
+  private readonly localDraftStoragePrefix = 'video-analysis-report-draft';
+  private localDraftStorageKey = `${this.localDraftStoragePrefix}:new`;
+  private hasRestoredLocalDraft = false;
+  private localDraftPersistTimer: ReturnType<typeof window.setTimeout> | null = null;
   private unitIdByName: Record<string, number> = {};
   private unitCodeByName: Record<string, string> = {};
   private unitAirportByName: Record<string, string> = {};
@@ -139,8 +171,11 @@ export class InformesComponent implements OnInit, OnDestroy {
   ];
 
   readonly vmsAuthenticityOptions: { value: VideoReportVmsAuthenticityMode; label: string }[] = [
-    { value: 'vms_propio', label: 'El material fue recibido con hash propio del sistema' },
-    { value: 'hash_preventivo', label: 'El material fue recibido sin hash — el operador calculó el hash' },
+    { value: 'vms_propio', label: 'El propio sistema ya autentica el material exportado' },
+    {
+      value: 'hash_preventivo',
+      label: 'El material fue recibido sin hash — el operador calculó el hash',
+    },
     { value: 'sin_autenticacion', label: 'No fue posible aplicar hash' },
     { value: 'otro', label: 'Otro método' },
   ];
@@ -168,17 +203,123 @@ export class InformesComponent implements OnInit, OnDestroy {
     this.handleQueryParams();
   }
 
+  private resolveLocalDraftStorageKey(informeId: string | null, recordId: string | null): string {
+    if ((informeId || '').trim()) {
+      return `${this.localDraftStoragePrefix}:report:${(informeId || '').trim()}`;
+    }
+    if ((recordId || '').trim()) {
+      return `${this.localDraftStoragePrefix}:record:${(recordId || '').trim()}`;
+    }
+    return `${this.localDraftStoragePrefix}:new`;
+  }
+
+  private scheduleLocalDraftPersist(): void {
+    if (this.isReadOnly() || typeof window === 'undefined') {
+      return;
+    }
+    if (this.localDraftPersistTimer !== null) {
+      window.clearTimeout(this.localDraftPersistTimer);
+    }
+    this.localDraftPersistTimer = window.setTimeout(() => {
+      this.localDraftPersistTimer = null;
+      this.persistLocalDraftSnapshot();
+    }, 250);
+  }
+
+  private persistLocalDraftSnapshot(notify = false): void {
+    if (this.isReadOnly() || typeof window === 'undefined') {
+      return;
+    }
+
+    const snapshot: LocalVideoReportDraftSnapshot = {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      form: { ...this.form },
+      incluirFirma: this.incluirFirma,
+      incluirDatosVuelo: this.incluirDatosVuelo,
+      hora_inicio: this.hora_inicio,
+      hora_fin: this.hora_fin,
+      selectedAiProvider: this.selectedAiProvider,
+      integritySectionCollapsed: this.integritySectionCollapsed,
+    };
+
+    try {
+      window.localStorage.setItem(this.localDraftStorageKey, JSON.stringify(snapshot));
+      if (this.reportStatus() !== 'FINALIZADO') {
+        this.reportStatus.set('BORRADOR');
+      }
+      if (notify) {
+        this.toastService.success('Borrador local resguardado en este navegador.');
+      }
+    } catch {
+      if (notify) {
+        this.toastService.warning('No se pudo resguardar el borrador local en este navegador.');
+      }
+    }
+  }
+
+  private restoreLocalDraftIfAvailable(): void {
+    if (this.hasRestoredLocalDraft || this.isReadOnly() || typeof window === 'undefined') {
+      if (this.isReadOnly()) {
+        this.clearLocalDraftSnapshot();
+      }
+      return;
+    }
+
+    this.hasRestoredLocalDraft = true;
+    const rawDraft = window.localStorage.getItem(this.localDraftStorageKey);
+    if (!rawDraft) {
+      return;
+    }
+
+    try {
+      const draft = JSON.parse(rawDraft) as Partial<LocalVideoReportDraftSnapshot>;
+      if (draft?.version !== 1 || !draft.form) {
+        return;
+      }
+
+      this.applyLoadedFormData(draft.form);
+      this.incluirFirma =
+        typeof draft.incluirFirma === 'boolean' ? draft.incluirFirma : !!this.form.firma;
+      this.incluirDatosVuelo =
+        typeof draft.incluirDatosVuelo === 'boolean'
+          ? draft.incluirDatosVuelo
+          : this.incluirDatosVuelo;
+      this.hora_inicio = draft.hora_inicio || this.hora_inicio;
+      this.hora_fin = draft.hora_fin || this.hora_fin;
+      this.selectedAiProvider = draft.selectedAiProvider || this.selectedAiProvider;
+      this.integritySectionCollapsed = !!draft.integritySectionCollapsed;
+      this.isDirty = true;
+      if (this.reportStatus() !== 'FINALIZADO') {
+        this.reportStatus.set('BORRADOR');
+      }
+      this.toastService.show('Se restauro un borrador local del informe.', 'info');
+    } catch {
+      this.clearLocalDraftSnapshot();
+    }
+  }
+
+  private clearLocalDraftSnapshot(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.removeItem(this.localDraftStorageKey);
+  }
+
   private handleQueryParams(): void {
     const params = this.route.snapshot.queryParamMap;
     const recordId = params.get('record_id');
     const informeId = params.get('informe_id');
+    this.localDraftStorageKey = this.resolveLocalDraftStorageKey(informeId, recordId);
 
     if (informeId) {
       const id = parseInt(informeId, 10);
       if (!isNaN(id)) {
         this.informeService.getReport(id).subscribe({
           next: (informe) => {
-            return this.applyLoadedReport(informe);
+            this.applyLoadedReport(informe);
+            this.restoreLocalDraftIfAvailable();
+            return;
             this.existingReportId.set(informe.id);
             this.isReadOnly.set(true);
             if (informe.film_record != null) {
@@ -189,7 +330,10 @@ export class InformesComponent implements OnInit, OnDestroy {
             }
             this.toastService.show('Informe en modo lectura — no se puede modificar.', 'info');
           },
-          error: () => this.toastService.show('No se pudo cargar el informe.', 'error')
+          error: () => {
+            this.toastService.show('No se pudo cargar el informe.', 'error');
+            this.restoreLocalDraftIfAvailable();
+          },
         });
       }
     } else if (recordId) {
@@ -199,7 +343,9 @@ export class InformesComponent implements OnInit, OnDestroy {
         this.informeService.getReportByRecord(id).subscribe({
           next: (informes) => {
             if (informes.length > 0) {
-              return this.applyLoadedReport(informes[0]);
+              this.applyLoadedReport(informes[0]);
+              this.restoreLocalDraftIfAvailable();
+              return;
               const informe = informes[0];
               this.existingReportId.set(informe.id);
               this.isReadOnly.set(true);
@@ -211,18 +357,25 @@ export class InformesComponent implements OnInit, OnDestroy {
               this.prefillFromRecord(id);
             }
           },
-          error: () => this.prefillFromRecord(id)
+          error: () => this.prefillFromRecord(id),
         });
       }
+      return;
     }
+
+    this.restoreLocalDraftIfAvailable();
   }
 
   private prefillFromRecord(recordId: number): void {
     // GET film-records/{id}/ via HttpClient directly
     const baseUrl: string = (this.informeService as any).baseUrl || '';
-    const http = (this.informeService as any).http as import('@angular/common/http').HttpClient | undefined;
+    const http = (this.informeService as any).http as
+      | import('@angular/common/http').HttpClient
+      | undefined;
     if (!http) return;
-    (http.get(`${baseUrl}/api/film-records/${recordId}/`) as import('rxjs').Observable<any>).subscribe({
+    (
+      http.get(`${baseUrl}/api/film-records/${recordId}/`) as import('rxjs').Observable<any>
+    ).subscribe({
       next: (record: any) => {
         this.reportStatus.set('PENDIENTE');
         this.isReadOnly.set(false);
@@ -278,7 +431,8 @@ export class InformesComponent implements OnInit, OnDestroy {
         }
         this.form.involved_people = involvedPeople;
         if (!this.form.cantidad_observada && involvedPeople.length > 0) {
-          const label = involvedPeople.length === 1 ? '1 persona' : `${involvedPeople.length} personas`;
+          const label =
+            involvedPeople.length === 1 ? '1 persona' : `${involvedPeople.length} personas`;
           this.form.cantidad_observada = label;
         }
 
@@ -287,7 +441,9 @@ export class InformesComponent implements OnInit, OnDestroy {
         const locationCandidates = [place, sector].filter((value) => !!value && value !== 'N/C');
         const locationParts = locationCandidates.filter(
           (value, index) =>
-            locationCandidates.findIndex((candidate) => candidate.toUpperCase() === value.toUpperCase()) === index
+            locationCandidates.findIndex(
+              (candidate) => candidate.toUpperCase() === value.toUpperCase(),
+            ) === index,
         );
         const unifiedLocation = locationParts.join(' / ');
         if (unifiedLocation) {
@@ -301,8 +457,7 @@ export class InformesComponent implements OnInit, OnDestroy {
           const s = new Date(record.start_time);
           const e = new Date(record.end_time);
           const pad = (n: number) => n.toString().padStart(2, '0');
-          this.form.franja_horaria_analizada =
-            `${pad(s.getHours())}:${pad(s.getMinutes())} a ${pad(e.getHours())}:${pad(e.getMinutes())}`;
+          this.form.franja_horaria_analizada = `${pad(s.getHours())}:${pad(s.getMinutes())} a ${pad(e.getHours())}:${pad(e.getMinutes())}`;
         } else {
           const incidentTime = this.normalizeTimeLabel(record?.incident_time);
           if (incidentTime) {
@@ -317,8 +472,11 @@ export class InformesComponent implements OnInit, OnDestroy {
         this.loadSourceSystemsForCurrentUnit();
 
         this.toastService.show('Campos pre-cargados desde el registro.', 'info');
+        this.restoreLocalDraftIfAvailable();
       },
-      error: () => { }
+      error: () => {
+        this.restoreLocalDraftIfAvailable();
+      },
     });
   }
 
@@ -417,11 +575,15 @@ export class InformesComponent implements OnInit, OnDestroy {
       return '';
     }
 
-    const preferred = people.find((person) => this.normalizeText(person.role).toUpperCase() === 'DENUNCIANTE');
+    const preferred = people.find(
+      (person) => this.normalizeText(person.role).toUpperCase() === 'DENUNCIANTE',
+    );
     if (preferred?.full_name) {
       return preferred.full_name;
     }
-    const fallback = people.find((person) => this.normalizeText(person.role).toUpperCase() === 'DAMNIFICADO');
+    const fallback = people.find(
+      (person) => this.normalizeText(person.role).toUpperCase() === 'DAMNIFICADO',
+    );
     if (fallback?.full_name) {
       return fallback.full_name;
     }
@@ -450,7 +612,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     }
 
     // Mapear a los valores del formulario
-    const algorithmMap: Record<string, typeof this.form.hash_algorithms[number]> = {
+    const algorithmMap: Record<string, (typeof this.form.hash_algorithms)[number]> = {
       sha256: 'sha256',
       sha512: 'sha512',
       sha3: 'sha3',
@@ -497,8 +659,11 @@ export class InformesComponent implements OnInit, OnDestroy {
         console.error('Error loading units:', err);
         this.resetUnitCatalog();
         this.loadSourceSystemsForCurrentUnit();
-        this.toastService.show('No se pudieron cargar las unidades desde la base de datos.', 'warning');
-      }
+        this.toastService.show(
+          'No se pudieron cargar las unidades desde la base de datos.',
+          'warning',
+        );
+      },
     });
   }
 
@@ -511,9 +676,13 @@ export class InformesComponent implements OnInit, OnDestroy {
   }
 
   private applyUnitsFromApi(units: any): void {
-    const unitList = Array.isArray(units?.results) ? units.results : Array.isArray(units) ? units : [];
+    const unitList = Array.isArray(units?.results)
+      ? units.results
+      : Array.isArray(units)
+        ? units
+        : [];
     const sortedUnits = [...unitList].sort((a, b) =>
-      (a.name || '').localeCompare((b.name || ''), 'es', { sensitivity: 'base' })
+      (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }),
     );
 
     this.resetUnitCatalog();
@@ -566,8 +735,11 @@ export class InformesComponent implements OnInit, OnDestroy {
       error: (err) => {
         console.error('Error loading personnel:', err);
         this.personnelOptions = [];
-        this.toastService.show('No se pudo cargar personal. Puede completarlo manualmente.', 'warning');
-      }
+        this.toastService.show(
+          'No se pudo cargar personal. Puede completarlo manualmente.',
+          'warning',
+        );
+      },
     });
   }
 
@@ -581,7 +753,7 @@ export class InformesComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const person = this.personnelOptions.find(p => p.id === personId);
+    const person = this.personnelOptions.find((p) => p.id === personId);
     if (person) {
       this.selectedOperatorId = person.id;
       this.form.operador = this.getPersonDisplayName(person);
@@ -629,8 +801,9 @@ export class InformesComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const matchedOperator = this.personnelOptions.find((person) =>
-      this.getPersonDisplayName(person).toLowerCase() === this.form.operador.toLowerCase()
+    const matchedOperator = this.personnelOptions.find(
+      (person) =>
+        this.getPersonDisplayName(person).toLowerCase() === this.form.operador.toLowerCase(),
     );
     if (matchedOperator?.id) {
       this.selectedOperatorId = matchedOperator.id;
@@ -665,6 +838,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     this.syncAirportManualOverride();
     this.syncSelectedOperatorFromCurrentForm();
     this.syncFlightSectionVisibility();
+    this.normalizeIntegrityState();
     this.loadSourceSystemsForCurrentUnit();
   }
 
@@ -704,13 +878,17 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   private syncSelectedOperatorFromCurrentForm(): void {
     const currentOperator = this.normalizeText(this.form.operador).toLowerCase();
-    if (!currentOperator || !Array.isArray(this.personnelOptions) || this.personnelOptions.length === 0) {
+    if (
+      !currentOperator ||
+      !Array.isArray(this.personnelOptions) ||
+      this.personnelOptions.length === 0
+    ) {
       this.selectedOperatorId = null;
       return;
     }
 
-    const matchedOperator = this.personnelOptions.find((person) =>
-      this.getPersonDisplayName(person).toLowerCase() === currentOperator
+    const matchedOperator = this.personnelOptions.find(
+      (person) => this.getPersonDisplayName(person).toLowerCase() === currentOperator,
     );
     this.selectedOperatorId = matchedOperator?.id ?? null;
   }
@@ -742,7 +920,9 @@ export class InformesComponent implements OnInit, OnDestroy {
       return canonical;
     }
 
-    const existingOption = this.gradeOptions.find((option) => option.toUpperCase() === normalized.toUpperCase());
+    const existingOption = this.gradeOptions.find(
+      (option) => option.toUpperCase() === normalized.toUpperCase(),
+    );
     return existingOption || normalized;
   }
 
@@ -756,7 +936,9 @@ export class InformesComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const exists = this.gradeOptions.some((option) => option.toUpperCase() === normalized.toUpperCase());
+    const exists = this.gradeOptions.some(
+      (option) => option.toUpperCase() === normalized.toUpperCase(),
+    );
 
     if (!exists) {
       this.gradeOptions = [...this.gradeOptions, normalized];
@@ -826,7 +1008,9 @@ export class InformesComponent implements OnInit, OnDestroy {
     this.assetService.getSystems({ is_active: 'true' }).subscribe({
       next: (response) => {
         const results = (response as any)?.results ?? response;
-        this.sourceSystemOptions = this.sortSystemsForDisplay(Array.isArray(results) ? results : []);
+        this.sourceSystemOptions = this.sortSystemsForDisplay(
+          Array.isArray(results) ? results : [],
+        );
         this.syncSourceSystemSelection();
       },
       error: (err) => {
@@ -836,7 +1020,7 @@ export class InformesComponent implements OnInit, OnDestroy {
       },
       complete: () => {
         this.isLoadingSourceSystems = false;
-      }
+      },
     });
   }
 
@@ -848,13 +1032,15 @@ export class InformesComponent implements OnInit, OnDestroy {
       if (aMatch !== bMatch) {
         return aMatch - bMatch;
       }
-      return (a.name || '').localeCompare((b.name || ''), 'es', { sensitivity: 'base' });
+      return (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' });
     });
   }
 
   private syncSourceSystemSelection(): void {
     if (this.form.source_system_id != null) {
-      const selectedById = this.sourceSystemOptions.find((system) => system.id === this.form.source_system_id);
+      const selectedById = this.sourceSystemOptions.find(
+        (system) => system.id === this.form.source_system_id,
+      );
       if (selectedById) {
         this.selectedSourceSystemOption = selectedById.id;
         this.form.sistema = selectedById.name || this.form.sistema;
@@ -865,7 +1051,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     const currentSystemName = (this.form.sistema || '').trim().toLowerCase();
     if (currentSystemName) {
       const selectedByName = this.sourceSystemOptions.find(
-        (system) => (system.name || '').trim().toLowerCase() === currentSystemName
+        (system) => (system.name || '').trim().toLowerCase() === currentSystemName,
       );
       if (selectedByName) {
         this.selectedSourceSystemOption = selectedByName.id;
@@ -883,24 +1069,29 @@ export class InformesComponent implements OnInit, OnDestroy {
   }
 
   private applySourceSystemDefaults(system: SystemAsset): void {
-    const authenticityMode = (system.report_authenticity_mode_default || '') as VideoReportVmsAuthenticityMode | '';
+    const authenticityMode = (system.report_authenticity_mode_default || '') as
+      | VideoReportVmsAuthenticityMode
+      | '';
     if (authenticityMode) {
       this.onVmsAuthenticityModeChange(authenticityMode);
     }
     this.form.vms_authenticity_detail = system.report_authenticity_detail_default || '';
-    this.form.vms_native_hash_algorithms = [...(system.report_native_hash_algorithms_default || [])];
-    this.form.vms_native_hash_algorithm_other = system.report_native_hash_algorithm_other_default || '';
+    this.form.vms_native_hash_algorithms = [];
+    this.form.vms_native_hash_algorithm_other = '';
 
-    if ((system.report_hash_program_default || '').trim()) {
+    if (
+      authenticityMode === 'hash_preventivo' &&
+      (system.report_hash_program_default || '').trim()
+    ) {
       this.form.hash_program = system.report_hash_program_default || '';
-    } else if (authenticityMode === 'hash_preventivo' || authenticityMode === 'vms_propio') {
+    } else if (authenticityMode === 'hash_preventivo') {
       this.form.hash_program = 'HashMyFiles';
     }
 
+    this.normalizeIntegrityState();
+
     this.markDirty('vms_authenticity_mode');
     this.markDirty('vms_authenticity_detail');
-    this.markDirty('vms_native_hash_algorithms');
-    this.markDirty('vms_native_hash_algorithm_other');
     this.markDirty('hash_program');
   }
 
@@ -987,55 +1178,101 @@ export class InformesComponent implements OnInit, OnDestroy {
     return (this.form.hash_algorithms || []).includes(algorithm);
   }
 
-  toggleNativeHashAlgorithm(algorithm: VideoReportHashAlgorithm): void {
-    const current = this.form.vms_native_hash_algorithms || [];
-    if (current.includes(algorithm)) {
-      this.form.vms_native_hash_algorithms = current.filter((item) => item !== algorithm);
-    } else {
-      this.form.vms_native_hash_algorithms = [...current, algorithm];
+  private requiresOperatorHashData(
+    mode: VideoReportVmsAuthenticityMode | '' = this.form.vms_authenticity_mode || '',
+  ): boolean {
+    return mode === 'hash_preventivo';
+  }
+
+  private normalizeIntegrityState(): void {
+    const mode = this.form.vms_authenticity_mode || '';
+    const requiresOperatorHash = this.requiresOperatorHashData(mode);
+
+    if (mode !== 'otro') {
+      this.form.vms_authenticity_detail = '';
     }
-    this.markDirty('vms_native_hash_algorithms');
+    this.form.vms_native_hash_algorithms = [];
+    this.form.vms_native_hash_algorithm_other = '';
+    if (mode !== 'sin_autenticacion') {
+      this.form.motivo_sin_hash = '';
+    }
+    if (!requiresOperatorHash) {
+      this.form.hash_program = '';
+      this.form.hash_algorithms = [];
+      this.form.hash_algorithm_other = '';
+    } else if (!(this.form.hash_program || '').trim()) {
+      this.form.hash_program = 'HashMyFiles';
+    }
+
+    this.utilizoHash = requiresOperatorHash;
   }
 
-  hasNativeHashAlgorithm(algorithm: VideoReportHashAlgorithm): boolean {
-    return (this.form.vms_native_hash_algorithms || []).includes(algorithm);
+  toggleIntegritySectionCollapsed(): void {
+    this.integritySectionCollapsed = !this.integritySectionCollapsed;
+    this.scheduleLocalDraftPersist();
   }
 
-  getSelectedNativeHashAlgorithmsSummary(): string {
-    const algorithms = this.form.vms_native_hash_algorithms || [];
-    const labels = algorithms.map(item => this.getHashAlgorithmLabel(item, this.form.vms_native_hash_algorithm_other || ''));
-    return labels.length > 0 ? labels.join(', ') : 'No consignado';
+  hasIntegrityDraftData(): boolean {
+    return (
+      [
+        this.form.aeropuerto,
+        this.form.sistema,
+        this.form.vms_authenticity_mode,
+        this.form.vms_authenticity_detail,
+        this.form.hash_program,
+        this.form.hash_algorithm_other,
+        this.form.motivo_sin_hash,
+      ].some((value) => !!this.normalizeText(value)) || (this.form.hash_algorithms || []).length > 0
+    );
+  }
+
+  isIntegritySectionComplete(): boolean {
+    if (
+      !(this.form.aeropuerto || '').trim() ||
+      !(this.form.sistema || '').trim() ||
+      !(this.form.vms_authenticity_mode || '').trim()
+    ) {
+      return false;
+    }
+    if (this.form.vms_authenticity_mode === 'otro') {
+      return !!(this.form.vms_authenticity_detail || '').trim();
+    }
+    if (this.form.vms_authenticity_mode === 'hash_preventivo') {
+      return (
+        !!(this.form.hash_program || '').trim() && this.getSelectedHashAlgorithmLabels().length > 0
+      );
+    }
+    return true;
+  }
+
+  getIntegritySectionSummary(): string {
+    const parts: string[] = [];
+    const lugar = (this.form.aeropuerto || '').trim();
+    const sistema = (this.form.sistema || '').trim();
+    const modo = (this.form.vms_authenticity_mode || '').trim();
+
+    if (lugar) {
+      parts.push(lugar);
+    }
+    if (sistema) {
+      parts.push(sistema);
+    }
+    if (modo) {
+      parts.push(this.getVmsAuthenticitySummary());
+    }
+    if (this.requiresOperatorHashData()) {
+      const hashLabels = this.getSelectedHashAlgorithmLabels();
+      if (hashLabels.length > 0) {
+        parts.push(`Hash operador: ${hashLabels.join(', ')}`);
+      }
+    }
+
+    return parts.join(' · ') || 'Sin completar';
   }
 
   onVmsAuthenticityModeChange(value: VideoReportVmsAuthenticityMode | ''): void {
     this.form.vms_authenticity_mode = value;
-    if (value !== 'otro') {
-      this.form.vms_authenticity_detail = '';
-    }
-    if (value !== 'vms_propio') {
-      this.form.vms_native_hash_algorithms = [];
-      this.form.vms_native_hash_algorithm_other = '';
-    }
-    if (value === 'sin_autenticacion' || value === 'otro') {
-      this.utilizoHash = false;
-      this.form.hash_program = '';
-      this.form.hash_algorithms = [];
-      this.form.hash_algorithm_other = '';
-    }
-    if (value === 'vms_propio') {
-      this.utilizoHash = true;
-      if (!(this.form.hash_program || '').trim()) {
-        this.form.hash_program = 'HashMyFiles';
-        this.markDirty('hash_program');
-      }
-    }
-    if (value === 'hash_preventivo') {
-      this.utilizoHash = true;
-      if (!(this.form.hash_program || '').trim()) {
-        this.form.hash_program = 'HashMyFiles';
-        this.markDirty('hash_program');
-      }
-    }
+    this.normalizeIntegrityState();
     this.markDirty('vms_authenticity_mode');
   }
 
@@ -1047,10 +1284,7 @@ export class InformesComponent implements OnInit, OnDestroy {
       this.form.hash_algorithm_other = '';
     } else {
       this.form.motivo_sin_hash = '';
-      if (
-        this.form.vms_authenticity_mode === 'vms_propio' &&
-        !(this.form.hash_program || '').trim()
-      ) {
+      if (this.requiresOperatorHashData() && !(this.form.hash_program || '').trim()) {
         this.form.hash_program = 'HashMyFiles';
         this.markDirty('hash_program');
       }
@@ -1061,8 +1295,6 @@ export class InformesComponent implements OnInit, OnDestroy {
     const labels = this.getSelectedHashAlgorithmLabels();
     return labels.length > 0 ? labels.join(', ') : 'No consignado';
   }
-
-
 
   getVmsAuthenticitySummary(): string {
     const mode = this.form.vms_authenticity_mode || '';
@@ -1164,7 +1396,7 @@ export class InformesComponent implements OnInit, OnDestroy {
       }
     }
     this.airportOptions = Array.from(options).sort((a, b) =>
-      a.localeCompare(b, 'es', { sensitivity: 'base' })
+      a.localeCompare(b, 'es', { sensitivity: 'base' }),
     );
   }
 
@@ -1177,7 +1409,7 @@ export class InformesComponent implements OnInit, OnDestroy {
       return;
     }
     this.airportOptions = [...this.airportOptions, normalized].sort((a, b) =>
-      a.localeCompare(b, 'es', { sensitivity: 'base' })
+      a.localeCompare(b, 'es', { sensitivity: 'base' }),
     );
   }
   gradeOptions: string[] = [...FIXED_GRADE_OPTIONS];
@@ -1461,8 +1693,8 @@ export class InformesComponent implements OnInit, OnDestroy {
       ejemplo: 'Subir JPG/PNG de capturas clave del hecho.',
     },
     frame_description: {
-      quePoner: 'Desycribe brevemente que muestra cada fotograma.',
-      ejemplo: 'Se observa al sospechoso retirando equipaje de cinta 3.',
+      quePoner: 'Consigna una descripcion breve y objetiva de lo que se ve en cada fotograma.',
+      ejemplo: '00:14:32 - Se observa al sospechoso retirando equipaje de la cinta 3.',
     },
     motivo_sin_hash: {
       quePoner: 'Indica la razón por la que no se adjuntó un archivo de hash o no se verificó.',
@@ -1471,13 +1703,23 @@ export class InformesComponent implements OnInit, OnDestroy {
   };
 
   private readonly requiredFields: (keyof VideoReportFormData)[] = [
-    'operador', 'grado', 'lup', 'report_date', 'unidad', 'numero_informe',
-    'sistema', 'prevencion_sumaria', 'caratula', 'denunciante',
-    'objeto_denunciado', 'vms_authenticity_mode',
+    'operador',
+    'grado',
+    'lup',
+    'report_date',
+    'unidad',
+    'numero_informe',
+    'sistema',
+    'prevencion_sumaria',
+    'caratula',
+    'denunciante',
+    'objeto_denunciado',
+    'vms_authenticity_mode',
   ];
 
   @HostListener('window:beforeunload', ['$event'])
   beforeUnload(event: BeforeUnloadEvent): void {
+    this.persistLocalDraftSnapshot();
     if (this.isDirty && !this.isGenerating) {
       event.preventDefault();
       event.returnValue = '';
@@ -1502,9 +1744,14 @@ export class InformesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.localDraftPersistTimer !== null) {
+      window.clearTimeout(this.localDraftPersistTimer);
+      this.localDraftPersistTimer = null;
+    }
+    this.persistLocalDraftSnapshot();
     this.stopAiFeedback();
     for (const frame of this.frames) {
-      if (frame.preview_url) {
+      if (frame.preview_url?.startsWith('blob:')) {
         URL.revokeObjectURL(frame.preview_url);
       }
     }
@@ -1521,7 +1768,7 @@ export class InformesComponent implements OnInit, OnDestroy {
       this.aiProgressLabel = `${this.aiBaseLabel} · ${elapsedSeconds}s`;
       if (this.aiToastId !== null) {
         this.toastService.update(this.aiToastId, {
-          message: `${this.aiBaseLabel} (${elapsedSeconds}s)`
+          message: `${this.aiBaseLabel} (${elapsedSeconds}s)`,
         });
       }
     }, 1000);
@@ -1558,6 +1805,7 @@ export class InformesComponent implements OnInit, OnDestroy {
       this.invalidFields = result.invalid;
       this.validationMessage = result.message;
     }
+    this.scheduleLocalDraftPersist();
   }
 
   toggleHelp(helpKey: HelpKey, event: MouseEvent): void {
@@ -1576,7 +1824,6 @@ export class InformesComponent implements OnInit, OnDestroy {
     }
     return this.fieldHelp[this.openHelpKey];
   }
-
 
   // --- LOGICA DE FIRMA DIGITAL ---
   initSignaturePad() {
@@ -1597,7 +1844,8 @@ export class InformesComponent implements OnInit, OnDestroy {
     const scaleX = this.signaturePad.nativeElement.width / rect.width;
     const scaleY = this.signaturePad.nativeElement.height / rect.height;
 
-    let clientX = 0, clientY = 0;
+    let clientX = 0,
+      clientY = 0;
     if (window.TouchEvent && evt instanceof TouchEvent) {
       clientX = evt.touches[0].clientX;
       clientY = evt.touches[0].clientY;
@@ -1608,7 +1856,7 @@ export class InformesComponent implements OnInit, OnDestroy {
 
     return {
       x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
+      y: (clientY - rect.top) * scaleY,
     };
   }
 
@@ -1638,7 +1886,12 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   clearSignatureCanvas() {
     if (this.signatureCtx && this.signaturePad) {
-      this.signatureCtx.clearRect(0, 0, this.signaturePad.nativeElement.width, this.signaturePad.nativeElement.height);
+      this.signatureCtx.clearRect(
+        0,
+        0,
+        this.signaturePad.nativeElement.width,
+        this.signaturePad.nativeElement.height,
+      );
     }
   }
 
@@ -1672,35 +1925,58 @@ export class InformesComponent implements OnInit, OnDestroy {
     return this.invalidFields.has(field);
   }
 
+  private validateFrameAnnotations(): string[] {
+    this.invalidFrameDescriptionIds.clear();
+
+    if (this.frames.length === 0) {
+      return [];
+    }
+
+    for (const frame of this.frames) {
+      if (!(frame.description || '').trim()) {
+        this.invalidFrameDescriptionIds.add(frame.id_temp);
+      }
+    }
+
+    if (this.invalidFrameDescriptionIds.size === 0) {
+      return [];
+    }
+
+    return ['Breve descripcion obligatoria en cada fotograma adjunto'];
+  }
+
   private buildValidationResult(): { invalid: Set<keyof VideoReportFormData>; message: string } {
     const required = [...this.requiredFields, 'aeropuerto' as keyof VideoReportFormData];
     const missing = required.filter((field) => this.isBlankField(field));
     const invalid = new Set<keyof VideoReportFormData>(missing);
+    const requiresOperatorHash = this.requiresOperatorHashData();
+    const frameValidationLabels = this.validateFrameAnnotations();
 
     let hasFormatError = false;
     let hasVmsDetailError = false;
-    let hasNativeHashOtherError = false;
     let hasCustomHashError = false;
     let hasHashProgramError = false;
     let hasExternalHashWithoutAlgorithmError = false;
 
-    if (!missing.includes('numero_informe') && !this.numeroInformePattern.test((this.form.numero_informe || '').trim())) {
+    if (
+      !missing.includes('numero_informe') &&
+      !this.numeroInformePattern.test((this.form.numero_informe || '').trim())
+    ) {
       invalid.add('numero_informe');
       hasFormatError = true;
     }
-    if ((this.form.vms_authenticity_mode || '') === 'otro' && !(this.form.vms_authenticity_detail || '').trim()) {
+    if (
+      (this.form.vms_authenticity_mode || '') === 'otro' &&
+      !(this.form.vms_authenticity_detail || '').trim()
+    ) {
       invalid.add('vms_authenticity_detail');
       hasVmsDetailError = true;
-    }
-    if (this.hasNativeHashAlgorithm('otro') && !(this.form.vms_native_hash_algorithm_other || '').trim()) {
-      invalid.add('vms_native_hash_algorithm_other');
-      hasNativeHashOtherError = true;
     }
     if (this.hasHashAlgorithm('otro') && !(this.form.hash_algorithm_other || '').trim()) {
       invalid.add('hash_algorithm_other');
       hasCustomHashError = true;
     }
-    if (this.utilizoHash) {
+    if (requiresOperatorHash) {
       if (this.getSelectedHashAlgorithmLabels().length === 0) {
         invalid.add('hash_algorithms');
         hasExternalHashWithoutAlgorithmError = true;
@@ -1711,17 +1987,21 @@ export class InformesComponent implements OnInit, OnDestroy {
       }
     }
 
-    if (invalid.size === 0) {
+    if (invalid.size === 0 && frameValidationLabels.length === 0) {
       return { invalid, message: '' };
     }
 
     const labels = missing.map((field) => this.fieldLabels[field]);
     if (hasFormatError) labels.push('Numero de Informe (formato NNNNCODIGO/YYYY)');
-    if (hasVmsDetailError) labels.push('Detalle de autenticidad (obligatorio cuando autenticidad = Otro)');
-    if (hasNativeHashOtherError) labels.push('Otro algoritmo de hash nativo (completa el nombre)');
-    if (hasCustomHashError) labels.push('Otro algoritmo de hash (completa el nombre del algoritmo)');
-    if (hasHashProgramError) labels.push('Programa de hash (obligatorio cuando autenticidad = Hash externo)');
-    if (hasExternalHashWithoutAlgorithmError) labels.push('Algoritmo SHA (obligatorio cuando autenticidad = Hash externo)');
+    if (hasVmsDetailError)
+      labels.push('Detalle de autenticidad (obligatorio cuando autenticidad = Otro)');
+    if (hasCustomHashError)
+      labels.push('Otro algoritmo de hash (completa el nombre del algoritmo)');
+    if (hasHashProgramError)
+      labels.push('Programa de hash (obligatorio cuando autenticidad = Hash externo)');
+    if (hasExternalHashWithoutAlgorithmError)
+      labels.push('Algoritmo SHA (obligatorio cuando autenticidad = Hash externo)');
+    labels.push(...frameValidationLabels);
 
     return {
       invalid,
@@ -1733,6 +2013,22 @@ export class InformesComponent implements OnInit, OnDestroy {
     const result = this.buildValidationResult();
     this.invalidFields = result.invalid;
     this.validationMessage = result.message;
+
+    if (
+      Array.from(result.invalid).some((field) =>
+        [
+          'aeropuerto',
+          'sistema',
+          'vms_authenticity_mode',
+          'vms_authenticity_detail',
+          'hash_program',
+          'hash_algorithms',
+          'hash_algorithm_other',
+        ].includes(field),
+      )
+    ) {
+      this.integritySectionCollapsed = false;
+    }
 
     if (!result.message) {
       return true;
@@ -1755,6 +2051,72 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   readableTotalFramesSize(): string {
     return this.readableBytes(this.totalFramesBytes());
+  }
+
+  getFrameProcessingMessage(): string {
+    if (!this.isProcessingFrames) {
+      return '';
+    }
+    if (this.frameProcessingTotal <= 0) {
+      return 'Procesando fotogramas...';
+    }
+    if (this.frameProcessingCompleted >= this.frameProcessingTotal) {
+      return 'Finalizando carga de fotogramas...';
+    }
+    return `Procesando fotograma ${this.frameProcessingCompleted + 1} de ${this.frameProcessingTotal}...`;
+  }
+
+  isFrameDescriptionInvalid(frame: VideoReportFrame): boolean {
+    return !!this.validationMessage && this.invalidFrameDescriptionIds.has(frame.id_temp);
+  }
+
+  onFrameTimeChange(frame: VideoReportFrame): void {
+    frame.frame_time = this.normalizeFrameTimestamp(frame.frame_time);
+    this.markDirty();
+  }
+
+  onFrameDescriptionChange(frame: VideoReportFrame): void {
+    if ((frame.description || '').trim()) {
+      this.invalidFrameDescriptionIds.delete(frame.id_temp);
+    }
+    this.markDirty();
+  }
+
+  private normalizeFrameTimestamp(value: string): string {
+    const raw = (value || '').trim();
+    if (!raw) {
+      return '';
+    }
+
+    const normalized = raw.replace(' ', 'T');
+    const match = normalized.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(:\d{2})?$/);
+    if (match) {
+      return `${match[1]}T${match[2]}`;
+    }
+
+    return raw;
+  }
+
+  private formatFrameTimestamp(value: string): string {
+    const normalized = this.normalizeFrameTimestamp(value);
+    const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})$/);
+    if (!match) {
+      return normalized;
+    }
+
+    const [, year, month, day, time] = match;
+    return `${day}/${month}/${year} ${time}`;
+  }
+
+  private waitForUiPaint(): Promise<void> {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+        setTimeout(resolve, 32);
+        return;
+      }
+
+      window.requestAnimationFrame(() => resolve());
+    });
   }
 
   private fileToDataUrl(file: File): Promise<string> {
@@ -1815,60 +2177,71 @@ export class InformesComponent implements OnInit, OnDestroy {
     let currentTotal = this.totalFramesBytes();
 
     this.isProcessingFrames = true;
-    this.loadingService.show();
-
-    // Permitir que Angular renderice el spinner antes de bloquear el hilo
-    await new Promise(resolve => setTimeout(resolve, 50));
+    this.frameProcessingTotal = candidates.length;
+    this.frameProcessingCompleted = 0;
+    this.cdr.detectChanges();
+    await this.waitForUiPaint();
 
     try {
       for (const file of candidates) {
-        if (!this.allowedMimeTypes.has(file.type)) {
-          this.toastService.error(`Tipo no permitido: ${file.name}`);
-          continue;
-        }
-        if (file.size > this.MAX_FRAME_SIZE) {
-          this.toastService.error(`El archivo ${file.name} supera ${this.MAX_FRAME_SIZE_MB} MB.`);
-          continue;
-        }
-        if (currentTotal + file.size > this.MAX_TOTAL_FRAMES_SIZE) {
-          this.toastService.error(
-            `El tamano total de fotogramas no puede superar ${this.MAX_TOTAL_FRAMES_SIZE_MB} MB.`
-          );
-          break;
-        }
-
         try {
+          if (!this.allowedMimeTypes.has(file.type)) {
+            this.toastService.error(`Tipo no permitido: ${file.name}`);
+            continue;
+          }
+          if (file.size > this.MAX_FRAME_SIZE) {
+            this.toastService.error(`El archivo ${file.name} supera ${this.MAX_FRAME_SIZE_MB} MB.`);
+            continue;
+          }
+          if (currentTotal + file.size > this.MAX_TOTAL_FRAMES_SIZE) {
+            this.toastService.error(
+              `El tamano total de fotogramas no puede superar ${this.MAX_TOTAL_FRAMES_SIZE_MB} MB.`,
+            );
+            break;
+          }
+
           const dataUrl = await this.fileToDataUrl(file);
           const frame: VideoReportFrame = {
             id_temp: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
             file_name: file.name,
             mime_type: file.type as VideoReportFrame['mime_type'],
             content_base64: dataUrl,
+            frame_time: '',
             description: '',
             order: this.frames.length,
-            preview_url: URL.createObjectURL(file),
+            preview_url: dataUrl,
             size_bytes: file.size,
           };
-          this.frames.push(frame);
+          this.frames = [...this.frames, frame];
           currentTotal += file.size;
           this.markDirty();
         } catch (error) {
           this.toastService.error(String(error));
+        } finally {
+          this.frameProcessingCompleted += 1;
+          this.cdr.detectChanges();
+          if (this.frameProcessingCompleted < this.frameProcessingTotal) {
+            await this.waitForUiPaint();
+          }
         }
       }
     } finally {
+      this.reindexFrames();
+      input.value = '';
       this.isProcessingFrames = false;
-      this.loadingService.hide();
+      this.frameProcessingTotal = 0;
+      this.frameProcessingCompleted = 0;
+      this.cdr.detectChanges();
     }
-
-    this.reindexFrames();
-    input.value = '';
   }
 
   removeFrame(index: number): void {
     const frame = this.frames[index];
-    if (frame?.preview_url) {
+    if (frame?.preview_url?.startsWith('blob:')) {
       URL.revokeObjectURL(frame.preview_url);
+    }
+    if (frame?.id_temp) {
+      this.invalidFrameDescriptionIds.delete(frame.id_temp);
     }
     this.frames.splice(index, 1);
     this.reindexFrames();
@@ -1905,26 +2278,26 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   private buildPayload(): VideoReportPayload {
     const reportData: VideoReportFormData = { ...this.form };
+    const authenticityMode = reportData.vms_authenticity_mode || '';
     reportData.destinatarios = this.getStandardDestinatarios(reportData.fiscalia);
     reportData.sintesis = '';
-    if (!reportData.vms_native_hash_algorithms.includes('otro')) {
-      reportData.vms_native_hash_algorithm_other = '';
+    if (authenticityMode !== 'otro') {
+      reportData.vms_authenticity_detail = '';
     }
+    reportData.vms_native_hash_algorithms = [];
+    reportData.vms_native_hash_algorithm_other = '';
     if (!reportData.hash_algorithms.includes('otro')) {
       reportData.hash_algorithm_other = '';
     }
-    if (
-      (reportData.vms_authenticity_mode || '') === 'hash_preventivo' &&
-      !(reportData.hash_program || '').trim()
-    ) {
+    if (authenticityMode !== 'hash_preventivo') {
+      reportData.hash_program = '';
+      reportData.hash_algorithms = [];
+      reportData.hash_algorithm_other = '';
+    } else if (!(reportData.hash_program || '').trim()) {
       reportData.hash_program = 'HashMyFiles';
     }
-    if (
-      (reportData.vms_authenticity_mode || '') === 'vms_propio' &&
-      this.utilizoHash &&
-      !(reportData.hash_program || '').trim()
-    ) {
-      reportData.hash_program = 'HashMyFiles';
+    if (authenticityMode !== 'sin_autenticacion') {
+      reportData.motivo_sin_hash = '';
     }
     if (!this.incluirFirma) {
       reportData.firma = '';
@@ -1937,7 +2310,9 @@ export class InformesComponent implements OnInit, OnDestroy {
     }
     reportData.involved_people = this.normalizeReportInvolvedPeople(reportData.involved_people);
     if (!(reportData.involved_people_summary || '').trim()) {
-      reportData.involved_people_summary = this.buildInvolvedPeopleSummary(reportData.involved_people);
+      reportData.involved_people_summary = this.buildInvolvedPeopleSummary(
+        reportData.involved_people,
+      );
     }
     if (!(reportData.denunciante || '').trim()) {
       const mainComplainant = this.pickMainComplainant(reportData.involved_people);
@@ -1952,13 +2327,38 @@ export class InformesComponent implements OnInit, OnDestroy {
         file_name: frame.file_name,
         mime_type: frame.mime_type,
         content_base64: frame.content_base64,
+        frame_time: this.normalizeFrameTimestamp(frame.frame_time),
         description: frame.description || '',
         order: frame.order,
       })),
     };
   }
 
-  private normalizeReportInvolvedPeople(people: VideoReportInvolvedPerson[]): VideoReportInvolvedPerson[] {
+  private buildFramesSummary(): string {
+    return this.orderedFrames()
+      .map((frame, index) => {
+        const time = this.normalizeFrameTimestamp(frame.frame_time);
+        const description = (frame.description || '').trim();
+        if (!time && !description) {
+          return '';
+        }
+
+        const detailParts = [];
+        if (time) {
+          detailParts.push(`fecha y hora ${this.formatFrameTimestamp(time)}`);
+        }
+        if (description) {
+          detailParts.push(description);
+        }
+        return `Fotograma ${index + 1}: ${detailParts.join(' - ')}`;
+      })
+      .filter((item) => !!item)
+      .join(' | ');
+  }
+
+  private normalizeReportInvolvedPeople(
+    people: VideoReportInvolvedPerson[],
+  ): VideoReportInvolvedPerson[] {
     if (!Array.isArray(people)) {
       return [];
     }
@@ -2012,8 +2412,6 @@ export class InformesComponent implements OnInit, OnDestroy {
       empresa_aerea: this.form.empresa_aerea,
       destino: this.form.destino,
       unidad: this.form.unidad,
-      vms_native_hash_algorithms: this.form.vms_native_hash_algorithms,
-      vms_native_hash_algorithm_other: this.form.vms_native_hash_algorithm_other,
       hash_algorithms: this.form.hash_algorithms,
       hash_algorithm_other: this.form.hash_algorithm_other,
       hash_program: this.form.hash_program,
@@ -2022,19 +2420,13 @@ export class InformesComponent implements OnInit, OnDestroy {
       motivo_sin_hash: this.form.motivo_sin_hash,
       involved_people_summary: this.form.involved_people_summary,
       involved_people: this.form.involved_people,
+      frames_summary: this.buildFramesSummary(),
     };
   }
 
   private buildMaterialFilmicoSeedFromContext(): string {
     const sistema = (this.form.sistema || '').trim() || 'sistema no consignado';
     const lugar = (this.form.aeropuerto || '').trim() || 'lugar de origen no consignado';
-    const nativeAlgos = this.getSelectedNativeHashAlgorithmsSummary();
-    const nativeHashPart =
-      this.form.vms_authenticity_mode === 'vms_propio'
-        ? ((this.form.vms_native_hash_algorithms || []).length > 0
-          ? `hashes nativos: ${nativeAlgos}`
-          : 'autenticacion propietaria del sistema')
-        : nativeAlgos;
     const autenticidad = this.getVmsAuthenticityLabel(this.form.vms_authenticity_mode || '');
     const cantidad = (this.form.cantidad_observada || '').trim();
     const sectores = (this.form.sectores_analizados || '').trim();
@@ -2042,12 +2434,6 @@ export class InformesComponent implements OnInit, OnDestroy {
     const tiempo = (this.form.tiempo_total_analisis || '').trim();
     const hashLabels = this.getSelectedHashAlgorithmLabels();
     const motivoSinHash = (this.form.motivo_sin_hash || '').trim();
-    const hashText =
-      hashLabels.length > 0
-        ? hashLabels.join(', ')
-        : motivoSinHash
-          ? `no aplicado (${motivoSinHash})`
-          : 'no aplicado';
     const hashProgram = (this.form.hash_program || '').trim() || 'programa de hash no consignado';
     const quantityText = cantidad ? ` Se consigno cantidad observada: ${cantidad}.` : '';
     const sectorText = sectores ? ` Sectores analizados: ${sectores}.` : '';
@@ -2056,37 +2442,46 @@ export class InformesComponent implements OnInit, OnDestroy {
         ? ` Franja horaria: ${franja || 'no consignada'}; tiempo total: ${tiempo || 'no consignado'}.`
         : '';
 
-    const hashDetail =
-      hashLabels.length > 0
-        ? `Verificacion mediante ${hashProgram} bajo ${hashText}.`
-        : motivoSinHash
-          ? `Hash no efectuado (${motivoSinHash}).`
-          : 'Hash no efectuado.';
+    let hashDetail = '';
+    if (this.form.vms_authenticity_mode === 'hash_preventivo') {
+      const hashText = hashLabels.length > 0 ? hashLabels.join(', ') : 'algoritmos no consignados';
+      hashDetail = `Verificacion mediante ${hashProgram} bajo ${hashText}.`;
+    } else if (this.form.vms_authenticity_mode === 'sin_autenticacion') {
+      hashDetail = motivoSinHash ? `Hash no efectuado (${motivoSinHash}).` : 'Hash no efectuado.';
+    }
 
-    return `Material obtenido del sistema ${sistema}, con origen en ${lugar}. Metodo de autenticidad: ${autenticidad} (${nativeHashPart}). ${hashDetail}${quantityText}${sectorText}${timingText}`;
+    return `Material obtenido del sistema ${sistema}, con origen en ${lugar}. Metodo de autenticidad: ${autenticidad}. ${hashDetail}${quantityText}${sectorText}${timingText}`;
   }
 
   private buildDesarrolloSeedFromContext(): string {
     const sectores = (this.form.sectores_analizados || '').trim() || 'sectores no consignados';
-    const franja = (this.form.franja_horaria_analizada || '').trim() || 'franja horaria no consignada';
+    const franja =
+      (this.form.franja_horaria_analizada || '').trim() || 'franja horaria no consignada';
     const tiempo = (this.form.tiempo_total_analisis || '').trim() || 'tiempo total no consignado';
-    const cantidad = (this.form.cantidad_observada || '').trim() || 'cantidad observada no consignada';
+    const cantidad =
+      (this.form.cantidad_observada || '').trim() || 'cantidad observada no consignada';
     const objeto = (this.form.objeto_denunciado || '').trim();
     const denunciante = (this.form.denunciante || '').trim();
     const involvedSummary =
       (this.form.involved_people_summary || '').trim() ||
-      this.buildInvolvedPeopleSummary(this.normalizeReportInvolvedPeople(this.form.involved_people || []));
+      this.buildInvolvedPeopleSummary(
+        this.normalizeReportInvolvedPeople(this.form.involved_people || []),
+      );
     const flightSummary = [
       (this.form.vuelo || '').trim(),
       (this.form.empresa_aerea || '').trim(),
       (this.form.destino || '').trim(),
-    ].filter((value) => !!value).join(' / ');
+    ]
+      .filter((value) => !!value)
+      .join(' / ');
+    const framesSummary = this.buildFramesSummary();
     const objectPart = objeto ? ` Hecho vinculado a: ${objeto}.` : '';
     const complainantPart = denunciante ? ` Denunciante registrado: ${denunciante}.` : '';
     const peoplePart = involvedSummary ? ` Personas vinculadas: ${involvedSummary}.` : '';
     const flightPart = flightSummary ? ` Datos de vuelo asociados: ${flightSummary}.` : '';
+    const framesPart = framesSummary ? ` Referencias de fotogramas: ${framesSummary}.` : '';
 
-    return `Se analizaron los sectores ${sectores}, en la franja horaria ${franja}, con un tiempo total de analisis de ${tiempo}. Cantidad observada: ${cantidad}.${objectPart}${complainantPart}${peoplePart}${flightPart}`;
+    return `Se analizaron los sectores ${sectores}, en la franja horaria ${franja}, con un tiempo total de analisis de ${tiempo}. Cantidad observada: ${cantidad}.${objectPart}${complainantPart}${peoplePart}${flightPart}${framesPart}`;
   }
 
   private buildConclusionSeedFromContext(): string {
@@ -2096,7 +2491,9 @@ export class InformesComponent implements OnInit, OnDestroy {
     const cantidad = (this.form.cantidad_observada || '').trim();
     const involvedSummary =
       (this.form.involved_people_summary || '').trim() ||
-      this.buildInvolvedPeopleSummary(this.normalizeReportInvolvedPeople(this.form.involved_people || []));
+      this.buildInvolvedPeopleSummary(
+        this.normalizeReportInvolvedPeople(this.form.involved_people || []),
+      );
     const cantidadPart = cantidad
       ? `se registro ${cantidad}`
       : 'no se consigno una cantidad observada especifica';
@@ -2111,8 +2508,6 @@ export class InformesComponent implements OnInit, OnDestroy {
     }
     return this.hashAlgorithmLabelByCode[code] || code.toUpperCase();
   }
-
-
 
   private getVmsAuthenticityLabel(mode: VideoReportVmsAuthenticityMode | ''): string {
     if (mode === 'vms_propio') {
@@ -2140,9 +2535,6 @@ export class InformesComponent implements OnInit, OnDestroy {
     const motivoSinHash = (report.motivo_sin_hash || '').trim();
     const vmsMode = (report.vms_authenticity_mode || '').trim();
     const vmsDetail = (report.vms_authenticity_detail || '').trim();
-    const nativeAlgos = (report.vms_native_hash_algorithms || []).map((item) =>
-      this.getHashAlgorithmLabel(item, report.vms_native_hash_algorithm_other || ''),
-    );
 
     const lugarClause = lugar
       ? `desde donde se obtuvo la información en "**${lugar}**"`
@@ -2150,11 +2542,7 @@ export class InformesComponent implements OnInit, OnDestroy {
 
     let authClause: string;
     if (vmsMode === 'vms_propio') {
-      if (nativeAlgos.length > 0) {
-        authClause = `posee como medida de seguridad autenticación provista por el propio sistema "**${sistema}**", que incorpora algoritmos de hash nativos (**${nativeAlgos.join(' y ')}**)`;
-      } else {
-        authClause = `posee como medida de seguridad autenticación propietaria provista por el propio sistema "**${sistema}**"`;
-      }
+      authClause = `posee como medida de seguridad autenticación propietaria provista por el propio sistema "**${sistema}**"`;
     } else if (vmsMode === 'hash_preventivo') {
       authClause = 'fue sometido a verificación de integridad mediante hash preventivo externo';
     } else if (vmsMode === 'sin_autenticacion') {
@@ -2206,7 +2594,9 @@ export class InformesComponent implements OnInit, OnDestroy {
     const cantidad = (report.cantidad_observada || '').trim();
     const involvedSummary =
       (report.involved_people_summary || '').trim() ||
-      this.buildInvolvedPeopleSummary(this.normalizeReportInvolvedPeople(report.involved_people || []));
+      this.buildInvolvedPeopleSummary(
+        this.normalizeReportInvolvedPeople(report.involved_people || []),
+      );
 
     const cantidadPart = cantidad
       ? `se consigno una cantidad observada de **${cantidad}**`
@@ -2257,7 +2647,9 @@ export class InformesComponent implements OnInit, OnDestroy {
     this.form.sectores_analizados = 'Hall de Arribos, Cinta 3, Plataforma Norte';
     this.form.franja_horaria_analizada = '08:00 a 12:00';
     this.form.tiempo_total_analisis = '04:00:00';
-    this.form.sintesis = 'Se analiza material de video del sistema de seguridad aeroportuaria a solicitud de autoridad competente.';
+    this.form.sintesis =
+      'Se analiza material de video del sistema de seguridad aeroportuaria a solicitud de autoridad competente.';
+    this.markDirty();
     this.toastService.show('Datos de prueba cargados hasta Sectores Analizados.', 'success');
   }
 
@@ -2292,7 +2684,7 @@ export class InformesComponent implements OnInit, OnDestroy {
           material_context: materialContext,
           mode: 'full',
           preferred_provider: this.selectedAiProvider,
-        })
+        }),
       );
 
       const elapsedSeconds = this.getAiElapsedSeconds();
@@ -2317,7 +2709,9 @@ export class InformesComponent implements OnInit, OnDestroy {
 
         this.cdr.detectChanges();
         if (response.ai_applied === false) {
-          this.toastService.warning(`Proceso finalizado en ${elapsedSeconds}s sin cambios en el texto.`);
+          this.toastService.warning(
+            `Proceso finalizado en ${elapsedSeconds}s sin cambios en el texto.`,
+          );
         } else {
           this.toastService.success(`Informe completado en ${elapsedSeconds}s.`);
         }
@@ -2326,7 +2720,10 @@ export class InformesComponent implements OnInit, OnDestroy {
       }, 50);
     } catch (error) {
       this.toastService.error(
-        this.getSimpleApiErrorMessage(error as HttpErrorResponse, 'No se pudo generar el informe completo.')
+        this.getSimpleApiErrorMessage(
+          error as HttpErrorResponse,
+          'No se pudo generar el informe completo.',
+        ),
       );
     } finally {
       if (!deferredSuccess) {
@@ -2335,7 +2732,6 @@ export class InformesComponent implements OnInit, OnDestroy {
       }
     }
   }
-
 
   generateReport(): void {
     if (!this.validate(true)) {
@@ -2349,7 +2745,9 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   private async generateReportLocally(payload: VideoReportPayload): Promise<void> {
     try {
-      const response = await firstValueFrom(this.informeService.generateVideoAnalysisReport(payload));
+      const response = await firstValueFrom(
+        this.informeService.generateVideoAnalysisReport(payload),
+      );
       const blob = response.body;
       if (!(blob instanceof Blob)) {
         throw new Error('Respuesta vacia al generar informe.');
@@ -2360,7 +2758,7 @@ export class InformesComponent implements OnInit, OnDestroy {
       link.download = this.resolveGeneratedFilename(response, this.form.report_date || 'hoy');
       link.click();
       window.URL.revokeObjectURL(url);
-      this.toastService.success('Informe DOCX generado.');
+      this.toastService.success('Informe DOCX generado sin guardar cambios en la base.');
     } catch (error) {
       const message = await this.getReportGenerationErrorMessage(error);
       this.toastService.error(message);
@@ -2370,7 +2768,10 @@ export class InformesComponent implements OnInit, OnDestroy {
     }
   }
 
-  private resolveGeneratedFilename(response: import('@angular/common/http').HttpResponse<Blob>, fallbackDate: string): string {
+  private resolveGeneratedFilename(
+    response: import('@angular/common/http').HttpResponse<Blob>,
+    fallbackDate: string,
+  ): string {
     const contentDisposition = response.headers.get('content-disposition') || '';
     const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
     if (utf8Match?.[1]) {
@@ -2441,10 +2842,13 @@ export class InformesComponent implements OnInit, OnDestroy {
         this.linkedRecordId.set(saved.film_record ?? null);
       }
       this.isDirty = false;
+      if ((saved.status || status) === 'FINALIZADO') {
+        this.clearLocalDraftSnapshot();
+      }
       this.toastService.success(
         (saved.status || status) === 'FINALIZADO'
           ? 'Informe finalizado y guardado en la base de datos.'
-          : 'Borrador del informe guardado en la base de datos exitosamente.'
+          : 'Borrador del informe guardado en la base de datos exitosamente.',
       );
     };
 
@@ -2454,8 +2858,8 @@ export class InformesComponent implements OnInit, OnDestroy {
           err,
           status === 'FINALIZADO'
             ? 'Error al finalizar el informe.'
-            : 'Error al guardar el borrador del informe.'
-        )
+            : 'Error al guardar el borrador del informe.',
+        ),
       );
     };
 
@@ -2463,7 +2867,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     if (existingId) {
       this.informeService.updateReport(existingId, reportData).subscribe({
         next: onSuccess,
-        error: onError
+        error: onError,
       });
       return;
     }
@@ -2471,14 +2875,14 @@ export class InformesComponent implements OnInit, OnDestroy {
     if (status === 'BORRADOR' && this.linkedRecordId()) {
       this.informeService.saveReportDraft(this.linkedRecordId()!, reportData).subscribe({
         next: onSuccess,
-        error: onError
+        error: onError,
       });
       return;
     }
 
     this.informeService.saveReport(reportData).subscribe({
       next: onSuccess,
-      error: onError
+      error: onError,
     });
   }
 
@@ -2504,28 +2908,39 @@ export class InformesComponent implements OnInit, OnDestroy {
     const hashAlgorithmsText =
       (report.hash_algorithms || [])
         .map((item) => this.getHashAlgorithmLabel(item, report.hash_algorithm_other))
-        .join(', ') || (report.motivo_sin_hash || '').trim() || 'No aplicado';
-    const nativeHashesText = this.getSelectedNativeHashAlgorithmsSummary();
+        .join(', ') ||
+      (report.motivo_sin_hash || '').trim() ||
+      'No aplicado';
     const hashProgramText = (report.hash_program || '').trim() || 'No consignado';
     const vmsModeText = this.getVmsAuthenticityLabel(report.vms_authenticity_mode || '');
     const vmsDetailText =
       report.vms_authenticity_mode === 'otro' && (report.vms_authenticity_detail || '').trim()
         ? ` (${this.escapeHtml(report.vms_authenticity_detail)})`
         : '';
-    const materialFilmicoText = (report.material_filmico || '').trim() || this.buildMaterialFilmicoFallbackTextFromReport(report);
-    const desarrolloText = (report.desarrollo || '').trim() || this.buildDesarrolloFallbackTextFromReport(report);
-    const conclusionText = (report.conclusion || '').trim() || this.buildConclusionFallbackTextFromReport(report);
-    const frameBlocks = orderedFrames.length === 0
-      ? '<p>No se adjuntaron fotogramas.</p>'
-      : orderedFrames.map((frame, idx) => `
+    const materialFilmicoText =
+      (report.material_filmico || '').trim() ||
+      this.buildMaterialFilmicoFallbackTextFromReport(report);
+    const desarrolloText =
+      (report.desarrollo || '').trim() || this.buildDesarrolloFallbackTextFromReport(report);
+    const conclusionText =
+      (report.conclusion || '').trim() || this.buildConclusionFallbackTextFromReport(report);
+    const frameBlocks =
+      orderedFrames.length === 0
+        ? '<p>No se adjuntaron fotogramas.</p>'
+        : orderedFrames
+            .map(
+              (frame, idx) => `
           <div class="frame">
             <h4>Fotograma ${idx + 1}: ${this.escapeHtml(frame.file_name)}</h4>
             <p align="center" style="text-align: center; margin: 20px 0;">
               <img src="${frame.content_base64}" alt="Fotograma ${idx + 1}" width="378" height="302" style="display: block; margin: 0 auto; border: 1px solid #d1d5db;">
             </p>
-            <p><strong>Descripcion:</strong> ${this.escapeHtml(frame.description || 'Sin descripcion.')}</p>
+            <p><strong>Fecha y hora de referencia:</strong> ${this.escapeHtml(this.formatFrameTimestamp(frame.frame_time) || 'No consignada')}</p>
+            <p><strong>Breve descripcion:</strong> ${this.escapeHtml(frame.description || 'Sin descripcion.')}</p>
           </div>
-        `).join('');
+        `,
+            )
+            .join('');
     const fiscalia = (report.fiscalia || '').trim();
     const fiscal = (report.fiscal || '').trim();
     const fiscaliaMeta = fiscalia
@@ -2536,7 +2951,9 @@ export class InformesComponent implements OnInit, OnDestroy {
       : '';
     const involvedSummary =
       (report.involved_people_summary || '').trim() ||
-      this.buildInvolvedPeopleSummary(this.normalizeReportInvolvedPeople(report.involved_people || []));
+      this.buildInvolvedPeopleSummary(
+        this.normalizeReportInvolvedPeople(report.involved_people || []),
+      );
     const involvedPeopleMeta = involvedSummary
       ? `<p><strong>Personas involucradas:</strong> ${this.escapeHtml(involvedSummary)}</p>`
       : '';
@@ -2561,7 +2978,9 @@ export class InformesComponent implements OnInit, OnDestroy {
       flightDetails.push(`del vuelo ${this.escapeHtml(report.vuelo)}`);
     }
     if (report.empresa_aerea) {
-      flightDetails.push(`perteneciente a la empresa aerocomercial ${this.escapeHtml(report.empresa_aerea)}`);
+      flightDetails.push(
+        `perteneciente a la empresa aerocomercial ${this.escapeHtml(report.empresa_aerea)}`,
+      );
     }
     if (report.destino) {
       flightDetails.push(`con destino a la ciudad de ${this.escapeHtml(report.destino)}`);
@@ -2571,9 +2990,10 @@ export class InformesComponent implements OnInit, OnDestroy {
       flightDetails.push(`el dia ${this.escapeHtml(report.fecha_hecho)}`);
     }
 
-    const flightIntroClause = flightDetails.length > 0
-      ? `, la cual se encontraba en el interior de su equipaje despachado por bodega ${flightDetails.join(', ')}`
-      : '';
+    const flightIntroClause =
+      flightDetails.length > 0
+        ? `, la cual se encontraba en el interior de su equipaje despachado por bodega ${flightDetails.join(', ')}`
+        : '';
 
     const introParagraph = `${reqClause}, el ${this.escapeHtml(report.unidad || 'CReV')} eleva el presente informe, a los efectos de llevar a su conocimiento el resultado del análisis efectuado por personal de esta dependencia, según lo aportado en los registros fílmicos obrantes en el ${this.escapeHtml(report.aeropuerto || 'aeropuerto')}, sistema ${this.escapeHtml(report.sistema || 'No consignado')}, respecto de los hechos denunciados por ${this.escapeHtml(report.denunciante)}, quien manifiesta el faltante de ${this.escapeHtml(report.objeto_denunciado)}${flightIntroClause}.`;
 
@@ -2618,7 +3038,6 @@ export class InformesComponent implements OnInit, OnDestroy {
           <p><strong>Sectores analizados:</strong> ${this.escapeHtml((report.sectores_analizados || '').trim() || 'No consignados')}</p>
           <p><strong>Franja horaria analizada:</strong> ${this.escapeHtml((report.franja_horaria_analizada || '').trim() || 'No consignada')}</p>
           <p><strong>Tiempo total de análisis:</strong> ${this.escapeHtml((report.tiempo_total_analisis || '').trim() || 'No consignado')}</p>
-          <p><strong>Algoritmos Hash Nativos del VMS:</strong> ${this.escapeHtml(nativeHashesText)}</p>
           <p><strong>Algoritmos SHA:</strong> ${this.escapeHtml(hashAlgorithmsText)}</p>
           <p><strong>Programa de hash:</strong> ${this.escapeHtml(hashProgramText)}</p>
           <p><strong>Autenticidad de exportación:</strong> ${this.escapeHtml(vmsModeText)}${vmsDetailText}</p>
@@ -2656,9 +3075,11 @@ export class InformesComponent implements OnInit, OnDestroy {
         <br><br><br>
         <div style="text-align: center; margin-top: 50px;">
           <p>_________________________________________</p>
-          ${report.firma && report.firma.startsWith('data:image')
-        ? `<img src="${report.firma}" style="max-height: 80px; display: block; margin: -20px auto 0 auto;" />`
-        : ``}
+          ${
+            report.firma && report.firma.startsWith('data:image')
+              ? `<img src="${report.firma}" style="max-height: 80px; display: block; margin: -20px auto 0 auto;" />`
+              : ``
+          }
           <p style="margin-top: ${report.firma && report.firma.startsWith('data:image') ? '5px' : '10px'};"><strong>${this.escapeHtml(report.grado)} ${this.escapeHtml(report.operador)}</strong></p>
         </div>
       </body>
@@ -2670,28 +3091,9 @@ export class InformesComponent implements OnInit, OnDestroy {
     if (this.isReadOnly()) {
       return;
     }
-    this.saveCurrentReport('BORRADOR');
-    return;
-    if (!this.linkedRecordId()) {
-      this.toastService.warning('No hay un registro fílmico vinculado para guardar el borrador.');
-      return;
-    }
-
-    const currentData = this.buildPayload().report_data;
-
-    this.informeService.saveReportDraft(this.linkedRecordId()!, currentData as any).subscribe({
-      next: (res: any) => {
-        this.toastService.success('Borrador del informe guardado en la base de datos exitosamente.');
-        if (res.report_id && !this.existingReportId()) {
-          this.existingReportId.set(res.report_id);
-        }
-      },
-      error: (err) => {
-        this.toastService.error(
-          this.getSimpleApiErrorMessage(err, 'Error al guardar el borrador del informe.')
-        );
-      }
-    });
+    this.persistLocalDraftSnapshot(true);
+    this.reportStatus.set('BORRADOR');
+    this.isDirty = false;
   }
 
   finalizeReportInDatabase(): void {
@@ -2760,9 +3162,3 @@ export class InformesComponent implements OnInit, OnDestroy {
     return fallback;
   }
 }
-
-
-
-
-
-

@@ -17,58 +17,59 @@ describe('InformesComponent', () => {
   let loadingServiceMock: Partial<LoadingService>;
 
   beforeEach(async () => {
+    window.localStorage.clear();
     informeServiceMock = {
       generateVideoAnalysisReport: () => of({} as any),
       getReport: () => of({} as VideoAnalysisReportRecord),
       getReportByRecord: () => of([]),
       improveVideoText: () =>
         of({
-        material_filmico: 'Material generado',
-        desarrollo: 'Desarrollo generado',
-        conclusion: 'Conclusion generada',
-      }),
+          material_filmico: 'Material generado',
+          desarrollo: 'Desarrollo generado',
+          conclusion: 'Conclusion generada',
+        }),
       saveReportDraft: () =>
         of({
-        id: 1,
-        film_record: 10,
-        status: 'BORRADOR',
-        form_data: {},
-      } as VideoAnalysisReportRecord),
+          id: 1,
+          film_record: 10,
+          status: 'BORRADOR',
+          form_data: {},
+        } as VideoAnalysisReportRecord),
       saveReport: () =>
         of({
-        id: 2,
-        film_record: 10,
-        status: 'FINALIZADO',
-        form_data: {},
-      } as VideoAnalysisReportRecord),
+          id: 2,
+          film_record: 10,
+          status: 'FINALIZADO',
+          form_data: {},
+        } as VideoAnalysisReportRecord),
       updateReport: () =>
         of({
-        id: 2,
-        film_record: 10,
-        status: 'BORRADOR',
-        form_data: {},
-      } as VideoAnalysisReportRecord),
+          id: 2,
+          film_record: 10,
+          status: 'BORRADOR',
+          form_data: {},
+        } as VideoAnalysisReportRecord),
       listReports: () => of([]),
     };
     personnelServiceMock = {
       getPeople: () =>
         of([
-        {
-          id: 11,
-          first_name: 'Juan',
-          last_name: 'Perez',
-          badge_number: '506896',
-          rank: 'COMISIONADO_MAYOR',
-          rank_display: 'Com. Mayor',
-          unit: 'EZE',
-        },
-      ]),
+          {
+            id: 11,
+            first_name: 'Juan',
+            last_name: 'Perez',
+            badge_number: '506896',
+            rank: 'COMISIONADO_MAYOR',
+            rank_display: 'Com. Mayor',
+            unit: 'EZE',
+          },
+        ]),
     };
     assetServiceMock = {
       getUnits: () =>
         of([
-        { id: 10, name: 'Unidad Ezeiza', code: 'EZE', airport: 'Ezeiza', parent: null },
-      ] as any),
+          { id: 10, name: 'Unidad Ezeiza', code: 'EZE', airport: 'Ezeiza', parent: null },
+        ] as any),
       getSystems: () => of([]),
     };
     toastServiceMock = {
@@ -110,8 +111,12 @@ describe('InformesComponent', () => {
     fixture.detectChanges();
 
     const actions = fixture.nativeElement.querySelector('[data-report-actions]') as HTMLElement;
-    const aiButton = fixture.nativeElement.querySelector('[data-ai-complete-button]') as HTMLButtonElement;
-    const buttons = Array.from(actions.querySelectorAll('button')).map((button) => button.textContent?.trim());
+    const aiButton = fixture.nativeElement.querySelector(
+      '[data-ai-complete-button]',
+    ) as HTMLButtonElement;
+    const buttons = Array.from(actions.querySelectorAll('button')).map((button) =>
+      button.textContent?.trim(),
+    );
 
     expect(actions).toBeTruthy();
     expect(actions.contains(aiButton)).toBe(true);
@@ -127,7 +132,9 @@ describe('InformesComponent', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance;
-    const aiButton = fixture.nativeElement.querySelector('[data-ai-complete-button]') as HTMLButtonElement;
+    const aiButton = fixture.nativeElement.querySelector(
+      '[data-ai-complete-button]',
+    ) as HTMLButtonElement;
 
     expect(component.canGenerateFullReport()).toBe(false);
     expect(aiButton.disabled).toBe(true);
@@ -187,5 +194,80 @@ describe('InformesComponent', () => {
     } as VideoAnalysisReportRecord);
     expect(component.isReadOnly()).toBe(true);
     expect(component.reportStatus()).toBe('FINALIZADO');
+  });
+
+  it('does not require operator hash data when authenticity is resolved by the system', () => {
+    const fixture = TestBed.createComponent(InformesComponent);
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    component.form.operador = 'Perez, Juan';
+    component.form.grado = 'INSPECTOR';
+    component.form.lup = '506896';
+    component.form.report_date = '2026-03-11';
+    component.form.unidad = 'Unidad Ezeiza';
+    component.form.numero_informe = '0001EZE/2026';
+    component.form.sistema = 'MILESTONE';
+    component.form.prevencion_sumaria = '003BAR/2026';
+    component.form.caratula = 'DENUNCIA S/ PRESUNTO HURTO';
+    component.form.denunciante = 'Perez, Ana';
+    component.form.objeto_denunciado = 'Telefono celular';
+    component.form.aeropuerto = 'Ezeiza';
+
+    component.onVmsAuthenticityModeChange('vms_propio');
+
+    const validation = (component as any).buildValidationResult() as {
+      invalid: Set<string>;
+      message: string;
+    };
+
+    expect(validation.invalid.has('hash_program')).toBe(false);
+    expect(validation.invalid.has('hash_algorithms')).toBe(false);
+  });
+
+  it('clears native VMS hash metadata from the payload', () => {
+    const fixture = TestBed.createComponent(InformesComponent);
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    component.form.vms_authenticity_mode = 'vms_propio';
+    component.form.vms_native_hash_algorithms = ['sha256', 'otro'];
+    component.form.vms_native_hash_algorithm_other = 'Firma propietaria';
+
+    const payload = (component as any).buildPayload();
+
+    expect(payload.report_data.vms_native_hash_algorithms).toEqual([]);
+    expect(payload.report_data.vms_native_hash_algorithm_other).toBe('');
+  });
+
+  it('stores draft state locally without calling backend draft endpoints', () => {
+    const fixture = TestBed.createComponent(InformesComponent);
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    const saveDraftSpy = spyOn(
+      informeServiceMock as InformeService,
+      'saveReportDraft',
+    ).and.callThrough();
+    const saveReportSpy = spyOn(
+      informeServiceMock as InformeService,
+      'saveReport',
+    ).and.callThrough();
+    const updateReportSpy = spyOn(
+      informeServiceMock as InformeService,
+      'updateReport',
+    ).and.callThrough();
+
+    component.form.operador = 'Perez, Juan';
+    component.form.numero_informe = '0001EZE/2026';
+    component.saveReportToDatabase();
+
+    expect(saveDraftSpy).not.toHaveBeenCalled();
+    expect(saveReportSpy).not.toHaveBeenCalled();
+    expect(updateReportSpy).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem('video-analysis-report-draft:new')).toContain(
+      '0001EZE/2026',
+    );
+    expect(component.reportStatus()).toBe('BORRADOR');
   });
 });

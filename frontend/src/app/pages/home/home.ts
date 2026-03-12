@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+
 import * as L from 'leaflet';
 import { ChartComponent } from 'ng-apexcharts';
 
@@ -100,27 +101,55 @@ const _now = new Date();
 const _yearStart = `${_now.getFullYear()}-01-01`;
 const _today = _now.toISOString().split('T')[0];
 
-const FILTER_DEFAULTS: Record<DashboardModule, Record<string, string>> = {
-  novedades: {
-    created_at__gte: _yearStart,
-    created_at__lte: _today,
-  },
-  hechos: {
-    timestamp__gte: _yearStart,
-    timestamp__lte: _today,
-  },
-  records: {
-    entry_date__gte: _yearStart,
-    entry_date__lte: _today,
-  },
-  personnel: {},
+const FILTER_DEFAULTS: Record<string, string> = {
+  created_at__gte: _yearStart,
+  created_at__lte: _today,
+  timestamp__gte: _yearStart,
+  timestamp__lte: _today,
+  entry_date__gte: _yearStart,
+  entry_date__lte: _today,
 };
 
-const cloneFilters = (module: DashboardModule): Record<string, string> => ({
-  ...FILTER_DEFAULTS[module],
+const cloneFilters = (): Record<string, string> => ({
+  ...FILTER_DEFAULTS,
 });
 
-const MODULE_CONFIG: Record<DashboardModule, DashboardModuleUiConfig> = {
+const MODULE_CONFIG: Record<string, DashboardModuleUiConfig> = {
+  general: {
+    label: 'Vista General',
+    title: 'Resumen operativo integral',
+    subtitle: 'Consolidado de novedades, hechos, registros y personal activo.',
+    icon: 'layers',
+    tone: 'sky',
+    chartColor: '#0ea5e9',
+    primaryTitle: 'Distribucion por modulo',
+    secondaryTitle: 'Resumen por estado',
+    filters: [],
+    shortLabels: {
+      novedades: 'Novedades',
+      hechos: 'Hechos',
+      records: 'Registros',
+      personnel: 'Personal',
+    },
+    seriesIcons: {
+      novedades: 'alert',
+      hechos: 'clipboard',
+      records: 'archive',
+      personnel: 'users',
+    },
+    seriesTones: {
+      novedades: 'amber',
+      hechos: 'sky',
+      records: 'emerald',
+      personnel: 'slate',
+    },
+    cardMeta: {
+      total: { icon: 'layers', helper: 'Total consolidado de registros.', tone: 'sky' },
+      novedades: { icon: 'alert', helper: 'Novedades en el periodo.', tone: 'amber' },
+      hechos: { icon: 'clipboard', helper: 'Hechos registrados.', tone: 'sky' },
+      records: { icon: 'archive', helper: 'Registros filmicos.', tone: 'emerald' },
+    },
+  },
   novedades: {
     label: 'Novedades',
     title: 'Panorama de novedades operativas',
@@ -304,7 +333,7 @@ const MODULE_CONFIG: Record<DashboardModule, DashboardModuleUiConfig> = {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ChartComponent, UiIconComponent],
+  imports: [CommonModule, FormsModule, ChartComponent, UiIconComponent],
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
@@ -323,33 +352,76 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   private leafletMap: L.Map | null = null;
   private markerLayer: L.LayerGroup | null = null;
 
-  selectedModule = signal<DashboardModule>('novedades');
   loading = signal(false);
-  moduleData = signal<DashboardModuleResponse | null>(null);
+  novedadesData = signal<DashboardModuleResponse | null>(null);
+  hechosData = signal<DashboardModuleResponse | null>(null);
+  recordsData = signal<DashboardModuleResponse | null>(null);
+  personnelData = signal<DashboardModuleResponse | null>(null);
   mapPoints = signal<DashboardMapPoint[]>([]);
   selectedPoint = signal<DashboardMapPoint | null>(null);
   lastUpdated = signal<Date | null>(null);
+  expandedChart = signal<string | null>(null);
+  
+  modules = signal(['General', 'Novedades', 'Hechos', 'Registros', 'Personal']);
+  selectedModule = signal('General');
 
-  private readonly filtersByModule: Record<DashboardModule, Record<string, string>> = {
-    novedades: cloneFilters('novedades'),
-    hechos: cloneFilters('hechos'),
-    records: cloneFilters('records'),
-    personnel: cloneFilters('personnel'),
-  };
+  globalFilters = signal<Record<string, string>>((() => {
+    const now = new Date();
+    const firstDayOfYear = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+    const today = now.toISOString().split('T')[0];
+    
+    return {
+      'created_at__gte': firstDayOfYear,
+      'timestamp__gte': firstDayOfYear,
+      'entry_date__gte': firstDayOfYear,
+      'created_at__lte': today,
+      'timestamp__lte': today,
+      'entry_date__lte': today,
+      'from_date': firstDayOfYear,
+      'to_date': today,
+    };
+  })());
 
-  readonly modules = (Object.entries(MODULE_CONFIG) as [DashboardModule, DashboardModuleUiConfig][])
-    .map(([value, config]) => ({ value, label: config.label, icon: config.icon }));
+  readonly filterFields = computed<DashboardFilterField[]>(() => [
+    { key: 'from_date', label: 'Desde', type: 'date', icon: 'calendar' },
+    { key: 'to_date', label: 'Hasta', type: 'date', icon: 'calendar' },
+  ]);
+  readonly activeModuleKey = computed(() => {
+    const map: Record<string, string> = {
+      'General': 'general',
+      'Novedades': 'novedades',
+      'Hechos': 'hechos',
+      'Registros': 'records',
+      'Personal': 'personnel'
+    };
+    return map[this.selectedModule()] || 'novedades';
+  });
 
-  readonly activeModuleConfig = computed(() => MODULE_CONFIG[this.selectedModule()]);
-  readonly filterFields = computed(() => this.activeModuleConfig().filters);
-  readonly hasVisibleFilters = computed(() => this.filterFields().length > 0);
-  readonly moduleTotal = computed(() => this.moduleData()?.totals.records ?? 0);
+  readonly activeModuleData = computed(() => {
+    const key = this.activeModuleKey();
+    if (key === 'general') return this.buildGeneralAggregate();
+    if (key === 'hechos') return this.hechosData();
+    if (key === 'records') return this.recordsData();
+    if (key === 'personnel') return this.personnelData();
+    return this.novedadesData();
+  });
+
+  readonly moduleTotal = computed(() => {
+    if (this.selectedModule() === 'General') {
+      return (this.novedadesData()?.totals.records ?? 0) +
+             (this.hechosData()?.totals.records ?? 0) +
+             (this.recordsData()?.totals.records ?? 0) +
+             (this.personnelData()?.totals.records ?? 0);
+    }
+    return this.activeModuleData()?.totals.records ?? 0;
+  });
   readonly pointCount = computed(() => this.mapPoints().length);
-  readonly emptyState = computed(() => this.moduleData()?.empty_state ?? { is_empty: false, message: '' });
+  readonly emptyState = computed(() => this.activeModuleData()?.empty_state ?? { is_empty: false, message: '' });
 
   readonly cards = computed<DashboardCardView[]>(() => {
-    const config = this.activeModuleConfig();
-    return (this.moduleData()?.cards ?? []).map((card, index) => {
+    const key = this.activeModuleKey();
+    const config = MODULE_CONFIG[key as keyof typeof MODULE_CONFIG] || MODULE_CONFIG['novedades'];
+    return (this.activeModuleData()?.cards ?? []).map((card, index) => {
       const meta = config.cardMeta[card.id] ?? {
         icon: config.icon,
         helper: 'Indicador principal del modulo.',
@@ -360,114 +432,235 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   });
 
   readonly primaryRows = computed<DashboardSeriesView[]>(() =>
-    this.decorateSeries(this.moduleData()?.series.distribution_primary ?? [], 'primary'),
+    this.decorateSeries(this.activeModuleData()?.series.distribution_primary ?? [], 'primary', this.activeModuleKey() as any),
   );
 
   readonly secondaryRows = computed<DashboardSeriesView[]>(() =>
-    this.decorateSeries(this.moduleData()?.series.distribution_secondary ?? [], 'secondary'),
+    this.decorateSeries(this.activeModuleData()?.series.distribution_secondary ?? [], 'secondary', this.activeModuleKey() as any),
   );
 
-  readonly primaryPieChart = computed(() =>
-    this.buildDistributionChart(this.primaryRows(), this.activeModuleConfig().primaryTitle),
-  );
+  readonly primaryPieChart = computed(() => {
+    const key = this.activeModuleKey();
+    const rows = this.decorateSeries(this.activeModuleData()?.series.distribution_primary ?? [], 'primary', key as any);
+    const config = MODULE_CONFIG[key as keyof typeof MODULE_CONFIG] || MODULE_CONFIG['novedades'];
+    return this.buildDistributionChart(rows, config.primaryTitle);
+  });
 
-  readonly secondaryPieChart = computed(() =>
-    this.buildDistributionChart(this.secondaryRows(), this.activeModuleConfig().secondaryTitle),
-  );
+  readonly priorityChart = computed(() => {
+    const rows = this.secondaryRows() || [];
+    return {
+      series: [{ name: 'Total', data: rows.map((row) => row.value) }],
+      chart: {
+        type: 'bar' as const,
+        height: 180,
+        toolbar: { show: false },
+        fontFamily: 'system-ui, sans-serif',
+      },
+      plotOptions: {
+        bar: {
+          horizontal: true,
+          borderRadius: 4,
+          barHeight: '60%',
+        },
+      },
+      colors: rows.map((row) => TONE_HEX[row.tone] || '#cbd5e1'),
+      dataLabels: { enabled: false },
+      xaxis: {
+        categories: rows.map((row) => row.displayLabel),
+        labels: { show: false },
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+      },
+      yaxis: {
+        labels: {
+          style: { colors: '#64748b', fontSize: '11px', fontWeight: 600 },
+        },
+      },
+      grid: { show: false },
+      tooltip: { theme: 'light' },
+    };
+  });
+
+  readonly statusChart = computed(() => {
+    // Usa distribution_secondary del módulo activo como bar chart vertical
+    const rows = this.secondaryRows() || [];
+    const config = this.activeModuleConfig();
+    return {
+      series: [{ name: config.secondaryTitle, data: rows.map((row) => row.value) }],
+      chart: {
+        type: 'bar' as const,
+        height: 250,
+        toolbar: { show: false },
+        fontFamily: 'system-ui, sans-serif',
+      },
+      colors: rows.map((row) => TONE_HEX[row.tone] || '#cbd5e1'),
+      plotOptions: {
+        bar: { borderRadius: 4, columnWidth: '55%', distributed: true },
+      },
+      dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: 700 } },
+      stroke: { width: 0 },
+      xaxis: {
+        categories: rows.map((row) => row.displayLabel),
+        labels: { style: { colors: '#64748b', fontSize: '10px', fontWeight: 600 } },
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+      },
+      yaxis: { show: false },
+      grid: {
+        borderColor: '#f1f5f9',
+        strokeDashArray: 4,
+      },
+      legend: { show: false },
+      tooltip: { theme: 'light' },
+      noData: {
+        text: 'Sin datos para el periodo',
+        style: { color: '#94a3b8', fontSize: '12px' },
+      },
+    };
+  });
+
+  readonly topUnitsRadarChart = computed(() => {
+    const key = this.activeModuleKey();
+    
+    // Función para obtener el valor de una unidad según módulo activo
+    const getUnitValue = (p: DashboardMapPoint): number => {
+      if (key === 'general') return p.novedades_count + p.hechos_count + p.records_count + p.personnel_count;
+      if (key === 'hechos') return p.hechos_count;
+      if (key === 'records') return p.records_count;
+      if (key === 'personnel') return p.personnel_count;
+      return p.novedades_count;
+    };
+    
+    // Top 5 units based on active module count
+    const points = [...this.mapPoints()]
+      .sort((a, b) => getUnitValue(b) - getUnitValue(a))
+      .slice(0, 5);
+      
+    const categories = points.length >= 3 ? points.map(p => p.unit_name.substring(0, 12)) : [];
+    const data = points.length >= 3 ? points.map(p => getUnitValue(p)) : [];
+    const hasData = data.length >= 3;
+
+    return {
+      series: [
+        { name: this.selectedModule(), data: data },
+      ],
+      chart: {
+        type: 'radar' as const,
+        height: 250,
+        toolbar: { show: false },
+        fontFamily: 'system-ui, sans-serif',
+      },
+      labels: categories,
+      colors: [TONE_HEX[this.activeModuleConfig().tone as ToneKey] || '#14b8a6'],
+      stroke: { width: 2 },
+      fill: { opacity: 0.2 },
+      markers: { size: 3, hover: { size: 5 } },
+      yaxis: { show: false },
+      legend: {
+        position: 'bottom' as const,
+        horizontalAlign: 'center' as const,
+        itemMargin: { horizontal: 8, vertical: 0 },
+        fontSize: '11px',
+        fontWeight: 500,
+        labels: { colors: '#64748b' },
+      },
+      tooltip: { theme: 'light' },
+      noData: {
+        text: hasData ? '' : 'Se necesitan al menos 3 unidades',
+        style: { color: '#94a3b8', fontSize: '12px' },
+      },
+    };
+  });
+
+  readonly activeModuleConfig = computed((): DashboardModuleUiConfig => {
+    const key = this.activeModuleKey();
+    return MODULE_CONFIG[key] || MODULE_CONFIG['general'];
+  });
 
   readonly activeModuleStat = computed<PointDetailStat | null>(() => {
     const point = this.selectedPoint();
     if (!point) return null;
-    switch (this.selectedModule()) {
-      case 'novedades': return { label: 'Novedades', value: point.novedades_count, icon: 'alert', tone: 'amber' };
-      case 'hechos': return { label: 'Hechos', value: point.hechos_count, icon: 'clipboard', tone: 'sky' };
-      case 'records': return { label: 'Registros filmicos', value: point.records_count, icon: 'archive', tone: 'emerald' };
-      case 'personnel': return { label: 'Personal activo', value: point.personnel_count, icon: 'users', tone: 'slate' };
-      default: return { label: 'Camaras activas', value: point.cameras_online, icon: 'camera', tone: 'emerald' };
-    }
+    const config = this.activeModuleConfig();
+    const key = this.activeModuleKey();
+    const value = key === 'general'
+      ? point.novedades_count + point.hechos_count + point.records_count + point.personnel_count
+      : key === 'hechos' ? point.hechos_count
+      : key === 'records' ? point.records_count
+      : key === 'personnel' ? point.personnel_count
+      : point.novedades_count;
+    return { label: config.label, value, icon: config.icon, tone: config.tone };
   });
 
   readonly selectedPointStats = computed<PointDetailStat[]>(() => {
     const point = this.selectedPoint();
     if (!point) return [];
-    const activeLabel = this.activeModuleStat()?.label;
-    const all: PointDetailStat[] = [
-      { label: 'Novedades', value: point.novedades_count, icon: 'alert', tone: 'amber' },
+    return [
       { label: 'Hechos', value: point.hechos_count, icon: 'clipboard', tone: 'sky' },
       { label: 'Registros', value: point.records_count, icon: 'archive', tone: 'emerald' },
       { label: 'Personal', value: point.personnel_count, icon: 'users', tone: 'slate' },
       { label: 'Camaras activas', value: point.cameras_online, icon: 'camera', tone: 'emerald' },
       { label: 'Camaras inactivas', value: point.cameras_offline, icon: 'warning', tone: 'rose' },
     ];
-    return activeLabel ? all.filter((s) => s.label !== activeLabel) : all;
   });
 
   readonly trendChart = computed(() => {
     const config = this.activeModuleConfig();
-    const points = this.moduleData()?.series.trend ?? [];
+    const points = this.activeModuleData()?.series.trend ?? [];
     const categories = points.map((point) => this.formatTrendLabel(point.label));
     const values = points.map((point) => point.value);
+    
+    // Etiqueta dinámica según módulo
+    const seriesLabel = this.selectedModule() === 'General' ? 'Total' : this.selectedModule();
+
     return {
-      series: [{ name: config.label, data: values }],
+      series: [
+        { name: seriesLabel, data: values },
+      ],
       chart: {
-        type: 'bar' as const,
-        height: 312,
+        type: 'area' as const,
+        height: 250,
         toolbar: { show: false },
         zoom: { enabled: false },
-        foreColor: '#64748b',
         fontFamily: 'system-ui, sans-serif',
         animations: { enabled: true, speed: 350 },
       },
       colors: [config.chartColor],
-      stroke: { curve: 'smooth' as const, width: 0 },
-      plotOptions: {
-        bar: {
-          borderRadius: 6,
-          columnWidth: '52%',
-        },
-      },
+      stroke: { curve: 'smooth' as const, width: 2.5 },
       fill: {
-        type: 'solid',
-        opacity: 0.95,
+        type: 'gradient',
+        gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05, stops: [0, 90, 100] },
       },
+      markers: { size: 3, strokeWidth: 2, hover: { size: 5 } },
       dataLabels: { enabled: false },
-      markers: { size: 0 },
       grid: {
-        borderColor: '#e2e8f0',
+        borderColor: '#f1f5f9',
         strokeDashArray: 4,
-        padding: { left: 4, right: 8 },
+        padding: { left: 10, right: 10 },
       },
       xaxis: {
-        categories,
+        categories: categories.length ? categories : [],
         axisBorder: { show: false },
         axisTicks: { show: false },
         labels: {
-          style: {
-            colors: categories.map(() => '#94a3b8'),
-            fontSize: '10px',
-          },
+          style: { colors: '#94a3b8', fontSize: '10px', fontWeight: 600 },
+          rotate: -45,
+          rotateAlways: categories.length > 15,
         },
       },
       yaxis: {
-        min: 0,
-        forceNiceScale: true,
+        show: true,
         labels: {
-          formatter: (value: number) => `${Math.round(value)}`,
-          style: { colors: ['#94a3b8'] },
+          style: { colors: '#94a3b8', fontSize: '10px' },
         },
       },
+      legend: { show: false },
       tooltip: {
         theme: 'light',
-        y: {
-          formatter: (value: number) => `${value} registros`,
-        },
+        x: { show: true },
       },
       noData: {
-        text: 'Sin datos para el periodo',
-        style: {
-          color: '#94a3b8',
-          fontSize: '12px',
-        },
+        text: 'Sin datos de tendencia para el periodo',
+        style: { color: '#94a3b8', fontSize: '12px' },
       },
     };
   });
@@ -555,16 +748,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.leafletMap.fitBounds(bounds, { padding: [50, 50] });
   }
 
-  onModuleChange(value: string) {
-    this.selectedModule.set(value as DashboardModule);
-    this.selectedPoint.set(null);
-    this.refresh();
-  }
-
   refresh() {
     this.loading.set(true);
     const filters = this.currentFilters();
-    this.loadModule(filters);
+    this.loadData(filters);
     this.loadMap(filters);
   }
 
@@ -573,35 +760,31 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   clearFilters() {
-    const module = this.selectedModule();
-    this.filtersByModule[module] = cloneFilters(module);
+    this.globalFilters.set(cloneFilters());
+    this.refresh();
+  }
+
+  selectModule(module: string) {
+    this.selectedModule.set(module);
     this.refresh();
   }
 
   selectPoint(point: DashboardMapPoint) {
-    this.selectedPoint.set(point);
+    // Toggle: deseleccionar si se toca la misma unidad
+    const current = this.selectedPoint();
+    if (current && current.unit_code === point.unit_code) {
+      this.selectedPoint.set(null);
+    } else {
+      this.selectedPoint.set(point);
+    }
+    this.refresh();
   }
 
-  modulePillClasses(moduleValue: string): Record<string, boolean> {
-    const isActive = this.selectedModule() === moduleValue;
-    const tone = MODULE_CONFIG[moduleValue as DashboardModule].tone;
-    const tc = this.toneClasses(tone);
-    return {
-      'dashboard-module-pill-active': isActive,
-      'dashboard-module-pill-idle': !isActive,
-      [tc.badge]: isActive,
-    };
+  toggleExpand(chartId: string | null) {
+    this.expandedChart.set(chartId);
   }
 
-  moduleRoute() {
-    const routeMap: Record<DashboardModule, string> = {
-      novedades: '/novedades',
-      hechos: '/hechos',
-      records: '/records',
-      personnel: '/personnel',
-    };
-    return routeMap[this.selectedModule()];
-  }
+
 
   toneClasses(tone: ToneKey) {
     return {
@@ -659,11 +842,21 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getFilterValue(key: string): string {
-    return this.filtersByModule[this.selectedModule()][key] ?? '';
+    return this.globalFilters()[key] ?? '';
   }
 
   setFilterValue(key: string, value: string) {
-    this.filtersByModule[this.selectedModule()][key] = value;
+    const filters = { ...this.globalFilters() };
+    if (key === 'from_date') {
+      filters['created_at__gte'] = value;
+      filters['timestamp__gte'] = value;
+      filters['entry_date__gte'] = value;
+    } else {
+      filters['created_at__lte'] = value;
+      filters['timestamp__lte'] = value;
+      filters['entry_date__lte'] = value;
+    }
+    this.globalFilters.set(filters);
     this.applyFilters();
   }
 
@@ -701,8 +894,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     return 'Periodo actual';
   }
 
-  private decorateSeries(points: DashboardSeriesPoint[], section: 'primary' | 'secondary'): DashboardSeriesView[] {
-    const config = this.activeModuleConfig();
+  private decorateSeries(points: DashboardSeriesPoint[], section: 'primary' | 'secondary', moduleName: 'novedades' | 'hechos'): DashboardSeriesView[] {
+    const config = MODULE_CONFIG[moduleName] || MODULE_CONFIG['novedades'];
     const total = points.reduce((acc, item) => acc + item.value, 0);
     return points.map((point, index) => {
       const key = point.key ?? point.label;
@@ -802,7 +995,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private currentFilters(): Record<string, string> {
-    const base = { ...this.filtersByModule[this.selectedModule()] };
+    const base = { ...this.globalFilters() };
     const point = this.selectedPoint();
     if (point) {
       base['unit_code'] = point.unit_code;
@@ -810,31 +1003,96 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     return base;
   }
 
-  private loadModule(filters: Record<string, string>) {
-    const module = this.selectedModule();
-    const onNext = (data: DashboardModuleResponse) => {
-      this.moduleData.set(data);
-      this.lastUpdated.set(new Date());
-      this.loading.set(false);
-    };
-    const onError = () => {
-      this.moduleData.set(null);
-      this.loading.set(false);
-    };
+  private loadData(filters: Record<string, string>) {
+    forkJoin({
+      novedades: this.dashboardService.getNovedades(filters),
+      hechos: this.dashboardService.getHechos(filters),
+      records: this.dashboardService.getRecords(filters),
+      personnel: this.dashboardService.getPersonnel(filters),
+    }).subscribe({
+      next: (res) => {
+        this.novedadesData.set(res.novedades);
+        this.hechosData.set(res.hechos);
+        this.recordsData.set(res.records);
+        this.personnelData.set(res.personnel);
+        this.lastUpdated.set(new Date());
+        this.loading.set(false);
+      },
+      error: () => {
+        this.novedadesData.set(null);
+        this.hechosData.set(null);
+        this.recordsData.set(null);
+        this.personnelData.set(null);
+        this.loading.set(false);
+      }
+    });
+  }
 
-    if (module === 'novedades') {
-      this.dashboardService.getNovedades(filters).subscribe({ next: onNext, error: onError });
-      return;
+  /** Construye un DashboardModuleResponse agregado para VISTA GENERAL */
+  private buildGeneralAggregate(): DashboardModuleResponse | null {
+    const nov = this.novedadesData();
+    const hec = this.hechosData();
+    const rec = this.recordsData();
+    const per = this.personnelData();
+    if (!nov && !hec && !rec && !per) return null;
+
+    const totalNov = nov?.totals.records ?? 0;
+    const totalHec = hec?.totals.records ?? 0;
+    const totalRec = rec?.totals.records ?? 0;
+    const totalPer = per?.totals.records ?? 0;
+    const grandTotal = totalNov + totalHec + totalRec + totalPer;
+
+    // Cards: resumen por módulo
+    const cards: DashboardCard[] = [
+      { id: 'total', label: 'Total registros', value: grandTotal },
+      { id: 'novedades', label: 'Novedades', value: totalNov },
+      { id: 'hechos', label: 'Hechos', value: totalHec },
+      { id: 'records', label: 'Registros', value: totalRec },
+    ];
+
+    // distribution_primary: totales por módulo (para donut/pie)
+    const distributionPrimary: DashboardSeriesPoint[] = [
+      { key: 'novedades', label: 'Novedades', value: totalNov },
+      { key: 'hechos', label: 'Hechos', value: totalHec },
+      { key: 'records', label: 'Registros', value: totalRec },
+      { key: 'personnel', label: 'Personal', value: totalPer },
+    ];
+
+    // distribution_secondary: combinar primeras 2 entradas de cada módulo
+    const distributionSecondary: DashboardSeriesPoint[] = [
+      ...(nov?.series.distribution_secondary?.slice(0, 2) ?? []),
+      ...(hec?.series.distribution_secondary?.slice(0, 2) ?? []),
+      ...(rec?.series.distribution_secondary?.slice(0, 2) ?? []),
+    ];
+
+    // trend: sumar los valores de cada fecha agrupando por label
+    const trendMap = new Map<string, number>();
+    const allTrends = [
+      ...(nov?.series.trend ?? []),
+      ...(hec?.series.trend ?? []),
+      ...(rec?.series.trend ?? []),
+    ];
+    for (const point of allTrends) {
+      trendMap.set(point.label, (trendMap.get(point.label) ?? 0) + point.value);
     }
-    if (module === 'hechos') {
-      this.dashboardService.getHechos(filters).subscribe({ next: onNext, error: onError });
-      return;
-    }
-    if (module === 'records') {
-      this.dashboardService.getRecords(filters).subscribe({ next: onNext, error: onError });
-      return;
-    }
-    this.dashboardService.getPersonnel(filters).subscribe({ next: onNext, error: onError });
+    const trend: DashboardSeriesPoint[] = Array.from(trendMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([label, value]) => ({ label, value }));
+
+    return {
+      module: 'novedades' as DashboardModule, // Tipo técnico, no afecta la UI
+      cards,
+      series: {
+        trend,
+        distribution_primary: distributionPrimary,
+        distribution_secondary: distributionSecondary,
+      },
+      totals: { records: grandTotal },
+      empty_state: {
+        is_empty: grandTotal === 0,
+        message: grandTotal === 0 ? 'Sin datos para el periodo seleccionado' : '',
+      },
+    };
   }
 
   private loadMap(filters: Record<string, string>) {
