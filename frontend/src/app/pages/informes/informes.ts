@@ -32,6 +32,10 @@ import { ToastService } from '../../services/toast.service';
 import { LoadingService } from '../../services/loading.service';
 import { PersonnelService } from '../../services/personnel.service';
 import { AssetService, SystemAsset } from '../../services/asset.service';
+import {
+  getNowDateTimeLocalInputValue,
+  getTodayDateInputValue,
+} from '../../utils/date-inputs';
 
 type HelpKey = keyof VideoReportFormData | 'operador_select' | 'frame_upload' | 'frame_description';
 
@@ -196,7 +200,7 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     if (!this.form.report_date) {
-      this.form.report_date = new Date().toISOString().split('T')[0];
+      this.form.report_date = getTodayDateInputValue();
     }
     this.loadUnits();
     this.loadPersonnel();
@@ -1436,7 +1440,7 @@ export class InformesComponent implements OnInit, OnDestroy {
   };
 
   form: VideoReportFormData = {
-    report_date: new Date().toISOString().slice(0, 10),
+    report_date: getTodayDateInputValue(),
     destinatarios: '',
     unidad: '',
     tipo_informe: 'Informe de análisis de videos',
@@ -2637,7 +2641,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     this.form.operador = 'GARCIA, Juan';
     this.form.grado = 'INSPECTOR';
     this.form.lup = '506896';
-    this.form.report_date = new Date().toISOString().slice(0, 10);
+    this.form.report_date = getTodayDateInputValue();
     this.form.numero_informe = `0001EZE/${year}`;
     this.form.tipo_informe = 'Informe de análisis de videos';
     this.form.destinatarios = 'JEFATURA DE SEGURIDAD AEROPORTUARIA';
@@ -2651,6 +2655,14 @@ export class InformesComponent implements OnInit, OnDestroy {
       'Se analiza material de video del sistema de seguridad aeroportuaria a solicitud de autoridad competente.';
     this.markDirty();
     this.toastService.show('Datos de prueba cargados hasta Sectores Analizados.', 'success');
+  }
+
+  get maxDate(): string {
+    return getTodayDateInputValue();
+  }
+
+  get maxDateTime(): string {
+    return getNowDateTimeLocalInputValue();
   }
 
   async generateFullReportWithAi(): Promise<void> {

@@ -1,6 +1,6 @@
 <app-spinner></app-spinner>
 <app-toast></app-toast>
-<div class="ui-compact flex h-screen bg-slate-50 overflow-hidden font-sans">
+<div class="ui-compact flex h-screen bg-slate-100 overflow-hidden font-sans">
   <!-- Sidebar -->
   <aside [class.w-64]="!isSidebarCollapsed" [class.w-16]="isSidebarCollapsed"
     class="relative bg-slate-900 text-slate-300 transition-all duration-300 ease-in-out flex flex-col shadow-xl z-20">
@@ -137,39 +137,44 @@
   </aside>
 
   <!-- Main Content -->
-  <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative overflow-hidden">
+  <main class="flex-1 flex flex-col min-w-0 bg-slate-100 relative overflow-hidden">
     <!-- Header -->
-    <header class="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-5 z-10 shrink-0">
-      <div class="flex items-center space-x-3">
-        <h1 class="text-lg font-bold text-slate-800">{{ pageTitle }}</h1>
+    <header class="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-5 z-10 shrink-0 shadow-lg">
+      <div class="flex items-center space-x-6">
+        <h1 class="text-base font-black text-white tracking-tight uppercase">{{ pageTitle }}</h1>
+        
+        <!-- Projected content from components -->
+        <div class="hidden lg:block">
+          <ng-container [ngTemplateOutlet]="layoutService.headerContent()"></ng-container>
+        </div>
       </div>
 
-      <div class="flex items-center space-x-3">
+      <div class="flex items-center space-x-4">
         <button
-          class="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-slate-100 rounded-full transition-colors relative">
+          class="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-all relative">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
-          <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full border-2 border-white"></span>
+          <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-slate-900"></span>
         </button>
-        <div class="h-6 w-px bg-slate-200"></div>
-        <div class="flex items-center space-x-2 cursor-pointer group">
+        <div class="h-6 w-px bg-slate-800"></div>
+        <div class="flex items-center space-x-3 cursor-pointer group px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors">
           <div
-            class="w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center font-bold text-xs ring-2 ring-transparent group-hover:ring-primary-300 transition-all">
+            class="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-xs shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
             JD
           </div>
           <div class="hidden md:block">
-            <p class="text-xs font-semibold text-slate-900 leading-none">Jonatan D.</p>
-            <p class="text-[10px] font-medium text-slate-500 mt-0.5 leading-none">Administrador</p>
+            <p class="text-xs font-bold text-white leading-none">Jonatan D.</p>
+            <p class="text-[10px] font-bold text-slate-400 mt-1 leading-none uppercase tracking-wider">Administrador</p>
           </div>
         </div>
       </div>
     </header>
 
     <!-- Content Area -->
-    <div class="flex-1 overflow-y-auto p-5 custom-scrollbar">
+    <div class="flex-1 overflow-y-auto p-2 custom-scrollbar lg:p-3">
       <router-outlet></router-outlet>
     </div>
   </main>

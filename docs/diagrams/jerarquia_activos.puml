@@ -102,7 +102,7 @@ Unit "0..1" <-- "0..*" Unit : parent (CREV superior)
 
 ' ─── Asignaciones de Person ───────────────
 Person "0..1" <-- "0..*" CameramanGear : assigned_to\n(nullable)
-Person "0..1" <-- "0..*" Person : unit (revista en)
+Unit "0..1" <-- "0..*" Person : unit (revista en)
 Person "0..*" -- "0..*" System : assigned_systems\n(M2M)
 
 ' ─── Novedades sobre activos ──────────────

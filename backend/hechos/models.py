@@ -10,7 +10,7 @@ class Hecho(TimeStampedModel):
         ('RELEVAMIENTO', 'Relevamiento'),
     ]
 
-    timestamp = models.DateTimeField(help_text="Fecha y hora del hecho")
+    timestamp = models.DateTimeField(db_index=True, help_text="Fecha y hora del hecho")
     description = models.TextField()
     camera = models.ForeignKey(Camera, on_delete=models.SET_NULL, null=True, blank=True, related_name='hechos')
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='OPERATIVO')
