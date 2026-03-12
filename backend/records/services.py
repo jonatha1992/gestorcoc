@@ -93,20 +93,28 @@ class IntegrityService:
     @staticmethod
     def _build_verification_reference(context):
         ctx = context or {}
+        mode = IntegrityService._as_text(ctx.get('vms_authenticity_mode'), '').strip()
+        mode_text = IntegrityService._vms_authenticity_label(mode)
+        detail = IntegrityService._as_text(ctx.get('vms_authenticity_detail'), '').strip()
+        detail_text = f" ({detail})" if detail and mode == 'otro' else ''
+        motivo_sin_hash = IntegrityService._as_text(ctx.get('motivo_sin_hash'), '').strip()
         hash_program = IntegrityService._as_text(ctx.get('hash_program'), '').strip() or 'programa no consignado'
         hash_labels = IntegrityService._hash_algorithm_labels(
             ctx.get('hash_algorithms'),
             ctx.get('hash_algorithm_other'),
         )
+
+        if mode == 'vms_propio':
+            return f"Autenticidad: {mode_text}{detail_text}"
+
+        if mode == 'sin_autenticacion':
+            motivo_text = f"; Motivo: {motivo_sin_hash}" if motivo_sin_hash else ''
+            return f"Autenticidad: {mode_text}{motivo_text}"
+
         if hash_labels:
             algorithms_text = ', '.join(hash_labels)
         else:
             algorithms_text = 'sin algoritmos declarados'
-
-        mode = IntegrityService._as_text(ctx.get('vms_authenticity_mode'), '').strip()
-        mode_text = IntegrityService._vms_authenticity_label(mode)
-        detail = IntegrityService._as_text(ctx.get('vms_authenticity_detail'), '').strip()
-        detail_text = f" ({detail})" if detail and mode == 'otro' else ''
 
         return (
             f"Programa: {hash_program}; Algoritmos: {algorithms_text}; "
@@ -126,20 +134,10 @@ class IntegrityService:
         motivo_sin_hash = IntegrityService._as_text(ctx.get('motivo_sin_hash'), '').strip()
         vms_mode = IntegrityService._as_text(ctx.get('vms_authenticity_mode'), '').strip()
         vms_detail = IntegrityService._as_text(ctx.get('vms_authenticity_detail'), '').strip()
-        vms_native_labels = IntegrityService._hash_algorithm_labels(
-            ctx.get('vms_native_hash_algorithms'),
-            ctx.get('vms_native_hash_algorithm_other'),
-        )
-
         lugar_clause = f'desde donde se obtuvo la información en "{lugar}"' if lugar else 'desde donde se obtuvo el material analizado'
 
         if vms_mode == 'vms_propio':
-            if vms_native_labels:
-                vms_native_labels = typing.cast(typing.List[str], vms_native_labels)
-                native_text = ' y '.join(vms_native_labels) if len(vms_native_labels) <= 2 else ', '.join(vms_native_labels[:-1]) + f' y {vms_native_labels[-1]}'
-                auth_clause = f'posee como medida de seguridad autenticación provista por el propio sistema "{sistema}", que incorpora algoritmos de hash nativos ({native_text})'
-            else:
-                auth_clause = f'posee como medida de seguridad autenticación propietaria provista por el propio sistema "{sistema}"'
+            auth_clause = f'posee como medida de seguridad autenticación propietaria provista por el propio sistema "{sistema}"'
         elif vms_mode == 'hash_preventivo':
             auth_clause = 'fue sometido a verificación de integridad mediante hash preventivo externo'
         elif vms_mode == 'sin_autenticacion':
@@ -287,6 +285,7 @@ class IntegrityService:
         for idx, frame in enumerate(ordered, start=1):
             file_name = frame.get('file_name', f'fotograma_{idx}.jpg')
             description = frame.get('description') or ''
+            frame_time = IntegrityService._format_frame_reference(frame.get('frame_time'))
             IntegrityService._add_heading_safe(document, f"Fotograma {idx}: {file_name}", level=2)
             pic_stream = IntegrityService._prepare_picture_stream(frame)
             try:
@@ -294,10 +293,26 @@ class IntegrityService:
             except Exception as exc:
                 raise RuntimeError(f"No se pudo insertar el fotograma '{file_name}'.") from exc
 
+            if frame_time:
+                document.add_paragraph(f"Fecha y hora de referencia: {frame_time}")
             if description:
-                document.add_paragraph(f"Descripcion: {description}")
+                document.add_paragraph(f"Breve descripcion: {description}")
 
             document.add_paragraph("")
+
+    @staticmethod
+    def _format_frame_reference(value):
+        raw = str(value or '').strip()
+        if not raw:
+            return ''
+
+        normalized = raw.replace(' ', 'T')
+        for fmt in ('%Y-%m-%dT%H:%M', '%Y-%m-%dT%H:%M:%S'):
+            try:
+                return datetime.strptime(normalized, fmt).strftime('%d/%m/%Y %H:%M')
+            except ValueError:
+                continue
+        return raw
 
     @staticmethod
     def _normalize_video_payload(payload):
@@ -525,6 +540,7 @@ class IntegrityService:
         if mode == 'material_filmico':
             sistema = (ctx.get('sistema') or '').strip()
             aeropuerto = (ctx.get('aeropuerto') or '').strip()
+            frames_summary = (ctx.get('frames_summary') or '').strip()
             hash_algorithms = ctx.get('hash_algorithms') or []
             hash_algorithm_other = (ctx.get('hash_algorithm_other') or '').strip()
             hash_program = (ctx.get('hash_program') or '').strip()
@@ -543,6 +559,7 @@ class IntegrityService:
                 "- El lugar fisico de donde proviene el material filmico (aeropuerto, dependencia, etc.).\n"
                 "- Las medidas de integridad aplicadas: si se uso hash preventivo (indicar algoritmo y programa), "
                 "si el VMS posee autenticacion propia, o si no se aplico ningun metodo.\n"
+                "- Si se aportan referencias de fotogramas con fecha y hora, junto con su descripcion, usarlas como apoyo contextual sin agregar hechos no provistos.\n"
                 "- El material debe describirse de forma generica (no inventar camaras ni horarios especificos a menos que se provean).\n\n"
                 + STYLE_NOTE
             )
@@ -561,6 +578,7 @@ class IntegrityService:
                     "algoritmos_hash": hash_text,
                     "programa_hash": hash_program,
                     "medida_autenticidad": medida,
+                    "referencias_de_fotogramas": frames_summary,
                 },
             }
 
@@ -571,12 +589,14 @@ class IntegrityService:
             cantidad = (ctx.get('cantidad_observada') or '').strip()
             caratula = (ctx.get('caratula') or '').strip()
             sistema = (ctx.get('sistema') or '').strip()
+            frames_summary = (ctx.get('frames_summary') or '').strip()
 
             system_prompt = (
                 "Eres un redactor experto en informes policiales argentinos de analisis de video de CCTV. "
                 "Tu tarea es redactar el apartado 'DESARROLLO' de un informe oficial de analisis de video. "
                 "Este apartado DEBE narrar de forma objetiva y cronologica lo observado.\n"
-                "- Limitar la descripcion a lo objetivamente observable en el material filmico.\n\n"
+                "- Limitar la descripcion a lo objetivamente observable en el material filmico.\n"
+                "- Si se proveen fechas y horas con descripciones breves de fotogramas, integrarlas para ordenar mejor la secuencia observada.\n\n"
                 + STYLE_NOTE
             )
             payload_prompt = {
@@ -595,6 +615,7 @@ class IntegrityService:
                     "tiempo_total_analisis": tiempo,
                     "cantidad_observada": cantidad,
                     "caratula_causa": caratula,
+                    "referencias_de_fotogramas": frames_summary,
                 },
             }
 
@@ -636,6 +657,7 @@ class IntegrityService:
                 "instrucciones": (
                     "Mejora y/o redacta desde cero los tres apartados usando el contexto estructurado provisto. "
                     "Se sumamente inteligente: los datos que faltan deben excluirse fluidamente. Crea un texto generico pero realista en estilo policial si la mayor parte de la informacion falta y no hay textos originales."
+                    " Si el contexto incluye referencias de fotogramas con fecha y hora, junto con descripcion, usalas para enriquecer la cronologia del desarrollo sin inventar hechos nuevos. "
                     "PROHIBIDO inventar hechos concretos no provistos. "
                     "Devuelve SOLO un JSON valido con TRES CLAVES obligatorias. "
                     "Ejemplo: {\"material_filmico\": \"...\", \"desarrollo\": \"...\", \"conclusion\": \"...\"}"
@@ -1001,6 +1023,7 @@ class IntegrityService:
         hash_algorithms = IntegrityService._as_list(report_data.get("hash_algorithms"))
         hash_algorithm_other = IntegrityService._as_text(report_data.get("hash_algorithm_other"), "").strip()
         hash_program = IntegrityService._as_text(report_data.get("hash_program"), "").strip()
+        motivo_sin_hash = IntegrityService._as_text(report_data.get("motivo_sin_hash"), "").strip()
         medida_seguridad_interna = IntegrityService._as_text(report_data.get("medida_seguridad_interna"), "").strip()
         vms_authenticity_mode = IntegrityService._as_text(report_data.get("vms_authenticity_mode"), "").strip()
         vms_authenticity_detail = IntegrityService._as_text(report_data.get("vms_authenticity_detail"), "").strip()
@@ -1013,8 +1036,11 @@ class IntegrityService:
             "hash_program": hash_program,
             "hash_algorithms": hash_algorithms,
             "hash_algorithm_other": hash_algorithm_other,
+            "motivo_sin_hash": motivo_sin_hash,
             "vms_authenticity_mode": vms_authenticity_mode,
             "vms_authenticity_detail": vms_authenticity_detail,
+            "vms_native_hash_algorithms": vms_native_hash_algorithms,
+            "vms_native_hash_algorithm_other": vms_native_hash_algorithm_other,
         })
         prevencion_sumaria = IntegrityService._as_text(report_data.get("prevencion_sumaria"), "000BAR/2026")
         caratula = IntegrityService._as_text(report_data.get("caratula"), "DENUNCIA S/ PRESUNTO HURTO")
@@ -1036,7 +1062,10 @@ class IntegrityService:
         objeto_denunciado = IntegrityService._as_text(report_data.get("objeto_denunciado"), "objeto denunciado")
         conclusion = IntegrityService._as_text(report_data.get("conclusion"), "")
         desarrollo = IntegrityService._as_text(report_data.get("desarrollo"), "")
-        firma = IntegrityService._as_text(report_data.get("firma"), "Coordinador CReV I DEL ESTE")
+        firma_raw = IntegrityService._as_text(report_data.get("firma"), "").strip()
+        firma = firma_raw
+        if not firma or firma.startswith("data:image"):
+            firma = f"{grado} {operador}".strip()
 
         if not material_filmico.strip():
             material_filmico = IntegrityService._build_material_filmico_fallback({
