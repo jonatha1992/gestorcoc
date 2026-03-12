@@ -262,6 +262,7 @@ class VideoAnalysisReportApiTests(TestCase):
             "file_name": f"frame{index}.jpg",
             "mime_type": "image/jpeg",
             "content_base64": content_base64,
+            "frame_time": "2026-03-12T15:00",
             "description": f"Frame {index}",
             "order": index
         }
@@ -282,6 +283,32 @@ class VideoAnalysisReportApiTests(TestCase):
         service_mock.return_value = (BytesIO(b'docx-data'), 'informe.docx')
 
         response = self.client.post(self.url, self.valid_report_data, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        service_mock.assert_called_once()
+
+    @patch('records.views.IntegrityService.generate_video_analysis_docx')
+    def test_allows_generating_docx_without_signature(self, service_mock):
+        service_mock.return_value = (BytesIO(b'docx-data'), 'informe.docx')
+        report_data = {
+            **self.valid_report_data,
+            "firma": "",
+        }
+
+        response = self.client.post(self.url, {"report_data": report_data, "frames": []}, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        service_mock.assert_called_once()
+
+    @patch('records.views.IntegrityService.generate_video_analysis_docx')
+    def test_allows_generating_docx_with_base64_signature(self, service_mock):
+        service_mock.return_value = (BytesIO(b'docx-data'), 'informe.docx')
+        report_data = {
+            **self.valid_report_data,
+            "firma": "data:image/png;base64," + ("a" * 400),
+        }
+
+        response = self.client.post(self.url, {"report_data": report_data, "frames": []}, format='json')
 
         self.assertEqual(response.status_code, 200)
         service_mock.assert_called_once()
@@ -342,7 +369,7 @@ class VideoAnalysisReportApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('hash_algorithm_other', str(response.data))
 
-    def test_requires_native_hash_other_when_other_native_algorithm_is_selected(self):
+    def test_accepts_native_vms_metadata_without_requiring_detail(self):
         report_data = {
             **self.valid_report_data,
             "vms_authenticity_mode": "vms_propio",
@@ -352,8 +379,7 @@ class VideoAnalysisReportApiTests(TestCase):
 
         response = self.client.post(self.url, {"report_data": report_data, "frames": []}, format='json')
 
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('vms_native_hash_algorithm_other', str(response.data))
+        self.assertEqual(response.status_code, 200)
 
     def test_requires_vms_authenticity_detail_when_mode_is_otro(self):
         report_data = {
@@ -476,6 +502,19 @@ class VideoAnalysisReportApiTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn('errors', response.data)
+
+    def test_rejects_frame_without_brief_description(self):
+        frame = self._build_frame(index=0)
+        frame["description"] = ""
+        payload = {
+            "report_data": self.valid_report_data,
+            "frames": [frame]
+        }
+
+        response = self.client.post(self.url, payload, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('description', str(response.data))
 
     def test_generates_docx_without_mock(self):
         payload = {"report_data": self.valid_report_data, "frames": []}
@@ -646,6 +685,26 @@ class IntegrityServiceVideoReportTemplateTests(TestCase):
         self.assertIn('SHA-256', reference)
         self.assertIn('SHA-512', reference)
         self.assertIn('hash preventivo externo', reference)
+
+    def test_builds_verification_reference_for_native_vms_without_operator_hash(self):
+        reference = IntegrityService._build_verification_reference({
+            "vms_authenticity_mode": "vms_propio",
+            "vms_native_hash_algorithms": ["sha256"],
+        })
+
+        self.assertIn('propio sistema VMS', reference)
+        self.assertNotIn('SHA-256', reference)
+        self.assertNotIn('programa no consignado', reference)
+
+    def test_builds_verification_reference_for_material_without_authentication(self):
+        reference = IntegrityService._build_verification_reference({
+            "vms_authenticity_mode": "sin_autenticacion",
+            "motivo_sin_hash": "El sistema no ofrece autenticacion tecnica",
+        })
+
+        self.assertIn('sin autenticaci', reference)
+        self.assertIn('Motivo: El sistema no ofrece autenticacion tecnica', reference)
+        self.assertNotIn('Programa:', reference)
 
     def test_generate_video_analysis_docx_maps_informe_corto_layout(self):
         payload = {
@@ -1093,6 +1152,7 @@ class IntegrityServiceAiRequestTests(TestCase):
             "hash_algorithms": ["sha256"],
             "hash_program": "HashMyFiles",
             "vms_authenticity_mode": "vms_propio",
+            "frames_summary": "Fotograma 1: fecha y hora 12/03/2026 15:00 - equipaje sobre la cinta",
         }
         result = IntegrityService.improve_report_text_with_ai(
             "texto original", "", "", material_context=context, mode='material_filmico'
@@ -1110,6 +1170,10 @@ class IntegrityServiceAiRequestTests(TestCase):
         self.assertEqual(user_content['datos_del_sistema']['sistema_cctv'], 'MILESTONE')
         self.assertEqual(user_content['datos_del_sistema']['algoritmos_hash'], 'SHA-256')
         self.assertEqual(user_content['datos_del_sistema']['medida_autenticidad'], 'VMS propio del sistema de grabacion')
+        self.assertEqual(
+            user_content['datos_del_sistema']['referencias_de_fotogramas'],
+            'Fotograma 1: fecha y hora 12/03/2026 15:00 - equipaje sobre la cinta',
+        )
         # Solo debe pedir material_filmico en el formato
         self.assertEqual(set(user_content['formato_estricto'].keys()), {'material_filmico'})
 
@@ -1136,6 +1200,7 @@ class IntegrityServiceAiRequestTests(TestCase):
             "franja_horaria_analizada": "14:00 a 15:30",
             "tiempo_total_analisis": "1 hora 30 minutos",
             "cantidad_observada": "3 pasajeros",
+            "frames_summary": "Fotograma 2: fecha y hora 12/03/2026 02:14 - el sujeto toma una mochila",
         }
         result = IntegrityService.improve_report_text_with_ai(
             "", "texto desarrollo", "", material_context=context, mode='desarrollo'
@@ -1150,6 +1215,10 @@ class IntegrityServiceAiRequestTests(TestCase):
         user_content = json.loads(messages[1].get('content') or '{}')
         self.assertIn('datos_del_analisis', user_content)
         self.assertEqual(user_content['datos_del_analisis']['sectores_analizados'], 'Hall de arribos')
+        self.assertEqual(
+            user_content['datos_del_analisis']['referencias_de_fotogramas'],
+            'Fotograma 2: fecha y hora 12/03/2026 02:14 - el sujeto toma una mochila',
+        )
         self.assertEqual(set(user_content['formato_estricto'].keys()), {'desarrollo'})
 
     @override_settings(

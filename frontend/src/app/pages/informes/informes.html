@@ -1,859 +1,1422 @@
 <div class="space-y-6 informes-view">
-    @if (isReadOnly()) {
+  @if (isReadOnly()) {
     <div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24"
-            stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-        <div>
-            <div class="text-sm font-bold text-amber-800">Informe en modo lectura</div>
-            <div class="text-xs text-amber-600">Este informe ya fue generado y no puede ser modificado. Solo podés
-                volver a descargar el documento.</div>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="w-5 h-5 text-amber-500 shrink-0"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+        />
+      </svg>
+      <div>
+        <div class="text-sm font-bold text-amber-800">Informe en modo lectura</div>
+        <div class="text-xs text-amber-600">
+          Este informe ya fue generado y no puede ser modificado. Solo podés volver a descargar el
+          documento.
         </div>
+      </div>
     </div>
-    }
-    <form (ngSubmit)="generateReport()" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6"
-        [class.opacity-70]="isReadOnly()" [class.pointer-events-none]="isReadOnly()">
-        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <h2 class="text-xl font-bold text-slate-800">Informe de Analisis de Video</h2>
-            <div class="flex items-center gap-3 flex-wrap">
-                <button *ngIf="!isReadOnly()" type="button" (click)="fillSampleData()"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold transition-colors">
-                    <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                    Llenar datos hasta Sectores Analizados
+  }
+  <form
+    (ngSubmit)="generateReport()"
+    class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6"
+    [class.opacity-70]="isReadOnly()"
+    [class.pointer-events-none]="isReadOnly()"
+  >
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <h2 class="text-xl font-bold text-slate-800">Informe de Analisis de Video</h2>
+      <div class="flex items-center gap-3 flex-wrap">
+        <button
+          *ngIf="!isReadOnly()"
+          type="button"
+          (click)="fillSampleData()"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold transition-colors"
+        >
+          <svg
+            class="w-3.5 h-3.5 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+          Llenar datos hasta Sectores Analizados
+        </button>
+        <span
+          class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600"
+        >
+          Estado: {{ getReportStatusLabel() }}
+        </span>
+      </div>
+    </div>
+    <div
+      *ngIf="validationMessage"
+      class="w-full text-base font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-2xl px-5 py-4 mb-4 animate-slide-in"
+    >
+      {{ validationMessage }}
+    </div>
+
+    <div class="space-y-4 pt-4">
+      <h3 class="text-base font-bold text-slate-800 border-b border-slate-200 pb-2">Datos base</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
+        <div class="lg:col-span-2">
+          <div class="flex items-center gap-1 mb-1.5">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"
+              >OPERADOR *</label
+            >
+          </div>
+          <input
+            [ngModel]="form.operador"
+            (ngModelChange)="onOperatorInputChange($event)"
+            name="operador"
+            type="text"
+            list="operator-options"
+            placeholder="Apellido, Nombre"
+            [attr.data-invalid]="isFieldInvalid('operador') ? 'true' : null"
+            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          />
+          <datalist id="operator-options">
+            <option *ngFor="let p of personnelOptions" [value]="getPersonDisplayName(p)"></option>
+          </datalist>
+          <p class="text-[11px] text-slate-400 mt-1">
+            {{
+              personnelOptions.length > 0
+                ? 'Escribi o selecciona un operador cargado en la base.'
+                : 'Si el
+                        personal no carga, completa este dato manualmente.'
+            }}
+          </p>
+        </div>
+        <div class="lg:col-span-2">
+          <div class="flex items-center gap-1 mb-1.5">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"
+              >JERARQUIA *</label
+            >
+          </div>
+          <select
+            [(ngModel)]="form.grado"
+            (ngModelChange)="onOperatorGradeChange($event)"
+            name="grado"
+            [attr.data-invalid]="isFieldInvalid('grado') ? 'true' : null"
+            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          >
+            <option [ngValue]="''">Seleccione jerarquia...</option>
+            <option *ngFor="let gradoOption of gradeOptions" [ngValue]="gradoOption">
+              {{ gradoOption }}
+            </option>
+          </select>
+        </div>
+        <div class="lg:col-span-2">
+          <div class="flex items-center gap-1 mb-1.5">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"
+              >LEGAJO *</label
+            >
+          </div>
+          <input
+            [(ngModel)]="form.lup"
+            (ngModelChange)="onOperatorLupChange($event)"
+            name="lup"
+            type="number"
+            placeholder="506896"
+            min="100000"
+            max="999999"
+            [attr.data-invalid]="isFieldInvalid('lup') ? 'true' : null"
+            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          />
+        </div>
+        <div class="lg:col-span-1">
+          <div class="flex items-center gap-1 mb-1.5">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"
+              >FECHA DEL INFORME *</label
+            >
+          </div>
+          <input
+            [(ngModel)]="form.report_date"
+            (ngModelChange)="markDirty('report_date')"
+            name="report_date"
+            type="date"
+            [attr.data-invalid]="isFieldInvalid('report_date') ? 'true' : null"
+            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          />
+        </div>
+        <div class="lg:col-span-2">
+          <div class="flex items-center gap-1 mb-1.5">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"
+              >NUMERO DE INFORME *</label
+            >
+          </div>
+          <input
+            [(ngModel)]="form.numero_informe"
+            (ngModelChange)="onNumeroInformeChange($event)"
+            name="numero_informe"
+            type="text"
+            placeholder="0001EZE/2026"
+            [attr.data-invalid]="isFieldInvalid('numero_informe') ? 'true' : null"
+            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          />
+        </div>
+        <div class="md:col-span-2 lg:col-span-3">
+          <div class="flex items-center gap-1 mb-1.5">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"
+              >UNIDAD *</label
+            >
+          </div>
+          <select
+            [(ngModel)]="form.unidad"
+            (ngModelChange)="onUnidadChange($event)"
+            name="unidad"
+            [attr.data-invalid]="isFieldInvalid('unidad') ? 'true' : null"
+            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          >
+            <option [ngValue]="''">Seleccione unidad...</option>
+            <option *ngFor="let unidadOption of unidadOptions" [ngValue]="unidadOption">
+              {{ unidadOption }}
+            </option>
+          </select>
+          <p class="text-[11px] text-slate-400 mt-1">
+            {{
+              unidadOptions.length > 0
+                ? 'Unidades cargadas desde la base de datos.'
+                : 'No hay unidades
+                        disponibles desde la base de datos.'
+            }}
+          </p>
+        </div>
+        <div class="md:col-span-2 lg:col-span-12">
+          <div class="flex items-center gap-2 mb-2">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider"
+              >FIRMA DIGITAL</label
+            >
+            <input
+              type="checkbox"
+              [(ngModel)]="incluirFirma"
+              name="incluirFirma"
+              (change)="markDirty()"
+              class="rounded text-indigo-600 focus:ring-indigo-500"
+            />
+            <span class="text-xs text-slate-500">¿Incluir firma digital?</span>
+          </div>
+
+          <ng-container *ngIf="incluirFirma">
+            <div
+              *ngIf="form.firma && form.firma.startsWith('data:image')"
+              class="border border-slate-200 rounded-xl bg-white p-4"
+            >
+              <img [src]="form.firma" alt="Firma" class="max-h-32 mx-auto" />
+              <div class="flex justify-end mt-4">
+                <button
+                  type="button"
+                  (click)="removeSignature()"
+                  class="text-xs text-rose-500 hover:text-rose-700 font-semibold border border-rose-200 rounded px-2 py-1"
+                >
+                  Dibujar nueva firma
                 </button>
-                <span
-                    class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Estado: {{ getReportStatusLabel() }}
-                </span>
+              </div>
             </div>
-        </div>
-        <div *ngIf="validationMessage"
-            class="w-full text-base font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-2xl px-5 py-4 mb-4 animate-slide-in">
-            {{ validationMessage }}
-        </div>
 
-        <div class="space-y-4 pt-4">
-            <h3 class="text-base font-bold text-slate-800 border-b border-slate-200 pb-2">Datos base</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div class="col-span-1">
-                    <div class="flex items-center gap-1 mb-1.5">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">OPERADOR
-                            *</label>
-                    </div>
-                    <input [ngModel]="form.operador" (ngModelChange)="onOperatorInputChange($event)" name="operador"
-                        type="text" list="operator-options" placeholder="Apellido, Nombre"
-                        [attr.data-invalid]="isFieldInvalid('operador') ? 'true' : null"
-                        class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    <datalist id="operator-options">
-                        <option *ngFor="let p of personnelOptions" [value]="getPersonDisplayName(p)"></option>
-                    </datalist>
-                    <p class="text-[11px] text-slate-400 mt-1">
-                        {{ personnelOptions.length > 0 ? 'Escribi o selecciona un operador cargado en la base.' : 'Si el
-                        personal no carga, completa este dato manualmente.' }}
-                    </p>
-                </div>
-                <div class="col-span-1">
-                    <div class="flex items-center gap-1 mb-1.5">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">JERARQUIA
-                            *</label>
-                    </div>
-                    <select [(ngModel)]="form.grado" (ngModelChange)="onOperatorGradeChange($event)" name="grado"
-                        [attr.data-invalid]="isFieldInvalid('grado') ? 'true' : null"
-                        class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                        <option [ngValue]="''">Seleccione jerarquia...</option>
-                        <option *ngFor="let gradoOption of gradeOptions" [ngValue]="gradoOption">{{ gradoOption }}
-                        </option>
-                    </select>
-                </div>
-                <div class="col-span-1">
-                    <div class="flex items-center gap-1 mb-1.5">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">NÚMERO DE
-                            LEGAJO *</label>
-                    </div>
-                    <input [(ngModel)]="form.lup" (ngModelChange)="onOperatorLupChange($event)" name="lup" type="number"
-                        placeholder="506896" min="100000" max="999999"
-                        [attr.data-invalid]="isFieldInvalid('lup') ? 'true' : null"
-                        class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                </div>
-                <div class="col-span-1">
-                    <div class="flex items-center gap-1 mb-1.5">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">FECHA DEL
-                            INFORME *</label>
-                    </div>
-                    <input [(ngModel)]="form.report_date" (ngModelChange)="markDirty('report_date')" name="report_date"
-                        type="date" [attr.data-invalid]="isFieldInvalid('report_date') ? 'true' : null"
-                        class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                </div>
-                <div class="col-span-1">
-                    <div class="flex items-center gap-1 mb-1.5">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">NUMERO DE
-                            INFORME *</label>
-                    </div>
-                    <input [(ngModel)]="form.numero_informe" (ngModelChange)="onNumeroInformeChange($event)"
-                        name="numero_informe" type="text" placeholder="0001EZE/2026"
-                        [attr.data-invalid]="isFieldInvalid('numero_informe') ? 'true' : null"
-                        class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                </div>
-                <div class="col-span-1">
-                    <div class="flex items-center gap-1 mb-1.5">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0">UNIDAD
-                            *</label>
-                    </div>
-                    <select [(ngModel)]="form.unidad" (ngModelChange)="onUnidadChange($event)" name="unidad"
-                        [attr.data-invalid]="isFieldInvalid('unidad') ? 'true' : null"
-                        class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                        <option [ngValue]="''">Seleccione unidad...</option>
-                        <option *ngFor="let unidadOption of unidadOptions" [ngValue]="unidadOption">
-                            {{ unidadOption }}
-                        </option>
-                    </select>
-                    <p class="text-[11px] text-slate-400 mt-1">
-                        {{ unidadOptions.length > 0 ? 'Unidades cargadas desde la base de datos.' : 'No hay unidades
-                        disponibles desde la base de datos.' }}
-                    </p>
-                </div>
-                <div class="col-span-2 lg:col-span-12">
-                    <div class="flex items-center gap-2 mb-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">FIRMA
-                            DIGITAL</label>
-                        <input type="checkbox" [(ngModel)]="incluirFirma" name="incluirFirma" (change)="markDirty()"
-                            class="rounded text-indigo-600 focus:ring-indigo-500">
-                        <span class="text-xs text-slate-500">¿Incluir firma digital?</span>
-                    </div>
-
-                    <ng-container *ngIf="incluirFirma">
-
-                        <div *ngIf="form.firma && form.firma.startsWith('data:image')"
-                            class="border border-slate-200 rounded-xl bg-white p-4">
-                            <img [src]="form.firma" alt="Firma" class="max-h-32 mx-auto">
-                            <div class="flex justify-end mt-4">
-                                <button type="button" (click)="removeSignature()"
-                                    class="text-xs text-rose-500 hover:text-rose-700 font-semibold border border-rose-200 rounded px-2 py-1">Dibujar
-                                    nueva firma</button>
-                            </div>
-                        </div>
-
-                        <div *ngIf="!form.firma || !form.firma.startsWith('data:image')"
-                            class="border border-slate-300 rounded-xl bg-white overflow-hidden relative max-w-sm touch-none">
-                            <p *ngIf="!isDrawingSignature"
-                                class="absolute inset-0 flex items-center justify-center text-slate-200 font-bold text-2xl pointer-events-none select-none">
-                                FIRMAR AQUI</p>
-                            <canvas #signaturePad width="400" height="150"
-                                class="w-full h-auto cursor-crosshair relative z-10 bg-transparent"
-                                (mousedown)="startDrawingSignature($event)" (mousemove)="drawSignature($event)"
-                                (mouseup)="endDrawingSignature()" (mouseleave)="endDrawingSignature()"
-                                (touchstart)="startDrawingSignature($event)" (touchmove)="drawSignature($event)"
-                                (touchend)="endDrawingSignature()"></canvas>
-                        </div>
-
-                        <div *ngIf="!form.firma || !form.firma.startsWith('data:image')"
-                            class="flex justify-end mt-2 gap-2 max-w-sm">
-                            <button type="button" (click)="clearSignatureCanvas()"
-                                class="text-xs text-slate-500 font-semibold px-2 py-1 border border-slate-200 rounded hover:bg-slate-50">Limpiar</button>
-                            <button type="button" (click)="saveSignature()"
-                                class="text-xs text-indigo-600 font-semibold px-2 py-1 border border-indigo-200 rounded hover:bg-indigo-50">Guardar
-                                firma</button>
-                        </div>
-                    </ng-container>
-                </div>
+            <div
+              *ngIf="!form.firma || !form.firma.startsWith('data:image')"
+              class="border border-slate-300 rounded-xl bg-white overflow-hidden relative max-w-sm touch-none"
+            >
+              <p
+                *ngIf="!isDrawingSignature"
+                class="absolute inset-0 flex items-center justify-center text-slate-200 font-bold text-2xl pointer-events-none select-none"
+              >
+                FIRMAR AQUI
+              </p>
+              <canvas
+                #signaturePad
+                width="400"
+                height="150"
+                class="w-full h-auto cursor-crosshair relative z-10 bg-transparent"
+                (mousedown)="startDrawingSignature($event)"
+                (mousemove)="drawSignature($event)"
+                (mouseup)="endDrawingSignature()"
+                (mouseleave)="endDrawingSignature()"
+                (touchstart)="startDrawingSignature($event)"
+                (touchmove)="drawSignature($event)"
+                (touchend)="endDrawingSignature()"
+              ></canvas>
             </div>
-        </div>
 
-        <div class="space-y-5">
-            <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1">Datos de causa</h3>
-            <p class="text-xs text-slate-500 -mt-3">
-                Estos campos se precargan desde la solicitud vinculada cuando existe, pero siguen siendo editables.
+            <div
+              *ngIf="!form.firma || !form.firma.startsWith('data:image')"
+              class="flex justify-end mt-2 gap-2 max-w-sm"
+            >
+              <button
+                type="button"
+                (click)="clearSignatureCanvas()"
+                class="text-xs text-slate-500 font-semibold px-2 py-1 border border-slate-200 rounded hover:bg-slate-50"
+              >
+                Limpiar
+              </button>
+              <button
+                type="button"
+                (click)="saveSignature()"
+                class="text-xs text-indigo-600 font-semibold px-2 py-1 border border-indigo-200 rounded hover:bg-indigo-50"
+              >
+                Guardar firma
+              </button>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-5">
+      <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1">
+        Datos de causa
+      </h3>
+      <p class="text-xs text-slate-500 -mt-3">
+        Estos campos se precargan desde la solicitud vinculada cuando existe, pero siguen siendo
+        editables.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3">
+        <div class="lg:col-span-3">
+          <div class="flex items-center gap-1 mb-1">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
+              >Fiscalía / Juzgado (opcional)</label
+            >
+            <button
+              type="button"
+              data-help-trigger
+              (click)="toggleHelp('fiscalia', $event)"
+              class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+              aria-label="Ayuda Fiscalia"
+            >
+              ?
+            </button>
+          </div>
+          <input
+            [(ngModel)]="form.fiscalia"
+            (ngModelChange)="markDirty('fiscalia')"
+            name="fiscalia"
+            type="text"
+            placeholder="Ej: Fiscalía Nro. 02"
+            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          />
+        </div>
+        <div class="lg:col-span-3">
+          <div class="flex items-center gap-1 mb-1">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
+              >Fiscal / Juez / Secretario (opcional)</label
+            >
+            <button
+              type="button"
+              data-help-trigger
+              (click)="toggleHelp('fiscal', $event)"
+              class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+              aria-label="Ayuda Autoridad Interviniente"
+            >
+              ?
+            </button>
+          </div>
+          <input
+            [(ngModel)]="form.fiscal"
+            (ngModelChange)="markDirty('fiscal')"
+            name="fiscal"
+            type="text"
+            placeholder="Ej: Dr. INTI Isla"
+            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          />
+        </div>
+        <div class="lg:col-span-3">
+          <div class="flex items-center gap-1 mb-1">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
+              >Prevención Sumaria *</label
+            >
+            <span class="block text-[10px] text-slate-400 mb-0"
+              >Número de actuación policial inicial</span
+            >
+            <button
+              type="button"
+              data-help-trigger
+              (click)="toggleHelp('prevencion_sumaria', $event)"
+              class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+              aria-label="Ayuda Prevencion Sumaria"
+            >
+              ?
+            </button>
+          </div>
+          <input
+            [(ngModel)]="form.prevencion_sumaria"
+            (ngModelChange)="markDirty('prevencion_sumaria')"
+            name="prevencion_sumaria"
+            type="text"
+            placeholder="Ej: 003BAR/2026"
+            [attr.data-invalid]="isFieldInvalid('prevencion_sumaria') ? 'true' : null"
+            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          />
+        </div>
+        <div class="lg:col-span-3">
+          <div class="flex items-center gap-1 mb-1">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Carátula *</label>
+            <span class="block text-[10px] text-slate-400 mb-0"
+              >Tipo de causa según el expediente</span
+            >
+            <button
+              type="button"
+              data-help-trigger
+              (click)="toggleHelp('caratula', $event)"
+              class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+              aria-label="Ayuda Caratula"
+            >
+              ?
+            </button>
+          </div>
+          <input
+            [(ngModel)]="form.caratula"
+            (ngModelChange)="markDirty('caratula')"
+            name="caratula"
+            type="text"
+            placeholder="Ej: DENUNCIA S/ PRESUNTO HURTO"
+            [attr.data-invalid]="isFieldInvalid('caratula') ? 'true' : null"
+            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          />
+        </div>
+        <div class="lg:col-span-3">
+          <div class="flex items-center gap-1 mb-1">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
+              >Denunciante *</label
+            >
+            <button
+              type="button"
+              data-help-trigger
+              (click)="toggleHelp('denunciante', $event)"
+              class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+              aria-label="Ayuda Denunciante"
+            >
+              ?
+            </button>
+          </div>
+          <input
+            [(ngModel)]="form.denunciante"
+            (ngModelChange)="markDirty('denunciante')"
+            name="denunciante"
+            type="text"
+            placeholder="Ej: PONZO Osvaldo"
+            [attr.data-invalid]="isFieldInvalid('denunciante') ? 'true' : null"
+            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          />
+        </div>
+        <div class="lg:col-span-9">
+          <div class="flex items-center gap-1 mb-1">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
+              >Descripción del objeto o persona involucrada *</label
+            >
+            <button
+              type="button"
+              data-help-trigger
+              (click)="toggleHelp('objeto_denunciado', $event)"
+              class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+              aria-label="Ayuda Objeto Denunciado"
+            >
+              ?
+            </button>
+          </div>
+          <input
+            [(ngModel)]="form.objeto_denunciado"
+            (ngModelChange)="markDirty('objeto_denunciado')"
+            name="objeto_denunciado"
+            type="text"
+            placeholder="Ej: Telefono Samsung S24, color negro"
+            [attr.data-invalid]="isFieldInvalid('objeto_denunciado') ? 'true' : null"
+            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          />
+        </div>
+      </div>
+
+      <div class="shadow-sm p-4 rounded-xl bg-amber-50/50 border border-amber-100 space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <h4 class="text-sm font-bold text-amber-900">Datos del Vuelo / Equipaje</h4>
+          <label class="inline-flex items-center gap-2 text-xs text-slate-700 font-semibold">
+            <input
+              type="checkbox"
+              [(ngModel)]="incluirDatosVuelo"
+              name="incluirDatosVuelo"
+              (change)="onDatosVueloToggle()"
+              class="rounded text-indigo-600 focus:ring-indigo-500"
+            />
+            Incluir datos de vuelo/equipaje
+          </label>
+        </div>
+        <div
+          *ngIf="incluirDatosVuelo; else sinDatosVuelo"
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"
+        >
+          <div>
+            <div class="flex items-center gap-1 mb-1">
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
+                >Fecha del Hecho (opcional)</label
+              >
+              <button
+                type="button"
+                data-help-trigger
+                (click)="toggleHelp('fecha_hecho', $event)"
+                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                aria-label="Ayuda Fecha del Hecho"
+              >
+                ?
+              </button>
+            </div>
+            <input
+              [(ngModel)]="form.fecha_hecho"
+              (ngModelChange)="markDirty('fecha_hecho')"
+              name="fecha_hecho"
+              type="date"
+              lang="es-AR"
+              class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            />
+          </div>
+          <div>
+            <div class="flex items-center gap-1 mb-1">
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
+                >Vuelo (opcional)</label
+              >
+              <button
+                type="button"
+                data-help-trigger
+                (click)="toggleHelp('vuelo', $event)"
+                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                aria-label="Ayuda Vuelo"
+              >
+                ?
+              </button>
+            </div>
+            <input
+              [(ngModel)]="form.vuelo"
+              (ngModelChange)="markDirty('vuelo')"
+              name="vuelo"
+              type="text"
+              placeholder="Ej: WJ 3045"
+              class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            />
+          </div>
+          <div>
+            <div class="flex items-center gap-1 mb-1">
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
+                >Empresa Aerea (opcional)</label
+              >
+              <button
+                type="button"
+                data-help-trigger
+                (click)="toggleHelp('empresa_aerea', $event)"
+                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                aria-label="Ayuda Empresa Aerea"
+              >
+                ?
+              </button>
+            </div>
+            <input
+              [(ngModel)]="form.empresa_aerea"
+              (ngModelChange)="markDirty('empresa_aerea')"
+              name="empresa_aerea"
+              type="text"
+              placeholder="Ej: Jet Smart"
+              class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            />
+          </div>
+          <div>
+            <div class="flex items-center gap-1 mb-1">
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
+                >Destino (opcional)</label
+              >
+              <button
+                type="button"
+                data-help-trigger
+                (click)="toggleHelp('destino', $event)"
+                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                aria-label="Ayuda Destino"
+              >
+                ?
+              </button>
+            </div>
+            <input
+              [(ngModel)]="form.destino"
+              (ngModelChange)="markDirty('destino')"
+              name="destino"
+              type="text"
+              placeholder="Ej: San Carlos de Bariloche"
+              class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            />
+          </div>
+        </div>
+        <ng-template #sinDatosVuelo>
+          <p class="text-xs text-slate-600 bg-white border border-slate-200 rounded-lg px-3 py-2">
+            Se omiten datos de vuelo/equipaje para esta causa.
+          </p>
+        </ng-template>
+      </div>
+
+      <div class="shadow-sm p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 space-y-4">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h4 class="text-sm font-bold text-emerald-900">
+                Integridad y Autenticidad del Material
+              </h4>
+              <span
+                class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
+                [class.bg-emerald-100]="isIntegritySectionComplete()"
+                [class.text-emerald-800]="isIntegritySectionComplete()"
+                [class.bg-amber-100]="!isIntegritySectionComplete()"
+                [class.text-amber-800]="!isIntegritySectionComplete()"
+              >
+                {{ isIntegritySectionComplete() ? 'Completo' : 'En carga' }}
+              </span>
+            </div>
+            <p class="text-xs text-slate-600">
+              Indica el metodo de autenticidad del material. Si el sistema ya autentica el material,
+              no se solicita hash del operador.
             </p>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3">
-                <div class="lg:col-span-3">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Fiscalía / Juzgado
-                            (opcional)</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('fiscalia', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Fiscalia">?</button>
-                    </div>
-                    <input [(ngModel)]="form.fiscalia" (ngModelChange)="markDirty('fiscalia')" name="fiscalia"
-                        type="text" placeholder="Ej: Fiscalía Nro. 02"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                </div>
-                <div class="lg:col-span-3">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Fiscal / Juez / Secretario
-                            (opcional)</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('fiscal', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Autoridad Interviniente">?</button>
-                    </div>
-                    <input [(ngModel)]="form.fiscal" (ngModelChange)="markDirty('fiscal')" name="fiscal" type="text"
-                        placeholder="Ej: Dr. INTI Isla"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                </div>
-                <div class="lg:col-span-3">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Prevención Sumaria
-                            *</label>
-                        <span class="block text-[10px] text-slate-400 mb-0">Número de actuación policial inicial</span>
-                        <button type="button" data-help-trigger (click)="toggleHelp('prevencion_sumaria', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Prevencion Sumaria">?</button>
-                    </div>
-                    <input [(ngModel)]="form.prevencion_sumaria" (ngModelChange)="markDirty('prevencion_sumaria')"
-                        name="prevencion_sumaria" type="text" placeholder="Ej: 003BAR/2026"
-                        [attr.data-invalid]="isFieldInvalid('prevencion_sumaria') ? 'true' : null"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                </div>
-                <div class="lg:col-span-3">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Carátula *</label>
-                        <span class="block text-[10px] text-slate-400 mb-0">Tipo de causa según el expediente</span>
-                        <button type="button" data-help-trigger (click)="toggleHelp('caratula', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Caratula">?</button>
-                    </div>
-                    <input [(ngModel)]="form.caratula" (ngModelChange)="markDirty('caratula')" name="caratula"
-                        type="text" placeholder="Ej: DENUNCIA S/ PRESUNTO HURTO"
-                        [attr.data-invalid]="isFieldInvalid('caratula') ? 'true' : null"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                </div>
-                <div class="lg:col-span-3">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Denunciante *</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('denunciante', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Denunciante">?</button>
-                    </div>
-                    <input [(ngModel)]="form.denunciante" (ngModelChange)="markDirty('denunciante')" name="denunciante"
-                        type="text" placeholder="Ej: PONZO Osvaldo"
-                        [attr.data-invalid]="isFieldInvalid('denunciante') ? 'true' : null"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                </div>
-                <div class="lg:col-span-9">
-                    <div class="flex items-center gap-1 mb-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Descripción del objeto o
-                            persona involucrada *</label>
-                        <button type="button" data-help-trigger (click)="toggleHelp('objeto_denunciado', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Objeto Denunciado">?</button>
-                    </div>
-                    <input [(ngModel)]="form.objeto_denunciado" (ngModelChange)="markDirty('objeto_denunciado')"
-                        name="objeto_denunciado" type="text" placeholder="Ej: Telefono Samsung S24, color negro"
-                        [attr.data-invalid]="isFieldInvalid('objeto_denunciado') ? 'true' : null"
-                        class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                </div>
-            </div>
-
-
-
-
-
-            <div class="shadow-sm p-4 rounded-xl bg-amber-50/50 border border-amber-100 space-y-3">
-                <div class="flex items-center justify-between gap-3">
-                    <h4 class="text-sm font-bold text-amber-900">Datos del Vuelo / Equipaje</h4>
-                    <label class="inline-flex items-center gap-2 text-xs text-slate-700 font-semibold">
-                        <input type="checkbox" [(ngModel)]="incluirDatosVuelo" name="incluirDatosVuelo"
-                            (change)="onDatosVueloToggle()" class="rounded text-indigo-600 focus:ring-indigo-500">
-                        Incluir datos de vuelo/equipaje
-                    </label>
-                </div>
-                <div *ngIf="incluirDatosVuelo; else sinDatosVuelo"
-                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div>
-                        <div class="flex items-center gap-1 mb-1">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Fecha del Hecho
-                                (opcional)</label>
-                            <button type="button" data-help-trigger (click)="toggleHelp('fecha_hecho', $event)"
-                                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                                aria-label="Ayuda Fecha del Hecho">?</button>
-                        </div>
-                        <input [(ngModel)]="form.fecha_hecho" (ngModelChange)="markDirty('fecha_hecho')"
-                            name="fecha_hecho" type="date" lang="es-AR"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-1 mb-1">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Vuelo
-                                (opcional)</label>
-                            <button type="button" data-help-trigger (click)="toggleHelp('vuelo', $event)"
-                                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                                aria-label="Ayuda Vuelo">?</button>
-                        </div>
-                        <input [(ngModel)]="form.vuelo" (ngModelChange)="markDirty('vuelo')" name="vuelo" type="text"
-                            placeholder="Ej: WJ 3045"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-1 mb-1">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Empresa Aerea
-                                (opcional)</label>
-                            <button type="button" data-help-trigger (click)="toggleHelp('empresa_aerea', $event)"
-                                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                                aria-label="Ayuda Empresa Aerea">?</button>
-                        </div>
-                        <input [(ngModel)]="form.empresa_aerea" (ngModelChange)="markDirty('empresa_aerea')"
-                            name="empresa_aerea" type="text" placeholder="Ej: Jet Smart"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-1 mb-1">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Destino
-                                (opcional)</label>
-                            <button type="button" data-help-trigger (click)="toggleHelp('destino', $event)"
-                                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                                aria-label="Ayuda Destino">?</button>
-                        </div>
-                        <input [(ngModel)]="form.destino" (ngModelChange)="markDirty('destino')" name="destino"
-                            type="text" placeholder="Ej: San Carlos de Bariloche"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
-                </div>
-                <ng-template #sinDatosVuelo>
-                    <p class="text-xs text-slate-600 bg-white border border-slate-200 rounded-lg px-3 py-2">
-                        Se omiten datos de vuelo/equipaje para esta causa.
-                    </p>
-                </ng-template>
-            </div>
-
-
-            <div class="shadow-sm p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 space-y-4">
-                <h4 class="text-sm font-bold text-emerald-900">Integridad y Autenticidad del Material</h4>
-                <p class="text-xs text-slate-600">
-                    Indicá el método de autenticidad del material exportado.
-                </p>
-
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    <!-- Lugar de Origen -->
-                    <div class="md:col-span-12">
-                        <div class="flex items-center gap-1 mb-1">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Lugar de Origen de
-                                la Información *</label>
-                            <button type="button" data-help-trigger (click)="toggleHelp('aeropuerto', $event)"
-                                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                                aria-label="Ayuda Aeropuerto">?</button>
-                        </div>
-                        <div class="relative">
-                            <input [(ngModel)]="form.aeropuerto" (ngModelChange)="onAirportSelect($event)"
-                                (focus)="showAirportDropdown = true" (blur)="onAirportInputBlur()" name="aeropuerto"
-                                placeholder="Ej: Aeropuerto Internacional Mtro. Pistarini / Plataforma Norte"
-                                [attr.data-invalid]="isFieldInvalid('aeropuerto') ? 'true' : null"
-                                class="w-full px-2 py-1.5 pr-8 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                            <button type="button" (mousedown)="$event.preventDefault()"
-                                (click)="showAirportDropdown = !showAirportDropdown"
-                                class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs leading-none">▾</button>
-                            <div *ngIf="showAirportDropdown && filteredAirportOptions.length > 0"
-                                class="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                                <div *ngFor="let opt of filteredAirportOptions"
-                                    (mousedown)="$event.preventDefault(); selectAirportOption(opt)"
-                                    class="px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50 hover:text-indigo-700">
-                                    {{ opt }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Sistema / Dispositivo de origen -->
-                    <div class="md:col-span-12">
-                        <div class="flex items-center gap-1 mb-1">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Dispositivo/Sistema de
-                                origen *</label>
-                            <button type="button" data-help-trigger (click)="toggleHelp('sistema', $event)"
-                                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                                aria-label="Ayuda Sistema">?</button>
-                        </div>
-                        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
-                            <div>
-                                <select [ngModel]="selectedSourceSystemOption"
-                                    (ngModelChange)="onSourceSystemSelectionChange($event)" name="source_system_id"
-                                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                                    <option [ngValue]="null">Seleccione sistema cargado...</option>
-                                    <option *ngFor="let system of sourceSystemOptions" [ngValue]="system.id">
-                                        {{ system.name }}{{ system.unit?.name ? ' - ' + system.unit?.name : '' }}
-                                    </option>
-                                    <option [ngValue]="'otro'">Otro sistema / dispositivo</option>
-                                </select>
-                                <p class="text-[11px] text-slate-400 mt-1">
-                                    {{ isLoadingSourceSystems ? 'Cargando sistemas activos desde la base...' : 'Se
-                                    muestran los sistemas activos cargados en la base, priorizando la unidad
-                                    seleccionada.' }}
-                                </p>
-                            </div>
-                            <div *ngIf="selectedSourceSystemOption === 'otro'; else selectedSystemHint">
-                                <input [(ngModel)]="form.sistema" (ngModelChange)="onSistemaManualChange($event)"
-                                    name="sistema" type="text"
-                                    placeholder="Ej: Milestone XProtect, BMS aeroportuario, otro dispositivo..."
-                                    [attr.data-invalid]="isFieldInvalid('sistema') ? 'true' : null"
-                                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                                <p class="text-[11px] text-slate-400 mt-1">Completa manualmente el origen si no existe
-                                    en inventario.</p>
-                            </div>
-                            <ng-template #selectedSystemHint>
-                                <div
-                                    class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                                    <span *ngIf="form.sistema; else emptySystemHint">Sistema aplicado al informe:
-                                        <strong>{{ form.sistema }}</strong></span>
-                                    <ng-template #emptySystemHint>Selecciona un sistema de la base o elige
-                                        <strong>Otro</strong>.</ng-template>
-                                </div>
-                            </ng-template>
-                        </div>
-                    </div>
-
-                    <!-- 1. Autenticidad del material (va primero) -->
-                    <div class="md:col-span-6">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Método de verificación de
-                            integridad *</label>
-                        <select [(ngModel)]="form.vms_authenticity_mode"
-                            (ngModelChange)="onVmsAuthenticityModeChange($event)" name="vms_authenticity_mode"
-                            [attr.data-invalid]="isFieldInvalid('vms_authenticity_mode') ? 'true' : null"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                            <option value="">Seleccione opción...</option>
-                            <option *ngFor="let option of vmsAuthenticityOptions" [ngValue]="option.value">
-                                {{ option.label }}
-                            </option>
-                        </select>
-                    </div>
-                    <div *ngIf="form.vms_authenticity_mode === 'otro'" class="md:col-span-6">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Detalle de Autenticidad
-                            *</label>
-                        <input [(ngModel)]="form.vms_authenticity_detail"
-                            (ngModelChange)="markDirty('vms_authenticity_detail')" name="vms_authenticity_detail"
-                            type="text" placeholder="Detallar método alternativo"
-                            [attr.data-invalid]="isFieldInvalid('vms_authenticity_detail') ? 'true' : null"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
-
-                    <!-- 2. Hashes Nativos del VMS (sólo si es propio VMS) -->
-                    <div *ngIf="form.vms_authenticity_mode === 'vms_propio'"
-                        class="md:col-span-12 mt-2 border-t border-emerald-200 pt-3">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Algoritmos Hash Nativos
-                            del
-                            VMS
-                            (opcional)</label>
-                        <div class="flex flex-wrap gap-3">
-                            <label *ngFor="let algo of hashAlgorithmOptions"
-                                class="inline-flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                                <input type="checkbox" [checked]="hasNativeHashAlgorithm(algo.value)"
-                                    (change)="toggleNativeHashAlgorithm(algo.value)"
-                                    class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                <span>{{ algo.label }}</span>
-                            </label>
-                        </div>
-                        <div *ngIf="hasNativeHashAlgorithm('otro')" class="mt-2">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nombres de otros
-                                algoritmos o firmas nativas *</label>
-                            <input [(ngModel)]="form.vms_native_hash_algorithm_other"
-                                (ngModelChange)="markDirty('vms_native_hash_algorithm_other')"
-                                name="vms_native_hash_algorithm_other" type="text"
-                                placeholder="Ej: Watermark propietaria o firma RSA"
-                                [attr.data-invalid]="isFieldInvalid('vms_native_hash_algorithm_other') ? 'true' : null"
-                                class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3. Sección de hash — condicional según modo de autenticidad -->
-
-                <!-- vms_propio: hash del operador siempre visible -->
-                <ng-container *ngIf="form.vms_authenticity_mode === 'vms_propio'">
-                    <div class="border-t border-emerald-200 pt-3 space-y-3">
-                        <p class="text-xs font-semibold text-slate-700">Hash calculado por el operador</p>
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 pl-1">
-                            <div class="md:col-span-6">
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Programa de
-                                    Hash *</label>
-                                <input [(ngModel)]="form.hash_program" (ngModelChange)="markDirty('hash_program')"
-                                    name="hash_program" type="text" placeholder="HashMyFiles"
-                                    [attr.data-invalid]="isFieldInvalid('hash_program') ? 'true' : null"
-                                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                            </div>
-                            <div class="md:col-span-6">
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Algoritmos
-                                    utilizados *</label>
-                                <div class="flex flex-wrap gap-3">
-                                    <label *ngFor="let algo of hashAlgorithmOptions"
-                                        class="inline-flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                                        <input type="checkbox" [checked]="hasHashAlgorithm(algo.value)"
-                                            (change)="toggleHashAlgorithm(algo.value)"
-                                            [class.border-rose-400]="isFieldInvalid('hash_algorithms')"
-                                            class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                        <span>{{ algo.label }}</span>
-                                    </label>
-                                </div>
-                            </div>
-                            <div *ngIf="hasHashAlgorithm('otro')" class="md:col-span-12">
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Especificar
-                                    algoritmo *</label>
-                                <input [(ngModel)]="form.hash_algorithm_other"
-                                    (ngModelChange)="markDirty('hash_algorithm_other')" name="hash_algorithm_other"
-                                    type="text" placeholder="Ej: BLAKE3"
-                                    [attr.data-invalid]="isFieldInvalid('hash_algorithm_other') ? 'true' : null"
-                                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                            </div>
-                        </div>
-                    </div>
-                </ng-container>
-
-                <!-- hash_preventivo: mostrar campos directamente sin checkbox -->
-                <ng-container *ngIf="form.vms_authenticity_mode === 'hash_preventivo'">
-                    <div class="border-t border-emerald-200 pt-3 space-y-3">
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 pl-1">
-                            <div class="md:col-span-6">
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Programa de
-                                    Hash *</label>
-                                <input [(ngModel)]="form.hash_program" (ngModelChange)="markDirty('hash_program')"
-                                    name="hash_program" type="text" placeholder="HashMyFiles"
-                                    [attr.data-invalid]="isFieldInvalid('hash_program') ? 'true' : null"
-                                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                            </div>
-                            <div class="md:col-span-6">
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Algoritmos
-                                    utilizados *</label>
-                                <div class="flex flex-wrap gap-3">
-                                    <label *ngFor="let algo of hashAlgorithmOptions"
-                                        class="inline-flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                                        <input type="checkbox" [checked]="hasHashAlgorithm(algo.value)"
-                                            (change)="toggleHashAlgorithm(algo.value)"
-                                            [class.border-rose-400]="isFieldInvalid('hash_algorithms')"
-                                            class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                        <span>{{ algo.label }}</span>
-                                    </label>
-                                </div>
-                            </div>
-                            <div *ngIf="hasHashAlgorithm('otro')" class="md:col-span-12">
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Especificar
-                                    algoritmo *</label>
-                                <input [(ngModel)]="form.hash_algorithm_other"
-                                    (ngModelChange)="markDirty('hash_algorithm_other')" name="hash_algorithm_other"
-                                    type="text" placeholder="Ej: BLAKE3"
-                                    [attr.data-invalid]="isFieldInvalid('hash_algorithm_other') ? 'true' : null"
-                                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                            </div>
-                        </div>
-                    </div>
-                </ng-container>
-
-                <!-- sin_autenticacion: solo campo de motivo -->
-                <ng-container *ngIf="form.vms_authenticity_mode === 'sin_autenticacion'">
-                    <div class="border-t border-emerald-200 pt-3">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">¿Por qué no se efectuó
-                            hash? (opcional)</label>
-                        <input [(ngModel)]="form.motivo_sin_hash" (ngModelChange)="markDirty('motivo_sin_hash')"
-                            name="motivo_sin_hash" type="text" list="motivo-hash-options"
-                            placeholder="Ej: El VMS posee autenticación incorporada"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                        <datalist id="motivo-hash-options">
-                            <option *ngFor="let m of motivoSinHashOptions" [value]="m"></option>
-                        </datalist>
-                        <p class="text-xs text-slate-400 mt-1">Esta razón quedará registrada en el informe generado.
-                        </p>
-                    </div>
-                </ng-container>
-            </div>
-
+            <p
+              *ngIf="integritySectionCollapsed && hasIntegrityDraftData()"
+              class="inline-flex max-w-full rounded-xl border border-emerald-100 bg-white/90 px-3 py-2 text-xs text-slate-600"
+            >
+              {{ getIntegritySectionSummary() }}
+            </p>
+          </div>
+          <button
+            type="button"
+            (click)="toggleIntegritySectionCollapsed()"
+            class="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 transition-colors hover:bg-emerald-50"
+          >
+            <svg
+              class="h-4 w-4 transition-transform"
+              [class.rotate-180]="!integritySectionCollapsed"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m5 8 5 5 5-5" />
+            </svg>
+            {{ integritySectionCollapsed ? 'Expandir' : 'Colapsar' }}
+          </button>
         </div>
+        <h4 class="hidden">Integridad y Autenticidad del Material</h4>
+        <p class="hidden">Indicá el método de autenticidad del material exportado.</p>
 
-        <div class="space-y-4">
-            <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1">Contexto y Fotogramas</h3>
-            <div class="shadow-sm p-4 rounded-xl bg-sky-50/60 border border-sky-100 space-y-3">
-                <h4 class="text-sm font-bold text-sky-900">Contexto</h4>
-                <p class="text-xs text-slate-600">
-                    Estos datos complementan el informe y ayudan a ordenar la redacción manual del análisis.
-                </p>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha y hora inicio</label>
-                        <input [(ngModel)]="hora_inicio" (ngModelChange)="onTimeChange()" name="hora_inicio"
-                            type="datetime-local"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha y hora fin</label>
-                        <input [(ngModel)]="hora_fin" (ngModelChange)="onTimeChange()" name="hora_fin"
-                            type="datetime-local"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Franja analizada</label>
-                        <input [(ngModel)]="form.franja_horaria_analizada"
-                            (ngModelChange)="markDirty('franja_horaria_analizada')" name="franja_horaria_analizada"
-                            type="text" placeholder="Auto: 15/02/2026 14:05 a 02/03/2026 09:30"
-                            [readonly]="!!hora_inicio && !!hora_fin" [class.bg-slate-50]="!!hora_inicio && !!hora_fin"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tiempo total de
-                            análisis</label>
-                        <input [(ngModel)]="form.tiempo_total_analisis"
-                            (ngModelChange)="markDirty('tiempo_total_analisis')" name="tiempo_total_analisis"
-                            type="text" placeholder="Auto: 15 días 19 horas 25 minutos"
-                            [readonly]="!!hora_inicio && !!hora_fin" [class.bg-slate-50]="!!hora_inicio && !!hora_fin"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Cantidad
-                            observada</label>
-                        <input [(ngModel)]="form.cantidad_observada" (ngModelChange)="markDirty('cantidad_observada')"
-                            name="cantidad_observada" type="text" placeholder="Ej: 2 personas / 1 bulto"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
-                    <div class="md:col-span-3">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Sectores
-                            analizados</label>
-                        <input [(ngModel)]="form.sectores_analizados" (ngModelChange)="markDirty('sectores_analizados')"
-                            name="sectores_analizados" type="text"
-                            placeholder="Ej: Hall de arribos, cinta 3, plataforma norte"
-                            class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
-                    </div>
-                </div>
-            </div>
-            <!-- Fotogramas -->
-            <div class="border border-slate-200 rounded-2xl p-4 space-y-3">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <h4 class="font-semibold text-slate-800">Fotogramas</h4>
-                        <button type="button" data-help-trigger (click)="toggleHelp('frame_upload', $event)"
-                            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                            aria-label="Ayuda Carga de fotogramas">?</button>
-                    </div>
-                    <span class="text-xs text-slate-500">{{ frames.length }}/{{ MAX_FRAMES }} - {{
-                        readableTotalFramesSize() }}</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <button type="button" (click)="frameFilesInput.click()" [disabled]="isProcessingFrames"
-                        [class.opacity-60]="isProcessingFrames"
-                        class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">
-                        {{ isProcessingFrames ? 'Procesando imagenes...' : 'Cargar imagenes' }}
-                    </button>
-                    <span class="text-xs text-slate-500">
-                        {{ frames.length }} seleccionadas
-                    </span>
-                </div>
-                <input #frameFilesInput type="file" accept="image/jpeg,image/png,image/webp" multiple
-                    (change)="onFrameFilesSelected($event)" class="hidden">
-                <p class="text-xs text-slate-500">
-                    Tipos permitidos: JPG, PNG, WEBP. Maximo {{ MAX_FRAME_SIZE_MB }} MB por imagen, {{
-                    MAX_TOTAL_FRAMES_SIZE_MB }} MB total.
-                </p>
-
-                <div *ngIf="frames.length === 0" class="text-sm text-slate-500">No hay fotogramas cargados.</div>
-
-                <div *ngFor="let frame of frames; let i = index"
-                    class="border border-slate-200 rounded-xl p-3 space-y-2">
-                    <div class="flex items-start gap-3">
-                        <img [src]="frame.preview_url" alt="Fotograma"
-                            class="w-28 h-20 object-cover rounded border border-slate-200 bg-slate-50">
-                        <div class="flex-1 min-w-0">
-                            <div class="text-sm font-semibold text-slate-800 truncate">{{ i + 1 }}. {{
-                                frame.file_name
-                                }}</div>
-                            <div class="text-xs text-slate-500">{{ frame.mime_type }} - {{
-                                readableBytes(frame.size_bytes || 0) }}</div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="flex items-center gap-1 mb-1">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Descripcion
-                                (opcional)</label>
-                            <button type="button" data-help-trigger (click)="toggleHelp('frame_description', $event)"
-                                class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                                aria-label="Ayuda Descripcion de fotograma">?</button>
-                        </div>
-                        <textarea [(ngModel)]="frame.description" (ngModelChange)="markDirty()"
-                            [name]="'frame_description_' + frame.id_temp" rows="2" maxlength="500"
-                            placeholder="Ej: Se observa retiro de equipaje en cinta 3."
-                            class="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-slate-50"></textarea>
-                    </div>
-
-                    <div class="flex gap-2 justify-end">
-                        <button type="button" (click)="moveFrameUp(i)" [disabled]="i === 0"
-                            class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm disabled:opacity-50">Subir</button>
-                        <button type="button" (click)="moveFrameDown(i)" [disabled]="i === frames.length - 1"
-                            class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm disabled:opacity-50">Bajar</button>
-                        <button type="button" (click)="removeFrame(i)"
-                            class="px-3 py-1.5 rounded-lg border border-rose-300 text-rose-700 text-sm">Eliminar</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Texto del Informe -->
-            <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1 mt-2">Texto del Informe</h3>
-            <p class="text-xs text-slate-500">Podés completar estos tres campos manualmente o generar una primera
-                versión con el asistente.</p>
-
-            <div *ngIf="false"
-                class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-                <div class="flex flex-col gap-1 w-full md:w-auto">
-                    <label class="text-xs font-bold text-slate-600 uppercase">Proveedor IA</label>
-                    <select [(ngModel)]="selectedAiProvider" name="aiProvider"
-                        class="px-3 py-2 text-sm border border-indigo-200 rounded-xl bg-white text-indigo-900 shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400">
-                        <option value="gemini">Gemini</option>
-                        <option value="groq">Groq</option>
-                        <option value="openrouter">OpenRouter</option>
-                    </select>
-                </div>
-
-                <button type="button" (click)="generateFullReportWithAi()"
-                    [disabled]="isGeneratingFullReport || !canGenerateFullReport()"
-                    class="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md text-white text-sm font-bold shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span *ngIf="isGeneratingFullReport"
-                        class="w-4 h-4 rounded-full border-2 border-indigo-200 border-t-white animate-spin"></span>
-                    ✨ {{ isGeneratingFullReport ? 'Generando todo el informe...' : 'Completar Todo el Informe' }}
+        <div *ngIf="!integritySectionCollapsed" class="space-y-4">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <!-- Lugar de Origen -->
+            <div class="lg:col-span-5">
+              <div class="flex items-center gap-1 mb-1">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
+                  >Lugar de Origen de la Información *</label
+                >
+                <button
+                  type="button"
+                  data-help-trigger
+                  (click)="toggleHelp('aeropuerto', $event)"
+                  class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                  aria-label="Ayuda Aeropuerto"
+                >
+                  ?
                 </button>
-            </div>
-
-            <div *ngIf="false && isGeneratingFullReport"
-                class="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-cyan-50 to-indigo-50 px-3 py-2">
-                <div class="flex items-center justify-between text-xs text-slate-700">
-                    <span class="inline-flex items-center gap-2 font-medium">
-                        <span class="ai-status-dot"></span>
-                        {{ aiProgressLabel || 'Analizando informe' }}
-                    </span>
-                    <span class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">Procesando</span>
-                </div>
-                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-indigo-100">
-                    <div
-                        class="ai-progress-bar h-full w-1/3 rounded-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500">
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <div class="flex items-center gap-1 mb-1">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Introducción / Material Fílmico
-                        Analizado</label>
-                    <span class="text-[10px] text-indigo-500 font-semibold ml-1">IA</span>
-                    <button type="button" data-help-trigger (click)="toggleHelp('material_filmico', $event)"
-                        class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                        aria-label="Ayuda Material Filmico">?</button>
-                </div>
-                <p class="text-[10px] text-slate-400 mb-1">Podés generarlo desde los datos del formulario y luego
-                    ajustarlo manualmente si hace falta.</p>
-                <textarea [ngModel]="form.material_filmico" (ngModelChange)="onMaterialFilmicoChange($event)"
-                    name="material_filmico" rows="5"
-                    placeholder="Completá la introducción y el detalle del material fílmico analizado."
-                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
-            </div>
-            <div>
-                <div class="flex items-center gap-1 mb-1">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Desarrollo</label>
-                    <span class="text-[10px] text-indigo-500 font-semibold ml-1">IA</span>
-                    <button type="button" data-help-trigger (click)="toggleHelp('desarrollo', $event)"
-                        class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                        aria-label="Ayuda Desarrollo">?</button>
-                </div>
-                <textarea [ngModel]="form.desarrollo" (ngModelChange)="onDesarrolloChange($event)" name="desarrollo"
-                    rows="6" placeholder="Completá el desarrollo cronológico de lo observado."
-                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
-            </div>
-            <div>
-                <div class="flex items-center gap-1 mb-1">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Conclusion</label>
-                    <span class="text-[10px] text-indigo-500 font-semibold ml-1">IA</span>
-                    <button type="button" data-help-trigger (click)="toggleHelp('conclusion', $event)"
-                        class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
-                        aria-label="Ayuda Conclusion">?</button>
-                </div>
-                <textarea [ngModel]="form.conclusion" (ngModelChange)="onConclusionChange($event)" name="conclusion"
-                    rows="5" placeholder="Completá la conclusión y el resultado final del análisis."
-                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"></textarea>
-            </div>
-        </div>
-
-        <div class="space-y-3 pt-4 border-t border-slate-200" data-report-actions>
-            <div *ngIf="isGeneratingFullReport"
-                class="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-cyan-50 to-indigo-50 px-3 py-2">
-                <div class="flex items-center justify-between text-xs text-slate-700">
-                    <span class="inline-flex items-center gap-2 font-medium">
-                        <span class="ai-status-dot"></span>
-                        {{ aiProgressLabel || 'Analizando informe' }}
-                    </span>
-                    <span class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">Procesando</span>
-                </div>
-                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-indigo-100">
-                    <div
-                        class="ai-progress-bar h-full w-1/3 rounded-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500">
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+              </div>
+              <div class="relative">
+                <input
+                  [(ngModel)]="form.aeropuerto"
+                  (ngModelChange)="onAirportSelect($event)"
+                  (focus)="showAirportDropdown = true"
+                  (blur)="onAirportInputBlur()"
+                  name="aeropuerto"
+                  placeholder="Ej: Aeropuerto Internacional Mtro. Pistarini / Plataforma Norte"
+                  [attr.data-invalid]="isFieldInvalid('aeropuerto') ? 'true' : null"
+                  class="w-full px-2 py-1.5 pr-8 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                />
+                <button
+                  type="button"
+                  (mousedown)="$event.preventDefault()"
+                  (click)="showAirportDropdown = !showAirportDropdown"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs leading-none"
+                >
+                  ▾
+                </button>
                 <div
-                    class="flex flex-col gap-1 rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 xl:min-w-[220px]">
-                    <label class="text-xs font-bold text-slate-600 uppercase">Proveedor IA</label>
-                    <select [(ngModel)]="selectedAiProvider" name="aiProvider"
-                        class="px-3 py-2 text-sm border border-indigo-200 rounded-xl bg-white text-indigo-900 shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400">
-                        <option value="gemini">Gemini</option>
-                        <option value="groq">Groq</option>
-                        <option value="openrouter">OpenRouter</option>
-                    </select>
+                  *ngIf="showAirportDropdown && filteredAirportOptions.length > 0"
+                  class="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto"
+                >
+                  <div
+                    *ngFor="let opt of filteredAirportOptions"
+                    (mousedown)="$event.preventDefault(); selectAirportOption(opt)"
+                    class="px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50 hover:text-indigo-700"
+                  >
+                    {{ opt }}
+                  </div>
                 </div>
-
-                <div class="flex flex-col md:flex-row items-stretch md:items-center justify-end gap-3">
-                    <button type="button" (click)="saveReportToDatabase()" [disabled]="isGenerating || isReadOnly()"
-                        class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-semibold transition-colors shadow-sm disabled:opacity-60"
-                        style="pointer-events: auto !important;">
-                        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/>
-                            <polyline points="17 21 17 13 7 13 7 21"/>
-                            <polyline points="7 3 7 8 15 8"/>
-                        </svg>
-                        Guardar Borrador
-                    </button>
-                    <button type="button" (click)="generateFullReportWithAi()"
-                        [disabled]="isGeneratingFullReport || !canUseAiCompletion()" data-ai-complete-button
-                        class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md text-white text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                        style="pointer-events: auto !important;">
-                        <span *ngIf="isGeneratingFullReport"
-                            class="w-4 h-4 rounded-full border-2 border-indigo-200 border-t-white animate-spin"></span>
-                        <svg *ngIf="!isGeneratingFullReport" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="m13 2 1.5 4.5L19 8l-4.5 1.5L13 14l-1.5-4.5L7 8l4.5-1.5L13 2Z"/>
-                            <path d="m6 14 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"/>
-                        </svg>
-                        {{ isGeneratingFullReport ? 'Generando todo el informe...' : 'Completar Todo el Informe' }}
-                    </button>
-                    <button type="button" (click)="finalizeReportInDatabase()" [disabled]="isGenerating || isReadOnly()"
-                        class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 border border-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold transition-colors shadow-sm disabled:opacity-60"
-                        style="pointer-events: auto !important;">
-                        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9"/>
-                            <path d="m9 12 2 2 4-4"/>
-                        </svg>
-                        Finalizar y Guardar
-                    </button>
-                    <button type="submit" [disabled]="isGenerating"
-                        class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-semibold transition-colors shadow-sm"
-                        style="pointer-events: auto !important;">
-                        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                            <line x1="16" y1="13" x2="8" y2="13"/>
-                            <line x1="16" y1="17" x2="8" y2="17"/>
-                        </svg>
-                        {{ isGenerating ? 'Generando...' : (isReadOnly() ? 'Volver a descargar (DOC)' : 'Generar Informe (DOC)') }}
-                    </button>
-                </div>
+              </div>
             </div>
+
+            <!-- Sistema / Dispositivo de origen -->
+            <div class="lg:col-span-7">
+              <div class="flex items-center gap-1 mb-1">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
+                  >Dispositivo/Sistema de origen *</label
+                >
+                <button
+                  type="button"
+                  data-help-trigger
+                  (click)="toggleHelp('sistema', $event)"
+                  class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                  aria-label="Ayuda Sistema"
+                >
+                  ?
+                </button>
+              </div>
+              <div class="grid grid-cols-1 gap-3">
+                <div>
+                  <select
+                    [ngModel]="selectedSourceSystemOption"
+                    (ngModelChange)="onSourceSystemSelectionChange($event)"
+                    name="source_system_id"
+                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                  >
+                    <option [ngValue]="null">Seleccione sistema cargado...</option>
+                    <option *ngFor="let system of sourceSystemOptions" [ngValue]="system.id">
+                      {{ system.name }}{{ system.unit?.name ? ' - ' + system.unit?.name : '' }}
+                    </option>
+                    <option [ngValue]="'otro'">Otro sistema / dispositivo</option>
+                  </select>
+                  <p class="text-[11px] text-slate-400 mt-1">
+                    {{
+                      isLoadingSourceSystems
+                        ? 'Cargando sistemas activos desde la base...'
+                        : 'Se
+                                    muestran los sistemas activos cargados en la base, priorizando la unidad
+                                    seleccionada.'
+                    }}
+                  </p>
+                </div>
+                <div *ngIf="selectedSourceSystemOption === 'otro'">
+                  <input
+                    [(ngModel)]="form.sistema"
+                    (ngModelChange)="onSistemaManualChange($event)"
+                    name="sistema"
+                    type="text"
+                    placeholder="Ej: Milestone XProtect, BMS aeroportuario, otro dispositivo..."
+                    [attr.data-invalid]="isFieldInvalid('sistema') ? 'true' : null"
+                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                  />
+                  <p class="text-[11px] text-slate-400 mt-1">
+                    Completa manualmente el origen si no existe en inventario.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 1. Autenticidad del material (va primero) -->
+            <div class="md:col-span-6">
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
+                >Método de verificación de integridad *</label
+              >
+              <select
+                [(ngModel)]="form.vms_authenticity_mode"
+                (ngModelChange)="onVmsAuthenticityModeChange($event)"
+                name="vms_authenticity_mode"
+                [attr.data-invalid]="isFieldInvalid('vms_authenticity_mode') ? 'true' : null"
+                class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+              >
+                <option value="">Seleccione opción...</option>
+                <option *ngFor="let option of vmsAuthenticityOptions" [ngValue]="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
+            <div *ngIf="form.vms_authenticity_mode === 'otro'" class="md:col-span-6">
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
+                >Detalle de Autenticidad *</label
+              >
+              <input
+                [(ngModel)]="form.vms_authenticity_detail"
+                (ngModelChange)="markDirty('vms_authenticity_detail')"
+                name="vms_authenticity_detail"
+                type="text"
+                placeholder="Detallar método alternativo"
+                [attr.data-invalid]="isFieldInvalid('vms_authenticity_detail') ? 'true' : null"
+                class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+              />
+            </div>
+
+            <!-- 2. Hashes Nativos del VMS (sólo si es propio VMS) -->
+            <div
+              *ngIf="form.vms_authenticity_mode === 'vms_propio'"
+              class="md:col-span-12 mt-2 border-t border-emerald-200 pt-3"
+            >
+              <p
+                class="rounded-xl border border-emerald-100 bg-white/80 px-3 py-2 text-xs text-slate-600"
+              >
+                El sistema seleccionado aporta autenticidad propia. No hace falta completar datos
+                adicionales de hash.
+              </p>
+            </div>
+          </div>
+
+          <!-- 3. Sección de hash — condicional según modo de autenticidad -->
+
+          <!-- hash_preventivo: mostrar campos directamente sin checkbox -->
+          <ng-container *ngIf="form.vms_authenticity_mode === 'hash_preventivo'">
+            <div class="border-t border-emerald-200 pt-3 space-y-3">
+              <p class="text-xs text-slate-500">
+                Completa estos datos solo cuando el sistema de origen no aporta autenticacion
+                propia.
+              </p>
+              <div class="grid grid-cols-1 md:grid-cols-12 gap-4 pl-1">
+                <div class="md:col-span-5">
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
+                    >Programa de Hash *</label
+                  >
+                  <input
+                    [(ngModel)]="form.hash_program"
+                    (ngModelChange)="markDirty('hash_program')"
+                    name="hash_program"
+                    type="text"
+                    placeholder="HashMyFiles"
+                    [attr.data-invalid]="isFieldInvalid('hash_program') ? 'true' : null"
+                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                  />
+                </div>
+                <div class="md:col-span-7">
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-2"
+                    >Algoritmos utilizados *</label
+                  >
+                  <div class="flex flex-wrap gap-3">
+                    <label
+                      *ngFor="let algo of hashAlgorithmOptions"
+                      class="inline-flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        [checked]="hasHashAlgorithm(algo.value)"
+                        (change)="toggleHashAlgorithm(algo.value)"
+                        [class.border-rose-400]="isFieldInvalid('hash_algorithms')"
+                        class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span>{{ algo.label }}</span>
+                    </label>
+                  </div>
+                </div>
+                <div *ngIf="hasHashAlgorithm('otro')" class="md:col-span-12">
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
+                    >Especificar algoritmo *</label
+                  >
+                  <input
+                    [(ngModel)]="form.hash_algorithm_other"
+                    (ngModelChange)="markDirty('hash_algorithm_other')"
+                    name="hash_algorithm_other"
+                    type="text"
+                    placeholder="Ej: BLAKE3"
+                    [attr.data-invalid]="isFieldInvalid('hash_algorithm_other') ? 'true' : null"
+                    class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- sin_autenticacion: solo campo de motivo -->
+          <ng-container *ngIf="form.vms_authenticity_mode === 'sin_autenticacion'">
+            <div class="border-t border-emerald-200 pt-3">
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
+                >¿Por qué no se efectuó hash? (opcional)</label
+              >
+              <input
+                [(ngModel)]="form.motivo_sin_hash"
+                (ngModelChange)="markDirty('motivo_sin_hash')"
+                name="motivo_sin_hash"
+                type="text"
+                list="motivo-hash-options"
+                placeholder="Ej: El VMS posee autenticación incorporada"
+                class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+              />
+              <datalist id="motivo-hash-options">
+                <option *ngFor="let m of motivoSinHashOptions" [value]="m"></option>
+              </datalist>
+              <p class="text-xs text-slate-400 mt-1">
+                Esta razón quedará registrada en el informe generado.
+              </p>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1">
+        Contexto y Fotogramas
+      </h3>
+      <div class="shadow-sm p-4 rounded-xl bg-sky-50/60 border border-sky-100 space-y-3">
+        <h4 class="text-sm font-bold text-sky-900">Contexto</h4>
+        <p class="text-xs text-slate-600">
+          Estos datos complementan el informe y ayudan a ordenar la redacción manual del análisis.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
+              >Fecha y hora inicio</label
+            >
+            <input
+              [(ngModel)]="hora_inicio"
+              (ngModelChange)="onTimeChange()"
+              name="hora_inicio"
+              type="datetime-local"
+              class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            />
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
+              >Fecha y hora fin</label
+            >
+            <input
+              [(ngModel)]="hora_fin"
+              (ngModelChange)="onTimeChange()"
+              name="hora_fin"
+              type="datetime-local"
+              class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            />
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
+              >Franja analizada</label
+            >
+            <input
+              [(ngModel)]="form.franja_horaria_analizada"
+              (ngModelChange)="markDirty('franja_horaria_analizada')"
+              name="franja_horaria_analizada"
+              type="text"
+              placeholder="Auto: 15/02/2026 14:05 a 02/03/2026 09:30"
+              [readonly]="!!hora_inicio && !!hora_fin"
+              [class.bg-slate-50]="!!hora_inicio && !!hora_fin"
+              class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            />
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
+              >Tiempo total de análisis</label
+            >
+            <input
+              [(ngModel)]="form.tiempo_total_analisis"
+              (ngModelChange)="markDirty('tiempo_total_analisis')"
+              name="tiempo_total_analisis"
+              type="text"
+              placeholder="Auto: 15 días 19 horas 25 minutos"
+              [readonly]="!!hora_inicio && !!hora_fin"
+              [class.bg-slate-50]="!!hora_inicio && !!hora_fin"
+              class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
+              >Cantidad observada</label
+            >
+            <input
+              [(ngModel)]="form.cantidad_observada"
+              (ngModelChange)="markDirty('cantidad_observada')"
+              name="cantidad_observada"
+              type="text"
+              placeholder="Ej: 2 personas / 1 bulto"
+              class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            />
+          </div>
+          <div class="md:col-span-3">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
+              >Sectores analizados</label
+            >
+            <input
+              [(ngModel)]="form.sectores_analizados"
+              (ngModelChange)="markDirty('sectores_analizados')"
+              name="sectores_analizados"
+              type="text"
+              placeholder="Ej: Hall de arribos, cinta 3, plataforma norte"
+              class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            />
+          </div>
+        </div>
+      </div>
+      <!-- Fotogramas -->
+      <div class="border border-slate-200 rounded-2xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h4 class="font-semibold text-slate-800">Fotogramas</h4>
+            <button
+              type="button"
+              data-help-trigger
+              (click)="toggleHelp('frame_upload', $event)"
+              class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+              aria-label="Ayuda Carga de fotogramas"
+            >
+              ?
+            </button>
+          </div>
+          <span class="text-xs text-slate-500"
+            >{{ frames.length }}/{{ MAX_FRAMES }} - {{ readableTotalFramesSize() }}</span
+          >
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            type="button"
+            (click)="frameFilesInput.click()"
+            [disabled]="isProcessingFrames"
+            [class.opacity-60]="isProcessingFrames"
+            [attr.aria-busy]="isProcessingFrames ? 'true' : 'false'"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold"
+          >
+            <span
+              *ngIf="isProcessingFrames"
+              class="w-4 h-4 rounded-full border-2 border-indigo-200 border-t-white animate-spin"
+            ></span>
+            {{ isProcessingFrames ? 'Procesando imagenes...' : 'Cargar imagenes' }}
+          </button>
+          <span class="text-xs text-slate-500"> {{ frames.length }} seleccionadas </span>
+        </div>
+        <div
+          *ngIf="isProcessingFrames"
+          class="flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs text-indigo-700"
+        >
+          <span
+            class="w-4 h-4 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin"
+          ></span>
+          {{ getFrameProcessingMessage() }}
+        </div>
+        <input
+          #frameFilesInput
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          (change)="onFrameFilesSelected($event)"
+          class="hidden"
+        />
+        <p class="text-xs text-slate-500">
+          Tipos permitidos: JPG, PNG, WEBP. Maximo {{ MAX_FRAME_SIZE_MB }} MB por imagen,
+          {{ MAX_TOTAL_FRAMES_SIZE_MB }} MB total.
+        </p>
+
+        <div *ngIf="frames.length === 0" class="text-sm text-slate-500">
+          No hay fotogramas cargados.
         </div>
 
-        <div *ngIf="false" class="flex flex-col md:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-200">
-            <button type="button" (click)="saveReportToDatabase()" [disabled]="isGenerating || isReadOnly()"
-                class="px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-semibold transition-colors shadow-sm disabled:opacity-60"
-                style="pointer-events: auto !important;">
-                💾 Guardar Borrador
+        <div
+          *ngFor="let frame of frames; let i = index"
+          class="border border-slate-200 rounded-xl p-3 space-y-2"
+        >
+          <div class="flex items-start gap-3">
+            <img
+              [src]="frame.preview_url"
+              alt="Fotograma"
+              class="w-28 h-20 object-cover rounded border border-slate-200 bg-slate-50"
+            />
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-semibold text-slate-800 truncate">
+                {{ i + 1 }}. {{ frame.file_name }}
+              </div>
+              <div class="text-xs text-slate-500">
+                {{ frame.mime_type }} - {{ readableBytes(frame.size_bytes || 0) }}
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div class="md:col-span-2">
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
+                >Fecha y hora</label
+              >
+              <input
+                [(ngModel)]="frame.frame_time"
+                (ngModelChange)="onFrameTimeChange(frame)"
+                [name]="'frame_time_' + frame.id_temp"
+                type="datetime-local"
+                step="60"
+                class="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-slate-50"
+              />
+              <p class="mt-1 text-[11px] text-slate-400">Seleccioná la fecha y hora del fotograma.</p>
+            </div>
+            <div class="md:col-span-3">
+              <div class="flex items-center gap-1 mb-1">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
+                  >Breve descripcion *</label
+                >
+                <button
+                  type="button"
+                  data-help-trigger
+                  (click)="toggleHelp('frame_description', $event)"
+                  class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+                  aria-label="Ayuda Descripcion de fotograma"
+                >
+                  ?
+                </button>
+              </div>
+              <textarea
+                [(ngModel)]="frame.description"
+                (ngModelChange)="onFrameDescriptionChange(frame)"
+                [name]="'frame_description_' + frame.id_temp"
+                rows="2"
+                maxlength="500"
+                placeholder="Ej: Se observa al sospechoso retirando un equipaje de la cinta 3."
+                [class.border-rose-400]="isFrameDescriptionInvalid(frame)"
+                class="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-slate-50"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="flex gap-2 justify-end">
+            <button
+              type="button"
+              (click)="moveFrameUp(i)"
+              [disabled]="i === 0"
+              class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm disabled:opacity-50"
+            >
+              Subir
             </button>
-            <button type="submit" [disabled]="isGenerating"
-                class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-semibold transition-colors shadow-sm"
-                style="pointer-events: auto !important;">
-                {{ isGenerating ? 'Generando...' : (isReadOnly() ? 'Volver a descargar (DOC)' : '📄 Generar Informe
-                (DOC)') }}
+            <button
+              type="button"
+              (click)="moveFrameDown(i)"
+              [disabled]="i === frames.length - 1"
+              class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm disabled:opacity-50"
+            >
+              Bajar
             </button>
+            <button
+              type="button"
+              (click)="removeFrame(i)"
+              class="px-3 py-1.5 rounded-lg border border-rose-300 text-rose-700 text-sm"
+            >
+              Eliminar
+            </button>
+          </div>
         </div>
-    </form>
+      </div>
+
+      <!-- Texto del Informe -->
+      <h3 class="text-base font-bold text-slate-700 border-b border-slate-200 pb-1 mt-2">
+        Texto del Informe
+      </h3>
+      <p class="text-xs text-slate-500">
+        Podés completar estos tres campos manualmente o generar una primera versión con el
+        asistente.
+      </p>
+
+      <div
+        *ngIf="false"
+        class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4"
+      >
+        <div class="flex flex-col gap-1 w-full md:w-auto">
+          <label class="text-xs font-bold text-slate-600 uppercase">Proveedor IA</label>
+          <select
+            [(ngModel)]="selectedAiProvider"
+            name="aiProvider"
+            class="px-3 py-2 text-sm border border-indigo-200 rounded-xl bg-white text-indigo-900 shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+          >
+            <option value="gemini">Gemini</option>
+            <option value="groq">Groq</option>
+            <option value="openrouter">OpenRouter</option>
+          </select>
+        </div>
+
+        <button
+          type="button"
+          (click)="generateFullReportWithAi()"
+          [disabled]="isGeneratingFullReport || !canGenerateFullReport()"
+          class="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md text-white text-sm font-bold shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span
+            *ngIf="isGeneratingFullReport"
+            class="w-4 h-4 rounded-full border-2 border-indigo-200 border-t-white animate-spin"
+          ></span>
+          ✨
+          {{
+            isGeneratingFullReport ? 'Generando todo el informe...' : 'Completar Todo el Informe'
+          }}
+        </button>
+      </div>
+
+      <div
+        *ngIf="false && isGeneratingFullReport"
+        class="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-cyan-50 to-indigo-50 px-3 py-2"
+      >
+        <div class="flex items-center justify-between text-xs text-slate-700">
+          <span class="inline-flex items-center gap-2 font-medium">
+            <span class="ai-status-dot"></span>
+            {{ aiProgressLabel || 'Analizando informe' }}
+          </span>
+          <span class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500"
+            >Procesando</span
+          >
+        </div>
+        <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-indigo-100">
+          <div
+            class="ai-progress-bar h-full w-1/3 rounded-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500"
+          ></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex items-center gap-1 mb-1">
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
+            >Introducción / Material Fílmico Analizado</label
+          >
+          <span class="text-[10px] text-indigo-500 font-semibold ml-1">IA</span>
+          <button
+            type="button"
+            data-help-trigger
+            (click)="toggleHelp('material_filmico', $event)"
+            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+            aria-label="Ayuda Material Filmico"
+          >
+            ?
+          </button>
+        </div>
+        <p class="text-[10px] text-slate-400 mb-1">
+          Podés generarlo desde los datos del formulario y luego ajustarlo manualmente si hace
+          falta.
+        </p>
+        <textarea
+          [ngModel]="form.material_filmico"
+          (ngModelChange)="onMaterialFilmicoChange($event)"
+          name="material_filmico"
+          rows="5"
+          placeholder="Completá la introducción y el detalle del material fílmico analizado."
+          class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+        ></textarea>
+      </div>
+      <div>
+        <div class="flex items-center gap-1 mb-1">
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Desarrollo</label>
+          <span class="text-[10px] text-indigo-500 font-semibold ml-1">IA</span>
+          <button
+            type="button"
+            data-help-trigger
+            (click)="toggleHelp('desarrollo', $event)"
+            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+            aria-label="Ayuda Desarrollo"
+          >
+            ?
+          </button>
+        </div>
+        <textarea
+          [ngModel]="form.desarrollo"
+          (ngModelChange)="onDesarrolloChange($event)"
+          name="desarrollo"
+          rows="6"
+          placeholder="Completá el desarrollo cronológico de lo observado."
+          class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+        ></textarea>
+      </div>
+      <div>
+        <div class="flex items-center gap-1 mb-1">
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-0">Conclusion</label>
+          <span class="text-[10px] text-indigo-500 font-semibold ml-1">IA</span>
+          <button
+            type="button"
+            data-help-trigger
+            (click)="toggleHelp('conclusion', $event)"
+            class="w-4 h-4 rounded-full border border-indigo-300 text-indigo-700 text-[10px] leading-none font-bold"
+            aria-label="Ayuda Conclusion"
+          >
+            ?
+          </button>
+        </div>
+        <textarea
+          [ngModel]="form.conclusion"
+          (ngModelChange)="onConclusionChange($event)"
+          name="conclusion"
+          rows="5"
+          placeholder="Completá la conclusión y el resultado final del análisis."
+          class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+        ></textarea>
+      </div>
+    </div>
+
+    <div class="space-y-3 pt-4 border-t border-slate-200" data-report-actions>
+      <div
+        *ngIf="isGeneratingFullReport"
+        class="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-cyan-50 to-indigo-50 px-3 py-2"
+      >
+        <div class="flex items-center justify-between text-xs text-slate-700">
+          <span class="inline-flex items-center gap-2 font-medium">
+            <span class="ai-status-dot"></span>
+            {{ aiProgressLabel || 'Analizando informe' }}
+          </span>
+          <span class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500"
+            >Procesando</span
+          >
+        </div>
+        <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-indigo-100">
+          <div
+            class="ai-progress-bar h-full w-1/3 rounded-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500"
+          ></div>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div
+          class="flex flex-col gap-1 rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 xl:min-w-[220px]"
+        >
+          <label class="text-xs font-bold text-slate-600 uppercase">Proveedor IA</label>
+          <select
+            [(ngModel)]="selectedAiProvider"
+            name="aiProvider"
+            class="px-3 py-2 text-sm border border-indigo-200 rounded-xl bg-white text-indigo-900 shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+          >
+            <option value="gemini">Gemini</option>
+            <option value="groq">Groq</option>
+            <option value="openrouter">OpenRouter</option>
+          </select>
+        </div>
+
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-end gap-3">
+          <button
+            type="button"
+            (click)="saveReportToDatabase()"
+            [disabled]="isGenerating || isReadOnly()"
+            class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-semibold transition-colors shadow-sm disabled:opacity-60"
+            style="pointer-events: auto !important"
+          >
+            <svg
+              class="w-4 h-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+            Resguardar Borrador Local
+          </button>
+          <button
+            type="button"
+            (click)="generateFullReportWithAi()"
+            [disabled]="isGeneratingFullReport || !canUseAiCompletion()"
+            data-ai-complete-button
+            class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md text-white text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            style="pointer-events: auto !important"
+          >
+            <span
+              *ngIf="isGeneratingFullReport"
+              class="w-4 h-4 rounded-full border-2 border-indigo-200 border-t-white animate-spin"
+            ></span>
+            <svg
+              *ngIf="!isGeneratingFullReport"
+              class="w-4 h-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m13 2 1.5 4.5L19 8l-4.5 1.5L13 14l-1.5-4.5L7 8l4.5-1.5L13 2Z" />
+              <path d="m6 14 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z" />
+            </svg>
+            {{
+              isGeneratingFullReport ? 'Generando todo el informe...' : 'Completar Todo el Informe'
+            }}
+          </button>
+          <button
+            type="button"
+            (click)="finalizeReportInDatabase()"
+            [disabled]="isGenerating || isReadOnly()"
+            class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 border border-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold transition-colors shadow-sm disabled:opacity-60"
+            style="pointer-events: auto !important"
+          >
+            <svg
+              class="w-4 h-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+            Finalizar y Guardar
+          </button>
+          <button
+            type="submit"
+            [disabled]="isGenerating"
+            class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-semibold transition-colors shadow-sm"
+            style="pointer-events: auto !important"
+          >
+            <svg
+              class="w-4 h-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+            {{
+              isGenerating
+                ? 'Generando...'
+                : isReadOnly()
+                  ? 'Volver a descargar (DOC)'
+                  : 'Generar Informe (DOC)'
+            }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      *ngIf="false"
+      class="flex flex-col md:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-200"
+    >
+      <button
+        type="button"
+        (click)="saveReportToDatabase()"
+        [disabled]="isGenerating || isReadOnly()"
+        class="px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-semibold transition-colors shadow-sm disabled:opacity-60"
+        style="pointer-events: auto !important"
+      >
+        💾 Resguardar Borrador Local
+      </button>
+      <button
+        type="submit"
+        [disabled]="isGenerating"
+        class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-semibold transition-colors shadow-sm"
+        style="pointer-events: auto !important"
+      >
+        {{
+          isGenerating
+            ? 'Generando...'
+            : isReadOnly()
+              ? 'Volver a descargar (DOC)'
+              : '📄 Generar Informe
+                (DOC)'
+        }}
+      </button>
+    </div>
+  </form>
 </div>

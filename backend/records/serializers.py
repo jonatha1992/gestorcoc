@@ -228,6 +228,7 @@ class VideoReportMaterialContextSerializer(serializers.Serializer):
     unidad = serializers.CharField(max_length=200, required=False, allow_blank=True)
     involved_people_summary = serializers.CharField(max_length=3000, required=False, allow_blank=True)
     involved_people = VideoReportInvolvedPersonSerializer(many=True, required=False)
+    frames_summary = serializers.CharField(max_length=5000, required=False, allow_blank=True)
     vms_native_hash_algorithms = serializers.ListField(
         child=serializers.ChoiceField(choices=HASH_ALGORITHM_CHOICES),
         required=False,
@@ -266,15 +267,10 @@ class VideoReportMaterialContextSerializer(serializers.Serializer):
     def validate(self, attrs):
         mode = (attrs.get('vms_authenticity_mode') or '').strip()
         detail = (attrs.get('vms_authenticity_detail') or '').strip()
-        vms_native_algorithms = attrs.get('vms_native_hash_algorithms') or []
         hash_algorithms = attrs.get('hash_algorithms') or []
         if mode == 'otro' and not detail:
             raise serializers.ValidationError({
                 'vms_authenticity_detail': "Debe completar detalle cuando autenticidad = 'otro'."
-            })
-        if 'otro' in vms_native_algorithms and not (attrs.get('vms_native_hash_algorithm_other') or '').strip():
-            raise serializers.ValidationError({
-                'vms_native_hash_algorithm_other': "Debe completar el nombre del algoritmo nativo cuando selecciona 'otro'."
             })
         if 'otro' in hash_algorithms and not (attrs.get('hash_algorithm_other') or '').strip():
             raise serializers.ValidationError({
@@ -340,7 +336,7 @@ class VideoReportDataSerializer(serializers.Serializer):
     objeto_denunciado = serializers.CharField(max_length=200)
     desarrollo = serializers.CharField(required=False, allow_blank=True)
     conclusion = serializers.CharField(required=False, allow_blank=True)
-    firma = serializers.CharField(max_length=200)
+    firma = serializers.CharField(required=False, allow_blank=True)
 
     def to_internal_value(self, data):
         if isinstance(data, dict):
@@ -366,15 +362,10 @@ class VideoReportDataSerializer(serializers.Serializer):
     def validate(self, attrs):
         mode = (attrs.get('vms_authenticity_mode') or '').strip()
         detail = (attrs.get('vms_authenticity_detail') or '').strip()
-        vms_native_algorithms = attrs.get('vms_native_hash_algorithms') or []
         hash_algorithms = attrs.get('hash_algorithms') or []
         if mode == 'otro' and not detail:
             raise serializers.ValidationError({
                 'vms_authenticity_detail': "Debe completar detalle cuando autenticidad = 'otro'."
-            })
-        if 'otro' in vms_native_algorithms and not (attrs.get('vms_native_hash_algorithm_other') or '').strip():
-            raise serializers.ValidationError({
-                'vms_native_hash_algorithm_other': "Debe completar el nombre del algoritmo nativo cuando selecciona 'otro'."
             })
         if 'otro' in hash_algorithms and not (attrs.get('hash_algorithm_other') or '').strip():
             raise serializers.ValidationError({
@@ -390,7 +381,8 @@ class VideoReportFrameSerializer(serializers.Serializer):
     file_name = serializers.CharField(max_length=255)
     mime_type = serializers.CharField(max_length=50)
     content_base64 = serializers.CharField()
-    description = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    frame_time = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    description = serializers.CharField(required=True, allow_blank=False, max_length=500)
     order = serializers.IntegerField(min_value=0)
 
     def validate_mime_type(self, value):
