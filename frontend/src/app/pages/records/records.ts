@@ -9,6 +9,8 @@ import { InformeService } from '../../services/informe.service';
 import { PersonnelService } from '../../services/personnel.service';
 import { RecordsService } from '../../services/records.service';
 import { ToastService } from '../../services/toast.service';
+import { AuthService } from '../../services/auth.service';
+import { PermissionCodes } from '../../auth/auth.models';
 import {
   getFirstDayOfCurrentMonthInputValue,
   getTodayDateInputValue,
@@ -77,6 +79,7 @@ export class RecordsComponent implements OnInit {
   private toastService = inject(ToastService);
   private informeService = inject(InformeService);
   private router = inject(Router);
+  readonly authService = inject(AuthService);
 
   records = signal<any[]>([]);
   people = signal<any[]>([]);
@@ -114,6 +117,26 @@ export class RecordsComponent implements OnInit {
   newRecord: any = this.createEmptyRecord();
   invalidFields = new Set<string>();
   validationMessage = '';
+
+  get canManageRecords(): boolean {
+    return this.authService.hasPermission(PermissionCodes.MANAGE_RECORDS);
+  }
+
+  get canUseReportTools(): boolean {
+    return this.authService.hasPermission(PermissionCodes.USE_REPORTS);
+  }
+
+  get canVerifyCrev(): boolean {
+    return this.authService.hasPermission(PermissionCodes.VERIFY_CREV);
+  }
+
+  private requireManageRecords(): boolean {
+    if (this.canManageRecords) {
+      return true;
+    }
+    this.toastService.show('No tiene permiso para modificar registros.', 'warning');
+    return false;
+  }
 
   isFieldInvalid(fieldName: string): boolean {
     return this.invalidFields.has(fieldName);
@@ -229,6 +252,10 @@ export class RecordsComponent implements OnInit {
   }
 
   openInforme(record: any) {
+    if (!this.canUseReportTools) {
+      this.toastService.show('No tiene permiso para trabajar con informes.', 'warning');
+      return;
+    }
     const existing = this.informesMap()[record.id];
     if (existing) {
       void this.router.navigate(['/informes'], { queryParams: { informe_id: existing.id } });
@@ -260,6 +287,9 @@ export class RecordsComponent implements OnInit {
   }
 
   openCreateForm() {
+    if (!this.requireManageRecords()) {
+      return;
+    }
     this.resetForm();
     this.invalidFields.clear();
     this.validationMessage = '';
@@ -271,6 +301,9 @@ export class RecordsComponent implements OnInit {
   }
 
   editRecord(record: any) {
+    if (!this.requireManageRecords()) {
+      return;
+    }
     const involvedPeople = Array.isArray(record?.involved_people)
       ? record.involved_people.map((person: any) => ({
         role: person?.role || 'OTRO',
@@ -338,7 +371,37 @@ export class RecordsComponent implements OnInit {
     this.showForm.set(true);
   }
 
+  verifyRecord(record: any) {
+    if (!this.canVerifyCrev) {
+      this.toastService.show('No tiene permiso para verificar por CREV.', 'warning');
+      return;
+    }
+
+    const observations = prompt('Observaciones de verificacion CREV (opcional):', '');
+    if (observations === null) {
+      return;
+    }
+
+    this.recordsService.verifyByCrev(record.id, observations).subscribe({
+      next: (response) => {
+        const updatedRecord = response?.record ?? response;
+        this.toastService.show('Registro verificado por CREV.', 'success');
+        if (this.selectedRecord()?.id === updatedRecord?.id) {
+          this.selectedRecord.set(updatedRecord);
+        }
+        this.loadData();
+      },
+      error: (error) => {
+        const detail = error?.error?.error || error?.error?.detail || 'No se pudo verificar el registro.';
+        this.toastService.show(detail, 'error');
+      }
+    });
+  }
+
   saveRecord() {
+    if (!this.requireManageRecords()) {
+      return;
+    }
     this.invalidFields.clear();
     this.validationMessage = '';
 
@@ -435,6 +498,9 @@ export class RecordsComponent implements OnInit {
   }
 
   deleteRecord(record: any) {
+    if (!this.requireManageRecords()) {
+      return;
+    }
     if (!record?.id) {
       return;
     }
@@ -491,7 +557,7 @@ export class RecordsComponent implements OnInit {
   }
 
   getOperatorName(record: any): string {
-    return record?.operator_full_name || record?.operator_name || '-';
+    return record?.operator_full_name || record?.operator_name || record?.operator || '-';
   }
 
   isRecordVerified(record: any): boolean {

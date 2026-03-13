@@ -52,8 +52,8 @@ const personnelResponse: DashboardModuleResponse = {
   series: {
     trend: [{ label: '2026-03-01', value: 4 }],
     distribution_primary: [
-      { key: 'OP_CONTROL', label: 'Operador de Camaras (Fijas/Domos/PTZ)', value: 2 },
-      { key: 'OP_VIEWER', label: 'Solo Visualizacion', value: 1 },
+      { key: 'COORDINADOR_COC', label: 'Coordinador COC', value: 2 },
+      { key: 'OPERADOR', label: 'Operador', value: 1 },
     ],
     distribution_secondary: [{ key: 'active', label: 'Activos', value: 3 }],
   },
@@ -159,9 +159,9 @@ describe('HomeComponent', () => {
     const text = fixture.nativeElement.textContent as string;
     const dateInputs = fixture.nativeElement.querySelectorAll('input[type="date"]');
 
-    expect(text).toContain('Operador de camaras');
-    expect(text).toContain('Solo visualizacion');
-    expect(text).not.toContain('OP_CONTROL');
+    expect(text).toContain('Coordinador COC');
+    expect(text).toContain('Operador');
+    expect(text).not.toContain('COORDINADOR_COC');
     expect(dateInputs.length).toBe(2);
   });
 

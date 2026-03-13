@@ -1,8 +1,11 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { PersonnelService } from '../../services/personnel.service';
+
+import { PermissionCodes, RoleLabels } from '../../auth/auth.models';
+import { AuthService } from '../../services/auth.service';
 import { AssetService, Unit } from '../../services/asset.service';
+import { PersonnelService } from '../../services/personnel.service';
 import { ToastService } from '../../services/toast.service';
 
 @Component({
@@ -16,20 +19,21 @@ export class PersonnelComponent implements OnInit {
   private personnelService = inject(PersonnelService);
   private assetService = inject(AssetService);
   private toastService = inject(ToastService);
+  readonly authService = inject(AuthService);
 
-  readonly ROLE_LABELS: Record<string, string> = {
-    ADMIN: 'Administrador',
-    OP_EXTRACTION: 'Operador Extracción',
-    OP_CONTROL: 'Operador Control',
-    OP_VIEWER: 'Solo Visualización',
-  };
+  readonly ROLE_LABELS: Record<string, string> = { ...RoleLabels };
+  readonly ROLE_OPTIONS = [
+    { value: 'OPERADOR', label: 'Operador' },
+    { value: 'COORDINADOR_COC', label: 'Coordinador COC' },
+    { value: 'CREV', label: 'CREV' },
+    { value: 'COORDINADOR_CREV', label: 'Coordinador CREV' },
+    { value: 'ADMIN', label: 'Administrador' },
+  ];
 
   readonly RANK_OPTIONS = [
-    { value: 'JEFE', label: 'Jefe' },
-    { value: 'OFICIAL_AYUDANTE_PRINCIPAL', label: 'Oficial Ayudante Principal' },
+    { value: 'OFICIAL_AYUDANTE', label: 'Of. Ayte.' },
     { value: 'OFICIAL_PRINCIPAL', label: 'Oficial Principal' },
-    { value: 'OFICIAL', label: 'Oficial' },
-    { value: 'MAYOR', label: 'Mayor' },
+    { value: 'OFICIAL_MAYOR', label: 'Oficial Mayor' },
     { value: 'OFICIAL_JEFE', label: 'Oficial Jefe' },
     { value: 'SUBINSPECTOR', label: 'Subinspector' },
     { value: 'INSPECTOR', label: 'Inspector' },
@@ -42,14 +46,6 @@ export class PersonnelComponent implements OnInit {
     {} as Record<string, string>
   );
 
-  getRoleLabel(role: string): string {
-    return this.ROLE_LABELS[role] ?? role;
-  }
-
-  getRankLabel(rank: string): string {
-    return this.RANK_LABELS[rank] ?? rank;
-  }
-
   people = signal<any[]>([]);
   systems = signal<any[]>([]);
   units = signal<Unit[]>([]);
@@ -57,13 +53,11 @@ export class PersonnelComponent implements OnInit {
   isEditing = false;
   searchText = '';
 
-  // Pagination
   currentPage = 1;
   totalCount = 0;
   pageSize = 50;
   get totalPages() { return Math.ceil(this.totalCount / this.pageSize); }
 
-  // Filters
   filterRole = '';
   filterActive = '';
   filterUnit = '';
@@ -72,10 +66,22 @@ export class PersonnelComponent implements OnInit {
 
   currentPerson: any = this.getEmptyPerson();
 
+  get canManagePersonnel(): boolean {
+    return this.authService.hasPermission(PermissionCodes.MANAGE_PERSONNEL);
+  }
+
   ngOnInit() {
     this.loadUnits();
     this.loadPeople();
     this.loadSystems();
+  }
+
+  getRoleLabel(role: string): string {
+    return this.ROLE_LABELS[role] ?? role;
+  }
+
+  getRankLabel(rank: string): string {
+    return this.RANK_LABELS[rank] ?? rank;
   }
 
   loadUnits() {
@@ -169,7 +175,7 @@ export class PersonnelComponent implements OnInit {
       first_name: '',
       last_name: '',
       badge_number: '',
-      role: 'OP_VIEWER',
+      role: 'OPERADOR',
       rank: 'CIVIL',
       unit: availableUnits.length > 0 ? availableUnits[0].code : '',
       guard_group: '',
@@ -179,14 +185,19 @@ export class PersonnelComponent implements OnInit {
   }
 
   openForm() {
+    if (!this.requireManagePersonnel()) {
+      return;
+    }
     this.isEditing = false;
     this.currentPerson = this.getEmptyPerson();
     this.showForm.set(true);
   }
 
   editPerson(person: any) {
+    if (!this.requireManagePersonnel()) {
+      return;
+    }
     this.isEditing = true;
-    // Copy object to avoid reference issues, map assigned_systems IDs
     this.currentPerson = {
       ...person,
       rank: person.rank || 'CIVIL',
@@ -214,24 +225,30 @@ export class PersonnelComponent implements OnInit {
   }
 
   toggleActive(person: any) {
+    if (!this.requireManagePersonnel()) {
+      return;
+    }
     const updatedPerson = { ...person, is_active: !person.is_active };
     this.personnelService.updatePerson(person.id, updatedPerson).subscribe({
       next: () => {
         this.toastService.show(updatedPerson.is_active ? 'Personal activado' : 'Personal desactivado', 'success');
         this.loadPeople();
       },
-      error: (err) => this.toastService.show('Error al cambiar estado', 'error')
+      error: () => this.toastService.show('Error al cambiar estado', 'error')
     });
   }
 
   deletePerson(id: number) {
-    if (confirm('ADVERTENCIA: ¿Está seguro de eliminar permanentemente a este usuario? Esta acción no se puede deshacer.')) {
+    if (!this.requireManagePersonnel()) {
+      return;
+    }
+    if (confirm('ADVERTENCIA: Esta seguro de eliminar permanentemente a este usuario? Esta accion no se puede deshacer.')) {
       this.personnelService.deletePerson(id).subscribe({
         next: () => {
           this.toastService.show('Personal eliminado correctamente', 'success');
           this.loadPeople();
         },
-        error: (err) => this.toastService.show('Error al eliminar usuario', 'error')
+        error: () => this.toastService.show('Error al eliminar usuario', 'error')
       });
     }
   }
@@ -242,6 +259,9 @@ export class PersonnelComponent implements OnInit {
   }
 
   savePerson() {
+    if (!this.requireManagePersonnel()) {
+      return;
+    }
     this.onBadgeNumberInput();
 
     const request = this.isEditing
@@ -249,7 +269,7 @@ export class PersonnelComponent implements OnInit {
       : this.personnelService.createPerson(this.currentPerson);
 
     request.subscribe({
-      next: (res) => {
+      next: () => {
         this.toastService.show(this.isEditing ? 'Personal actualizado' : 'Personal registrado', 'success');
         this.closeForm();
         this.loadPeople();
@@ -259,5 +279,13 @@ export class PersonnelComponent implements OnInit {
         this.toastService.show('Error al guardar personal', 'error');
       }
     });
+  }
+
+  private requireManagePersonnel(): boolean {
+    if (this.canManagePersonnel) {
+      return true;
+    }
+    this.toastService.error('No tiene permiso para modificar personal.');
+    return false;
   }
 }

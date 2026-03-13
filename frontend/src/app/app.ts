@@ -4,7 +4,9 @@ import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs';
 import { SpinnerComponent } from './components/spinner.component';
 import { ToastComponent } from './components/toast.component';
+import { PermissionCode } from './auth/auth.models';
 import { LayoutService } from './services/layout.service';
+import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -17,17 +19,22 @@ export class App {
   title = 'Gestor COC';
   pageTitle = 'Panel operativo';
   isSidebarCollapsed = false;
+  isAuthRoute = false;
   private hasInitializedViewport = false;
   readonly layoutService = inject(LayoutService);
+  readonly authService = inject(AuthService);
 
   constructor(private router: Router) {
     this.syncSidebarWithViewport();
     this.setPageTitle(this.router.url);
+    this.isAuthRoute = this.router.url.startsWith('/login');
+    this.authService.ensureSession().subscribe();
 
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event: any) => {
       this.setPageTitle(event.url);
+      this.isAuthRoute = event.url.startsWith('/login');
     });
   }
 
@@ -38,6 +45,14 @@ export class App {
 
   toggleSidebar() {
     this.isSidebarCollapsed = !this.isSidebarCollapsed;
+  }
+
+  canAccess(permission: PermissionCode | string): boolean {
+    return this.authService.hasPermission(permission);
+  }
+
+  logout() {
+    this.authService.logout();
   }
 
   private syncSidebarWithViewport() {
@@ -69,6 +84,8 @@ export class App {
       this.pageTitle = 'Generador de Informes';
     } else if (url.includes('/settings')) {
       this.pageTitle = 'Configuracion';
+    } else if (url.includes('/login')) {
+      this.pageTitle = 'Ingreso';
     } else {
       this.pageTitle = 'Panel operativo';
     }

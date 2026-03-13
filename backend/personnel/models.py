@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
 
@@ -15,11 +16,18 @@ DNI_VALIDATOR = RegexValidator(
 
 
 class Person(TimeStampedModel):
+    ROLE_OPERADOR = "OPERADOR"
+    ROLE_COORDINADOR_COC = "COORDINADOR_COC"
+    ROLE_CREV = "CREV"
+    ROLE_COORDINADOR_CREV = "COORDINADOR_CREV"
+    ROLE_ADMIN = "ADMIN"
+
     ROLE_CHOICES = [
-        ("ADMIN", "Administrador"),
-        ("OP_EXTRACTION", "Operador Basico (Extraccion/Visualizacion)"),
-        ("OP_CONTROL", "Operador de Camaras (Fijas/Domos/PTZ)"),
-        ("OP_VIEWER", "Solo Visualizacion"),
+        (ROLE_OPERADOR, "Operador"),
+        (ROLE_COORDINADOR_COC, "Coordinador COC"),
+        (ROLE_CREV, "CREV"),
+        (ROLE_COORDINADOR_CREV, "Coordinador CREV"),
+        (ROLE_ADMIN, "Administrador"),
     ]
 
     RANK_CHOICES = [
@@ -36,13 +44,21 @@ class Person(TimeStampedModel):
 
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="person",
+        help_text="Cuenta de sistema asociada",
+    )
     badge_number = models.CharField(
         max_length=6,
         unique=True,
         validators=[LEGAJO_VALIDATOR],
         help_text="Legajo (6 digitos)",
     )
-    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default="OP_VIEWER")
+    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default=ROLE_OPERADOR)
     rank = models.CharField(
         max_length=40,
         choices=RANK_CHOICES,
@@ -72,6 +88,22 @@ class Person(TimeStampedModel):
 
     def __str__(self):
         return f"{self.last_name}, {self.first_name} ({self.badge_number})"
+
+
+class UserAccountProfile(TimeStampedModel):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="account_profile",
+    )
+    must_change_password = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Perfil de cuenta"
+        verbose_name_plural = "Perfiles de cuenta"
+
+    def __str__(self):
+        return f"Perfil {self.user.username}"
 
 
 class ExternalPerson(TimeStampedModel):

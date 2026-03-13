@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HechosService, Hecho } from '../../services/hechos';
 import { AssetService } from '../../services/asset.service';
 import { ToastService } from '../../services/toast.service';
+import { AuthService } from '../../services/auth.service';
+import { PermissionCodes } from '../../auth/auth.models';
 import {
   getFirstDayOfCurrentMonthInputValue,
   getNowDateTimeLocalInputValue,
@@ -22,6 +24,7 @@ export class HechosComponent implements OnInit {
   private hechosService = inject(HechosService);
   private assetService = inject(AssetService);
   private toastService = inject(ToastService);
+  readonly authService = inject(AuthService);
 
   hechos = signal<Hecho[]>([]);
   cameras = signal<any[]>([]);
@@ -48,6 +51,18 @@ export class HechosComponent implements OnInit {
     category: 'OPERATIVO',
     timestamp: getNowDateTimeLocalInputValue(),
   };
+
+  get canManageHechos(): boolean {
+    return this.authService.hasPermission(PermissionCodes.MANAGE_HECHOS);
+  }
+
+  private requireManageHechos(): boolean {
+    if (this.canManageHechos) {
+      return true;
+    }
+    this.toastService.error('No tiene permiso para modificar hechos.');
+    return false;
+  }
 
   ngOnInit() {
     this.loadHechos();
@@ -127,6 +142,9 @@ export class HechosComponent implements OnInit {
   }
 
   openForm() {
+    if (!this.requireManageHechos()) {
+      return;
+    }
     this.currentHecho = {
       category: 'OPERATIVO',
       timestamp: getNowDateTimeLocalInputValue(),
@@ -138,8 +156,12 @@ export class HechosComponent implements OnInit {
   }
 
   editHecho(hecho: Hecho) {
+    if (!this.requireManageHechos()) {
+      return;
+    }
     this.currentHecho = {
       ...hecho,
+      camera: (hecho as any).camera ?? (hecho as any).camera_details?.id ?? null,
       timestamp: toDateTimeLocalInputValue(hecho.timestamp),
       end_time: toDateTimeLocalInputValue(hecho.end_time),
     };
@@ -147,6 +169,9 @@ export class HechosComponent implements OnInit {
   }
 
   deleteHecho(id: number) {
+    if (!this.requireManageHechos()) {
+      return;
+    }
     if (!confirm('¿Estás seguro de eliminar este registro?')) return;
 
     this.hechosService.deleteHecho(id).subscribe({
@@ -163,18 +188,23 @@ export class HechosComponent implements OnInit {
   }
 
   saveHecho() {
+    if (!this.requireManageHechos()) {
+      return;
+    }
     if (!this.currentHecho.timestamp) {
       this.toastService.show('La fecha es obligatoria', 'error');
       return;
     }
 
-    const payload: Partial<Hecho> = {
+    const payload: Partial<Hecho> & { camera_id?: number | null } = {
       ...this.currentHecho,
+      camera_id: this.currentHecho.camera ?? null,
       timestamp: new Date(this.currentHecho.timestamp).toISOString(),
       end_time: this.currentHecho.end_time
         ? new Date(this.currentHecho.end_time).toISOString()
         : undefined,
     };
+    delete payload.camera;
 
     const request = this.currentHecho.id
       ? this.hechosService.updateHecho(this.currentHecho.id, payload)

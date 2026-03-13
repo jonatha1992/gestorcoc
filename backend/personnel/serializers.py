@@ -11,6 +11,9 @@ class PersonSerializer(serializers.ModelSerializer):
     unit = serializers.SlugRelatedField(queryset=Unit.objects.all(), slug_field="code", required=False, allow_null=True)
     rank_display = serializers.CharField(source="get_rank_display", read_only=True)
     role_display = serializers.CharField(source="get_role_display", read_only=True)
+    user_id = serializers.IntegerField(source="user.id", read_only=True)
+    username = serializers.CharField(source="user.username", read_only=True)
+    has_account = serializers.SerializerMethodField()
 
     def get_assigned_systems_details(self, obj):
         return [
@@ -24,6 +27,9 @@ class PersonSerializer(serializers.ModelSerializer):
             }
             for system in obj.assigned_systems.all()
         ]
+
+    def get_has_account(self, obj):
+        return obj.user_id is not None
 
     class Meta:
         model = Person
@@ -40,6 +46,9 @@ class PersonSerializer(serializers.ModelSerializer):
             "guard_group",
             "assigned_systems",
             "assigned_systems_details",
+            "user_id",
+            "username",
+            "has_account",
             "is_active",
         ]
 

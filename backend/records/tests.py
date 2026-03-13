@@ -3,12 +3,13 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from unittest.mock import Mock, patch
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.exceptions import RequestDataTooBig
 from django.db import connection
 from django.test import RequestFactory, TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, force_authenticate
 from assets.models import Camera, Server, System, Unit
 from hechos.models import Hecho
 from novedades.models import Novedad
@@ -18,16 +19,43 @@ from .services import IntegrityService
 from .views import DashboardMapView, DashboardNovedadesView
 
 
+_user_sequence = 0
+
+
+def create_authenticated_user(*, username_prefix='tester', badge_prefix='88', role=Person.ROLE_ADMIN, with_person=True):
+    global _user_sequence
+    _user_sequence += 1
+    username = f'{username_prefix}_{_user_sequence}'
+    User = get_user_model()
+    user = User.objects.create_user(username=username, password='password123!')
+    user.is_staff = True
+    user.is_superuser = True
+    user.save(update_fields=['is_staff', 'is_superuser'])
+
+    if with_person:
+        badge_number = f'{badge_prefix}{_user_sequence:04d}'[-6:]
+        Person.objects.create(
+            first_name='Test',
+            last_name='User',
+            badge_number=badge_number,
+            role=role,
+            user=user,
+        )
+    return user
+
+
 class DashboardLabelApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = create_authenticated_user(username_prefix='dashboard')
+        self.client.force_authenticate(self.user)
 
     def test_personnel_dashboard_uses_humanized_role_labels(self):
         Person.objects.create(
             first_name='Ana',
             last_name='Control',
             badge_number='223456',
-            role='OP_CONTROL',
+            role=Person.ROLE_COORDINADOR_COC,
         )
         Person.objects.create(
             first_name='Luis',
@@ -40,7 +68,7 @@ class DashboardLabelApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         labels = {item['label'] for item in response.data['series']['distribution_primary']}
-        self.assertIn('OP_CONTROL', labels)
+        self.assertIn(Person.ROLE_COORDINADOR_COC, labels)
         self.assertIn('ADMIN', labels)
 
     def test_novedades_dashboard_uses_humanized_status_labels(self):
@@ -93,7 +121,7 @@ class DashboardLabelApiTests(TestCase):
             first_name='Ana',
             last_name='Enero',
             badge_number='323456',
-            role='OP_CONTROL',
+            role=Person.ROLE_COORDINADOR_COC,
         )
         march = Person.objects.create(
             first_name='Luis',
@@ -119,6 +147,7 @@ class DashboardLabelApiTests(TestCase):
 class DashboardQueryPerformanceTests(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
+        self.user = create_authenticated_user(username_prefix='queries')
         self.unit = Unit.objects.create(
             name='Ezeiza',
             code='EZE',
@@ -140,11 +169,12 @@ class DashboardQueryPerformanceTests(TestCase):
             last_name='Mapa',
             badge_number='555001',
             unit=self.unit,
-            role='OP_CONTROL',
+            role=Person.ROLE_COORDINADOR_COC,
         )
 
     def test_novedades_dashboard_uses_a_small_fixed_number_of_queries(self):
         request = self.factory.get('/api/dashboard/novedades/')
+        force_authenticate(request, user=self.user)
         view = DashboardNovedadesView.as_view()
 
         with CaptureQueriesContext(connection) as context:
@@ -156,6 +186,7 @@ class DashboardQueryPerformanceTests(TestCase):
 
     def test_map_dashboard_does_not_execute_queries_inside_the_unit_loop(self):
         request = self.factory.get('/api/dashboard/map/?scope=ba')
+        force_authenticate(request, user=self.user)
         view = DashboardMapView.as_view()
 
         with CaptureQueriesContext(connection) as context:
@@ -169,6 +200,8 @@ class DashboardQueryPerformanceTests(TestCase):
 class HechoFutureDateValidationApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = create_authenticated_user(username_prefix='hechos')
+        self.client.force_authenticate(self.user)
         unit = Unit.objects.create(name='Unidad Hechos', code='UHT')
         system = System.objects.create(name='SYS-UHT', unit=unit)
         server = Server.objects.create(system=system, name='SRV-UHT', ip_address='10.0.1.10')
@@ -212,6 +245,8 @@ class HechoFutureDateValidationApiTests(TestCase):
 class FilmRecordApiPeopleTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = create_authenticated_user(username_prefix='film-record')
+        self.client.force_authenticate(self.user)
         self.records_url = '/api/film-records/'
         self.operator = Person.objects.create(
             first_name='Juan',
@@ -241,7 +276,7 @@ class FilmRecordApiPeopleTests(TestCase):
             "incident_sector": "Cinta 3",
             "incident_time": "14:05",
             "generator_unit": self.unit.id,
-            "operator": self.operator.id,
+            "operator": f"{self.operator.last_name}, {self.operator.first_name}",
             "received_by": self.receiver.id,
             "involved_people": [
                 {
@@ -327,6 +362,8 @@ class FilmRecordApiPeopleTests(TestCase):
 class FilmRecordFutureDateValidationApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = create_authenticated_user(username_prefix='film-record-future')
+        self.client.force_authenticate(self.user)
         self.records_url = '/api/film-records/'
         self.unit = Unit.objects.create(name='Unidad Test', code='UTF')
 
@@ -391,6 +428,8 @@ class FilmRecordFutureDateValidationApiTests(TestCase):
 class VideoAnalysisReportApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = create_authenticated_user(username_prefix='video-report')
+        self.client.force_authenticate(self.user)
         self.url = '/api/video-analysis-report/'
         self.valid_report_data = {
             "report_date": "2026-03-09",
@@ -808,6 +847,8 @@ class VideoAnalysisReportApiTests(TestCase):
 class VideoAnalysisReportStateApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = create_authenticated_user(username_prefix='report-state')
+        self.client.force_authenticate(self.user)
         self.record = FilmRecord.objects.create()
 
     def test_save_report_draft_marks_report_as_borrador(self):
@@ -1005,6 +1046,8 @@ class SerializerLimitConsistencyTests(TestCase):
 class VideoAnalysisImproveTextApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = create_authenticated_user(username_prefix='improve-text')
+        self.client.force_authenticate(self.user)
         self.url = '/api/video-analysis-improve-text/'
 
     @patch('records.views.IntegrityService.improve_report_text_with_ai')
