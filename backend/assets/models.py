@@ -85,6 +85,11 @@ class Camera(TimeStampedModel):
     ip_address = models.GenericIPAddressField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ONLINE', db_index=True)
     resolution = models.CharField(max_length=20, default='1080p')
+    photo_data = models.TextField(
+        blank=True,
+        default='',
+        help_text='Imagen de referencia pequena en formato data URL base64.',
+    )
 
     def __str__(self):
         return f"{self.name} ({self.status})"

@@ -32,8 +32,8 @@ export class AssetsComponent implements OnInit {
   totalServers = 0;
   error: string | null = null;
   activeTab: 'cctv' | 'gear' = 'cctv';
-  isLoadingCctv = false;
-  isLoadingGear = false;
+  isLoadingCctv = true;
+  isLoadingGear = true;
 
   expandedSystemIds = new Set<number>();
   expandedServerIds = new Set<number>();
@@ -464,12 +464,18 @@ export class AssetsComponent implements OnInit {
   // Camera CRUD
   showCameraModal = false;
   currentCamera: any = {};
+  readonly allowedCameraPhotoMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+  readonly cameraPhotoMaxBytes = 250 * 1024;
+  readonly cameraPhotoMaxDimension = 960;
+  isProcessingCameraPhoto = false;
+  cameraPhotoError: string | null = null;
 
   openCameraModal(serverId: number) {
     if (!this.requireManageAssets()) {
       return;
     }
-    this.currentCamera = { server: serverId, status: 'ONLINE' };
+    this.currentCamera = { server: serverId, status: 'ONLINE', resolution: '1080p', photo_data: '' };
+    this.cameraPhotoError = null;
     this.showCameraModal = true;
   }
 
@@ -477,17 +483,24 @@ export class AssetsComponent implements OnInit {
     if (!this.requireManageAssets()) {
       return;
     }
-    this.currentCamera = { ...cam };
+    this.currentCamera = { ...cam, photo_data: cam.photo_data || '' };
+    this.cameraPhotoError = null;
     this.showCameraModal = true;
   }
 
   closeCameraModal() {
     this.showCameraModal = false;
     this.currentCamera = {};
+    this.cameraPhotoError = null;
+    this.isProcessingCameraPhoto = false;
   }
 
   saveCamera() {
     if (!this.requireManageAssets()) {
+      return;
+    }
+    if (this.isProcessingCameraPhoto) {
+      this.toastService.error('Espere a que termine la compresion de la foto.');
       return;
     }
     this.loadingService.show();
@@ -506,6 +519,130 @@ export class AssetsComponent implements OnInit {
         this.loadingService.hide();
       }
     });
+  }
+
+  async onCameraPhotoSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!this.allowedCameraPhotoMimeTypes.has(file.type)) {
+      this.cameraPhotoError = 'Formato no soportado. Use JPG, PNG o WEBP.';
+      this.toastService.error(this.cameraPhotoError);
+      input.value = '';
+      return;
+    }
+
+    this.isProcessingCameraPhoto = true;
+    this.cameraPhotoError = null;
+    this.cdr.detectChanges();
+
+    try {
+      this.currentCamera.photo_data = await this.compressCameraPhoto(file);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo procesar la foto.';
+      this.currentCamera.photo_data = '';
+      this.cameraPhotoError = message;
+      this.toastService.error(message);
+      input.value = '';
+    } finally {
+      this.isProcessingCameraPhoto = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  clearCameraPhoto(input?: HTMLInputElement | null) {
+    this.currentCamera.photo_data = '';
+    this.cameraPhotoError = null;
+    if (input) {
+      input.value = '';
+    }
+  }
+
+  getCameraPhotoSizeLabel(photoData: string): string {
+    const sizeKb = this.estimateDataUrlBytes(photoData) / 1024;
+    return `${Math.max(1, Math.round(sizeKb))} KB`;
+  }
+
+  private async compressCameraPhoto(file: File): Promise<string> {
+    const source = await this.readFileAsDataUrl(file);
+    const image = await this.loadImage(source);
+    let width = image.width;
+    let height = image.height;
+    const maxSide = Math.max(width, height);
+
+    if (maxSide > this.cameraPhotoMaxDimension) {
+      const ratio = this.cameraPhotoMaxDimension / maxSide;
+      width = Math.max(1, Math.round(width * ratio));
+      height = Math.max(1, Math.round(height * ratio));
+    }
+
+    let bestCandidate = '';
+    const qualitySteps = [0.82, 0.72, 0.62, 0.52, 0.44];
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('No se pudo preparar la compresion de la imagen.');
+      }
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(image, 0, 0, width, height);
+
+      for (const quality of qualitySteps) {
+        const candidate = canvas.toDataURL('image/webp', quality);
+        if (!bestCandidate || this.estimateDataUrlBytes(candidate) < this.estimateDataUrlBytes(bestCandidate)) {
+          bestCandidate = candidate;
+        }
+        if (this.estimateDataUrlBytes(candidate) <= this.cameraPhotoMaxBytes) {
+          return candidate;
+        }
+      }
+
+      width = Math.max(1, Math.round(width * 0.82));
+      height = Math.max(1, Math.round(height * 0.82));
+    }
+
+    if (bestCandidate) {
+      throw new Error(
+        `La imagen sigue superando ${Math.round(this.cameraPhotoMaxBytes / 1024)} KB luego de comprimirla.`
+      );
+    }
+
+    throw new Error('No se pudo generar la foto comprimida.');
+  }
+
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error(`No se pudo leer ${file.name}.`));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private loadImage(source: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('No se pudo decodificar la imagen seleccionada.'));
+      image.src = source;
+    });
+  }
+
+  private estimateDataUrlBytes(dataUrl: string): number {
+    const payload = (dataUrl.split(',', 2)[1] || '').replace(/\s/g, '');
+    if (!payload) {
+      return 0;
+    }
+    const padding = payload.endsWith('==') ? 2 : payload.endsWith('=') ? 1 : 0;
+    return Math.ceil((payload.length * 3) / 4) - padding;
   }
 
   deleteCamera(cam: any) {
