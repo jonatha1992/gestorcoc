@@ -44,7 +44,7 @@ El frontend de produccion se sirve desde Django en las mismas rutas del sitio. `
 ### Backend
 
 - **Framework:** Django 5.2 + Django REST Framework
-- **Base de datos:** SQLite para desarrollo local, PostgreSQL para tests y produccion
+- **Base de datos:** PostgreSQL para desarrollo local, tests y produccion
 - **Autenticacion:** JWT con `djangorestframework-simplejwt`
 - **API docs:** drf-spectacular (Swagger + ReDoc)
 - **IA:** Gemini, OpenRouter, Groq, Ollama (configurable via `.env`)
@@ -62,7 +62,7 @@ El frontend de produccion se sirve desde Django en las mismas rutas del sitio. `
 
 - Python 3.11+
 - Node.js 20+
-- PostgreSQL 16+ solo para tests, staging y produccion
+- PostgreSQL 16+ para todos los entornos
 
 ### Backend
 
@@ -80,8 +80,8 @@ pip install -r requirements.txt
 # Migraciones
 .venv\Scripts\python.exe manage.py migrate
 
-# Seed de datos demo (opcional)
-.venv\Scripts\python.exe manage.py seed_data
+# Seed de datos demo para dev
+.venv\Scripts\python.exe manage.py seed_data --volume low
 
 # Usuarios base del sistema
 .venv\Scripts\python.exe manage.py seed_system_users
@@ -94,10 +94,13 @@ Variables de entorno: copiar `backend/.env.example` a `backend/.env` y configura
 
 Base de datos:
 
-- Desarrollo local: `APP_BRANCH=dev`
-- Produccion: `APP_BRANCH=master` + `DATABASE_URL=...`
-- Integracion/test env: `APP_BRANCH=test` + `DATABASE_URL=...`
+- Desarrollo local: `DATABASE_URL=postgresql://...@127.0.0.1:5432/gestorcoc`
+- Produccion: `DATABASE_URL=...`
+- Integracion/test env: `DATABASE_URL=...`
 - Tests: siempre PostgreSQL con `DATABASE_URL=...`
+- SQLite ya no se usa en este proyecto
+- Bootstrap recomendado en `dev`: `migrate` -> `seed_data --volume low` -> `seed_system_users`
+- Password temporal por defecto en `dev` para usuarios seed: `Temp123456!`
 
 ### Frontend
 
@@ -137,11 +140,9 @@ En Railway y en Docker el frontend no se sirve con `ng serve`: Angular se builda
 ```bash
 # Backend
 cd backend
-$env:APP_BRANCH='dev'
 .venv\Scripts\python.exe manage.py runserver
 
 # Tests
-$env:APP_BRANCH='dev'
 $env:DATABASE_URL='postgresql://postgres:password@127.0.0.1:5432/gestorcoc_test'
 .venv\Scripts\python.exe manage.py test personnel.tests
 .venv\Scripts\python.exe manage.py test records.tests

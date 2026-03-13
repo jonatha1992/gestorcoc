@@ -28,6 +28,7 @@ backend/.env
 
 # Archivos autogenerados de Django y Base de Datos Local
 backend/staticfiles/
+backend/db.sqlite3
 
 # Logs y archivos temporales de build
 *.log

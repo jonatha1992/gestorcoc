@@ -1,6 +1,6 @@
 # Modelo de Datos - GestorCOC
 
-> Base de datos relacional. Desarrollo: SQLite. Producción: PostgreSQL.
+> Base de datos relacional en PostgreSQL para desarrollo, testing y producción.
 > Todos los modelos heredan de `TimeStampedModel`.
 
 ---

@@ -2,7 +2,7 @@ from django.http import FileResponse
 from django.core.exceptions import RequestDataTooBig
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
-from django.db.models import Count, Max, Q, OuterRef, Subquery, IntegerField, Sum, Value
+from django.db.models import Count, F, Max, Q, OuterRef, Subquery, IntegerField, Sum, Value
 from django.db.models.functions import TruncDate, TruncMonth, Coalesce
 from datetime import timedelta
 from rest_framework import viewsets, views, status
@@ -13,6 +13,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
+from core.audit import set_audit_context
 from personnel.access import PermissionCode
 from personnel.permissions import ActionPermissionMixin, HasNamedPermission
 from .models import FilmRecord, Catalog, VideoAnalysisReport
@@ -99,6 +100,16 @@ class FilmRecordViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
         Acción personalizada para que un fiscalizador CREV verifique un registro.
         """
         film_record = self.get_object()
+        set_audit_context(
+            request,
+            action='verify_by_crev',
+            target={
+                'app': film_record._meta.app_label,
+                'model': film_record._meta.model_name,
+                'id': film_record.pk,
+                'repr': str(film_record),
+            },
+        )
         
         if film_record.verified_by_crev:
             return Response({
@@ -125,6 +136,16 @@ class FilmRecordViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
         if observations:
             film_record.observations = film_record.observations + f"\n[CREV {timezone.now().strftime('%d/%m/%Y')}] {observations}" if film_record.observations else observations
         film_record.save()
+        set_audit_context(
+            request,
+            actor=request.user,
+            username=request.user.username,
+            message='Registro verificado por CREV',
+            changes={
+                'verified_by_crev_id': film_record.verified_by_crev_id,
+                'is_editable': film_record.is_editable,
+            },
+        )
         
         serializer = self.get_serializer(film_record)
         return Response({
@@ -181,6 +202,20 @@ class FilmRecordViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
         )
         serializer.is_valid(raise_exception=True)
         saved_report = serializer.save(film_record=film_record)
+        set_audit_context(
+            request,
+            action='finalize_report' if status_value == 'FINALIZADO' else 'save_report_draft',
+            actor=request.user,
+            username=request.user.username,
+            target={
+                'app': saved_report._meta.app_label,
+                'model': saved_report._meta.model_name,
+                'id': saved_report.pk,
+                'repr': str(saved_report),
+            },
+            message='Informe finalizado' if status_value == 'FINALIZADO' else 'Borrador de informe guardado',
+            changes={'status': saved_report.status, 'film_record_id': film_record.pk},
+        )
         return Response(VideoAnalysisReportSerializer(saved_report).data, status=status.HTTP_200_OK)
 
 class CatalogViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
@@ -416,26 +451,42 @@ class DashboardQueryMixin:
 
     def _parse_dt(self, raw, end=False):
         if not raw: return None
-        dt = parse_datetime(raw)
-        if dt: return dt
         d = parse_date(raw)
-        if not d: return None
-        base = timezone.datetime.combine(d, timezone.datetime.max.time() if end else timezone.datetime.min.time())
-        if timezone.is_naive(base):
-            base = timezone.make_aware(base, timezone.get_current_timezone())
-        return base
+        if d:
+            base = timezone.datetime.combine(d, timezone.datetime.max.time() if end else timezone.datetime.min.time())
+            if timezone.is_naive(base):
+                base = timezone.make_aware(base, timezone.get_current_timezone())
+            return base
+        dt = parse_datetime(raw)
+        if not dt: return None
+        if timezone.is_naive(dt):
+            dt = timezone.make_aware(dt, timezone.get_current_timezone())
+        return dt
 
     def _trend(self, rows, field_name, days=30):
         scoped_rows = rows
+        model_field = rows.model._meta.get_field(field_name)
+        is_date_only = model_field.get_internal_type() == "DateField"
+
         if days is not None:
-            cutoff = timezone.now() - timedelta(days=days)
+            cutoff = timezone.localdate() - timedelta(days=days) if is_date_only else timezone.now() - timedelta(days=days)
             scoped_rows = scoped_rows.filter(**{f"{field_name}__gte": cutoff})
-        data = (
-            scoped_rows.order_by().annotate(day=TruncDate(field_name))
-            .values("day")
-            .annotate(value=Count("id"))
-            .order_by("day")
-        )
+
+        if is_date_only:
+            data = (
+                scoped_rows.order_by()
+                .annotate(day=F(field_name))
+                .values("day")
+                .annotate(value=Count("id"))
+                .order_by("day")
+            )
+        else:
+            data = (
+                scoped_rows.order_by().annotate(day=TruncDate(field_name))
+                .values("day")
+                .annotate(value=Count("id"))
+                .order_by("day")
+            )
         return [{"label": row["day"].strftime('%Y-%m-%d') if row["day"] else "SIN_FECHA", "value": row["value"]} for row in data]
 
     def _distribution(self, rows, field_name, fallback="SIN_DATO"):
