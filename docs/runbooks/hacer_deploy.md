@@ -3,7 +3,7 @@
 ## Prerrequisitos
 
 - Cuenta en Railway.app.
-- Variables de entorno configuradas: `APP_BRANCH=master`, `DATABASE_URL`, `SECRET_KEY` y las claves de IA que correspondan.
+- Variables de entorno configuradas: `DATABASE_URL`, `SECRET_KEY` y las claves de IA que correspondan.
 - El despliegue usa el `Dockerfile` ubicado en el root del repositorio.
 
 ## Flujo real de despliegue

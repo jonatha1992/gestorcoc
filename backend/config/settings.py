@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
-import sys
 import dj_database_url as _dj_db_url
 from datetime import timedelta
 from pathlib import Path
@@ -108,6 +107,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.AuditLogMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -138,7 +138,6 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 _app_branch = os.environ.get('APP_BRANCH', 'dev').strip().lower() or 'dev'
 _db_url = os.environ.get('DATABASE_URL', '').strip()
-_is_test_command = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
 
 def _postgres_database_settings():
@@ -155,17 +154,7 @@ def _postgres_database_settings():
     return parsed
 
 
-def _sqlite_database_settings():
-    return {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': str((BASE_DIR / 'db.sqlite3').resolve()),
-    }
-
-
-if _is_test_command or _app_branch in {'master', 'test'}:
-    DATABASES = {'default': _postgres_database_settings()}
-else:
-    DATABASES = {'default': _sqlite_database_settings()}
+DATABASES = {'default': _postgres_database_settings()}
 
 
 # Password validation

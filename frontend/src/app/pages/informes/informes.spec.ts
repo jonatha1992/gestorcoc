@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
+import { vi } from 'vitest';
 
 import { AssetService } from '../../services/asset.service';
 import { InformeService, VideoAnalysisReportRecord } from '../../services/informe.service';
@@ -245,18 +246,18 @@ describe('InformesComponent', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance;
-    const saveDraftSpy = spyOn(
+    const saveDraftSpy = vi.spyOn(
       informeServiceMock as InformeService,
       'saveReportDraft',
-    ).and.callThrough();
-    const saveReportSpy = spyOn(
+    );
+    const saveReportSpy = vi.spyOn(
       informeServiceMock as InformeService,
       'saveReport',
-    ).and.callThrough();
-    const updateReportSpy = spyOn(
+    );
+    const updateReportSpy = vi.spyOn(
       informeServiceMock as InformeService,
       'updateReport',
-    ).and.callThrough();
+    );
 
     component.form.operador = 'Perez, Juan';
     component.form.numero_informe = '0001EZE/2026';

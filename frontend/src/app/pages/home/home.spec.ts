@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, Subject } from 'rxjs';
 import { ChartComponent } from 'ng-apexcharts';
+import { vi } from 'vitest';
 
 import { DashboardModuleResponse, DashboardService } from '../../services/dashboard.service';
 import {
@@ -74,21 +75,27 @@ const recordsResponse: DashboardModuleResponse = {
 };
 
 describe('HomeComponent', () => {
-  let dashboardServiceMock: jasmine.SpyObj<DashboardService>;
+  let dashboardServiceMock: {
+    getNovedades: ReturnType<typeof vi.fn>;
+    getHechos: ReturnType<typeof vi.fn>;
+    getRecords: ReturnType<typeof vi.fn>;
+    getPersonnel: ReturnType<typeof vi.fn>;
+    getMap: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
-    dashboardServiceMock = jasmine.createSpyObj<DashboardService>('DashboardService', [
-      'getNovedades',
-      'getHechos',
-      'getRecords',
-      'getPersonnel',
-      'getMap',
-    ]);
-    dashboardServiceMock.getNovedades.and.returnValue(of(novedadesResponse));
-    dashboardServiceMock.getHechos.and.returnValue(of(novedadesResponse as DashboardModuleResponse));
-    dashboardServiceMock.getRecords.and.returnValue(of(recordsResponse));
-    dashboardServiceMock.getPersonnel.and.returnValue(of(personnelResponse));
-    dashboardServiceMock.getMap.and.returnValue(
+    dashboardServiceMock = {
+      getNovedades: vi.fn(),
+      getHechos: vi.fn(),
+      getRecords: vi.fn(),
+      getPersonnel: vi.fn(),
+      getMap: vi.fn(),
+    };
+    dashboardServiceMock.getNovedades.mockReturnValue(of(novedadesResponse));
+    dashboardServiceMock.getHechos.mockReturnValue(of(novedadesResponse as DashboardModuleResponse));
+    dashboardServiceMock.getRecords.mockReturnValue(of(recordsResponse));
+    dashboardServiceMock.getPersonnel.mockReturnValue(of(personnelResponse));
+    dashboardServiceMock.getMap.mockReturnValue(
       of({
         scope: 'ba',
         points: [
@@ -114,7 +121,7 @@ describe('HomeComponent', () => {
       imports: [HomeComponent],
       providers: [
         provideRouter([]),
-        { provide: DashboardService, useValue: dashboardServiceMock },
+        { provide: DashboardService, useValue: dashboardServiceMock as unknown as DashboardService },
       ],
     })
       .overrideComponent(HomeComponent, {
@@ -130,21 +137,21 @@ describe('HomeComponent', () => {
     const recordsSubject = new Subject<DashboardModuleResponse>();
     const personnelSubject = new Subject<DashboardModuleResponse>();
 
-    dashboardServiceMock.getNovedades.and.returnValue(novedadesSubject.asObservable());
-    dashboardServiceMock.getHechos.and.returnValue(hechosSubject.asObservable());
-    dashboardServiceMock.getRecords.and.returnValue(recordsSubject.asObservable());
-    dashboardServiceMock.getPersonnel.and.returnValue(personnelSubject.asObservable());
+    dashboardServiceMock.getNovedades.mockReturnValue(novedadesSubject.asObservable());
+    dashboardServiceMock.getHechos.mockReturnValue(hechosSubject.asObservable());
+    dashboardServiceMock.getRecords.mockReturnValue(recordsSubject.asObservable());
+    dashboardServiceMock.getPersonnel.mockReturnValue(personnelSubject.asObservable());
 
     const fixture = TestBed.createComponent(HomeComponent);
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.loading()).toBeTrue();
+    expect(fixture.componentInstance.loading()).toBe(true);
     expect(fixture.componentInstance.cards()).toEqual([]);
 
     novedadesSubject.next(novedadesResponse);
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.loading()).toBeFalse();
+    expect(fixture.componentInstance.loading()).toBe(false);
     expect(fixture.componentInstance.cards()[0]?.value).toBe(8);
     expect(fixture.componentInstance.activeModuleData()?.module).toBe('novedades');
   });
@@ -203,9 +210,9 @@ describe('HomeComponent', () => {
     fixture.detectChanges();
 
     const moduleSelect = fixture.nativeElement.querySelector('select');
-    const optionValues = Array.from(moduleSelect.querySelectorAll('option')).map(
-      (option: HTMLOptionElement) => option.value,
-    );
+    const optionValues = Array.from(
+      moduleSelect.querySelectorAll('option') as NodeListOf<HTMLOptionElement>,
+    ).map((option) => option.value);
 
     expect(moduleSelect).toBeTruthy();
     expect(optionValues).toEqual(['Novedades', 'Registros', 'Hechos', 'Personal']);
@@ -256,7 +263,7 @@ describe('HomeComponent', () => {
     ) as HTMLInputElement[];
 
     expect(dateInputs.length).toBe(2);
-    expect(dateInputs.every((input) => input.max === today)).toBeTrue();
+    expect(dateInputs.every((input) => input.max === today)).toBe(true);
   });
 
   it('shows CREV coverage by default and unit coverage when a point is selected', () => {

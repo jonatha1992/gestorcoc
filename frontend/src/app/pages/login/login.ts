@@ -20,6 +20,11 @@ export class LoginComponent {
   password = '';
   errorMessage = signal('');
   isSubmitting = signal(false);
+  showPassword = signal(false);
+
+  togglePasswordVisibility() {
+    this.showPassword.update((current) => !current);
+  }
 
   submit() {
     if (!this.username.trim() || !this.password) {

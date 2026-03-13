@@ -1,7 +1,9 @@
-from django.test import TestCase
+import base64
+
+from django.test import TestCase, override_settings
 
 from assets.models import Unit
-from assets.serializers import SystemSerializer
+from assets.serializers import CameraSerializer, SystemSerializer
 
 
 class SystemSerializerReportDefaultsTests(TestCase):
@@ -54,3 +56,44 @@ class SystemSerializerReportDefaultsTests(TestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
         instance = serializer.save()
         self.assertEqual(instance.report_native_hash_algorithm_other_default, '')
+
+
+class CameraSerializerPhotoDataTests(TestCase):
+    def _build_photo_data(self, size_bytes=32, mime_type='image/webp'):
+        payload = base64.b64encode(b'a' * size_bytes).decode('ascii')
+        return f'data:{mime_type};base64,{payload}'
+
+    def test_accepts_small_photo_data(self):
+        serializer = CameraSerializer(data={
+            'name': 'CAM-TEST-01',
+            'status': 'ONLINE',
+            'resolution': '1080p',
+            'photo_data': self._build_photo_data(),
+        })
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        instance = serializer.save()
+        self.assertTrue(instance.photo_data.startswith('data:image/webp;base64,'))
+
+    def test_rejects_unsupported_photo_type(self):
+        serializer = CameraSerializer(data={
+            'name': 'CAM-TEST-02',
+            'status': 'ONLINE',
+            'resolution': '1080p',
+            'photo_data': self._build_photo_data(mime_type='image/gif'),
+        })
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('photo_data', serializer.errors)
+
+    @override_settings(CAMERA_PHOTO_MAX_SIZE_BYTES=8)
+    def test_rejects_photo_over_size_limit(self):
+        serializer = CameraSerializer(data={
+            'name': 'CAM-TEST-03',
+            'status': 'ONLINE',
+            'resolution': '1080p',
+            'photo_data': self._build_photo_data(size_bytes=16),
+        })
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('photo_data', serializer.errors)

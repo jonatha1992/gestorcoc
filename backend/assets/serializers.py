@@ -1,8 +1,23 @@
+import base64
+import binascii
+
+from django.conf import settings
 from rest_framework import serializers
 
 from .models import System, Server, Camera, CameramanGear, Unit
 
 HASH_ALGORITHM_CHOICES = ('sha1', 'sha3', 'sha256', 'sha512', 'otro')
+
+
+def _camera_photo_max_size_bytes():
+    return int(getattr(settings, 'CAMERA_PHOTO_MAX_SIZE_BYTES', 250 * 1024))
+
+
+def _bytes_to_kb_label(size_bytes):
+    kb = size_bytes / 1024
+    if float(kb).is_integer():
+        return str(int(kb))
+    return f"{kb:.1f}".rstrip('0').rstrip('.')
 
 
 class UnitSerializer(serializers.ModelSerializer):
@@ -22,6 +37,8 @@ class UnitSerializer(serializers.ModelSerializer):
 
 
 class CameraSerializer(serializers.ModelSerializer):
+    ALLOWED_PHOTO_MIME_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
+
     # Se usan SerializerMethodField para manejar camaras con server=null
     # (el FK admite null=True, y los campos con source anidado fallan silenciosamente ante None)
     server_name = serializers.SerializerMethodField()
@@ -44,6 +61,37 @@ class CameraSerializer(serializers.ModelSerializer):
         if obj.server and obj.server.system:
             return obj.server.system.id
         return None
+
+    def validate_photo_data(self, value):
+        raw_value = str(value or '').strip()
+        if not raw_value:
+            return ''
+
+        if ',' not in raw_value:
+            raise serializers.ValidationError('La foto debe enviarse como data URL base64.')
+
+        header, payload = raw_value.split(',', 1)
+        if not header.startswith('data:') or ';base64' not in header:
+            raise serializers.ValidationError('La foto debe enviarse como data URL base64.')
+
+        mime_type = header[5:].split(';', 1)[0].strip().lower()
+        if mime_type not in self.ALLOWED_PHOTO_MIME_TYPES:
+            raise serializers.ValidationError(
+                'Tipo de imagen no soportado. Tipos permitidos: JPG, PNG o WEBP.'
+            )
+
+        try:
+            raw = base64.b64decode(payload, validate=True)
+        except (ValueError, binascii.Error):
+            raise serializers.ValidationError('La foto contiene base64 invalido.')
+
+        max_size = _camera_photo_max_size_bytes()
+        if len(raw) > max_size:
+            raise serializers.ValidationError(
+                f'La foto no puede superar {_bytes_to_kb_label(max_size)} KB.'
+            )
+
+        return raw_value
 
 
 class CameramanGearSerializer(serializers.ModelSerializer):

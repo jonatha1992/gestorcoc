@@ -6,6 +6,8 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 
+type PasswordField = 'old_password' | 'new_password' | 'new_password_confirm';
+
 @Component({
   selector: 'app-settings',
   standalone: true,
@@ -19,12 +21,28 @@ export class SettingsComponent {
 
   readonly isSubmitting = signal(false);
   readonly successMessage = signal('');
+  readonly passwordVisibility = signal<Record<PasswordField, boolean>>({
+    old_password: false,
+    new_password: false,
+    new_password_confirm: false,
+  });
 
   passwordForm = {
     old_password: '',
     new_password: '',
     new_password_confirm: '',
   };
+
+  isPasswordVisible(field: PasswordField): boolean {
+    return this.passwordVisibility()[field];
+  }
+
+  togglePasswordVisibility(field: PasswordField) {
+    this.passwordVisibility.update((current) => ({
+      ...current,
+      [field]: !current[field],
+    }));
+  }
 
   submitPasswordChange() {
     if (this.isSubmitting()) {
@@ -51,6 +69,11 @@ export class SettingsComponent {
           new_password: '',
           new_password_confirm: '',
         };
+        this.passwordVisibility.set({
+          old_password: false,
+          new_password: false,
+          new_password_confirm: false,
+        });
         this.successMessage.set('Contrasena actualizada correctamente.');
         this.toastService.success('Contrasena actualizada correctamente.');
         if (mustRedirect) {

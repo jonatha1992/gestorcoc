@@ -11,6 +11,7 @@ django-filter==25.2
 djangorestframework==3.16.1
 djangorestframework-simplejwt==5.5.1
 drf-spectacular==0.29.0
+Faker==40.8.0
 gunicorn==24.0.0
 idna==3.11
 jsonschema==4.26.0
