@@ -74,7 +74,10 @@ export class AuthService {
       return of(this.userState());
     }
 
-    if (!this.getAccessToken()) {
+    const accessToken = this.getAccessToken();
+    const hasRefreshToken = this.hasRefreshToken();
+
+    if (!accessToken && !hasRefreshToken) {
       this.clearSession();
       this.initializedState.set(true);
       return of(null);
@@ -85,20 +88,31 @@ export class AuthService {
     }
 
     this.loadingState.set(true);
-    this.bootstrapRequest$ = this.fetchMe().pipe(
-      catchError((error) => {
-        if (!this.hasRefreshToken()) {
-          this.clearSession();
-          return of(null);
-        }
-        return this.refreshToken().pipe(
+    const bootstrap$ = accessToken
+      ? this.fetchMe().pipe(
+          catchError(() => {
+            if (!hasRefreshToken) {
+              this.clearSession();
+              return of(null);
+            }
+            return this.refreshToken().pipe(
+              switchMap(() => this.fetchMe()),
+              catchError(() => {
+                this.clearSession();
+                return of(null);
+              }),
+            );
+          }),
+        )
+      : this.refreshToken().pipe(
           switchMap(() => this.fetchMe()),
           catchError(() => {
             this.clearSession();
             return of(null);
           }),
         );
-      }),
+
+    this.bootstrapRequest$ = bootstrap$.pipe(
       tap((user) => {
         this.userState.set(user);
         this.initializedState.set(true);

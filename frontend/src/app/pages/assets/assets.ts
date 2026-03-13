@@ -1,13 +1,12 @@
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AssetService } from '../../services/asset.service';
 import { ApiService } from '../../services/api.service';
-import { LoadingService } from '../../services/loading.service';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
 import { PermissionCodes } from '../../auth/auth.models';
-import { forkJoin } from 'rxjs';
+import { Subscription, forkJoin, take } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 
 @Component({
@@ -17,13 +16,14 @@ import { timeout } from 'rxjs/operators';
   templateUrl: './assets.html',
   providers: [AssetService]
 })
-export class AssetsComponent implements OnInit {
+export class AssetsComponent implements OnInit, OnDestroy {
   private assetService = inject(AssetService);
   private apiService = inject(ApiService);
-  private cdr = inject(ChangeDetectorRef);
-  loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
   readonly authService = inject(AuthService);
+  private refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private refreshSubscription?: Subscription;
+  private latestRefreshRequestId = 0;
   systems: any[] = [];
   units: any[] = [];
   groupedSystems: { unitId: number, unitName: string, unitCode: string, systems: any[] }[] = [];
@@ -122,18 +122,47 @@ export class AssetsComponent implements OnInit {
   }
 
   ngOnInit() {
-    // setTimeout evita NG0100: las señales del interceptor HTTP disparan CD
-    // antes de que el forkJoin complete, causando que systems.length cambie en mid-cycle
-    setTimeout(() => this.refreshData());
+    this.authService.ensureSession().pipe(take(1)).subscribe((user) => {
+      if (!user) {
+        this.isLoadingCctv = false;
+        this.isLoadingGear = false;
+        return;
+      }
+      this.refreshData();
+    });
+  }
+  ngOnDestroy() {
+    this.latestRefreshRequestId += 1;
+    if (this.refreshTimer !== null) {
+      clearTimeout(this.refreshTimer);
+      this.refreshTimer = null;
+    }
+    this.refreshSubscription?.unsubscribe();
   }
 
   refreshData() {
+    if (!this.authService.user() && !this.authService.getAccessToken() && !this.authService.hasRefreshToken()) {
+      this.isLoadingCctv = false;
+      this.isLoadingGear = false;
+      return;
+    }
+    if (this.refreshTimer !== null) {
+      clearTimeout(this.refreshTimer);
+    }
+    // Defer state flips to the next tick so Angular does not see the loading
+    // bindings change mid-check when a toast or another signal marks the view dirty.
+    this.refreshTimer = setTimeout(() => {
+      this.refreshTimer = null;
+      this.runRefreshData();
+    });
+  }
+  private runRefreshData() {
+    const requestId = ++this.latestRefreshRequestId;
+    this.refreshSubscription?.unsubscribe();
     this.isLoadingCctv = true;
     this.isLoadingGear = true;
-    this.loadingService.show();
     this.error = null;
-
-    forkJoin({
+    this.refreshSubscription = forkJoin({
       systems: this.assetService.getSystems({
         unit: this.cctvFilterUnit || undefined,
         system_type: this.cctvFilterSystemType || undefined,
@@ -148,40 +177,44 @@ export class AssetsComponent implements OnInit {
       timeout(30000)
     ).subscribe({
       next: (results) => {
-        // Process Systems (paginado: {count, results: [...]})
+        if (requestId !== this.latestRefreshRequestId) {
+          return;
+        }
         const systemsArr = (results.systems as any)?.results ?? results.systems;
         if (systemsArr) {
           this.systems = systemsArr;
           this.totalCameras = this.systems.reduce((acc: number, sys: any) => acc + (sys.camera_count || 0), 0);
           this.totalServers = this.systems.reduce((acc: number, sys: any) => acc + (sys.servers?.length || 0), 0);
         }
-
-        // Process Units (paginado: {count, results: [...]})
         const unitsArr = (results.units as any)?.results ?? results.units;
         if (unitsArr) {
           this.units = unitsArr;
           this.groupSystems();
         }
-
-        // Process Gear (paginado: {count, results: [...]})
         const gearArr = (results.gear as any)?.results ?? results.gear;
         if (gearArr) {
           this.gear = gearArr;
         }
-
         this.isLoadingCctv = false;
         this.isLoadingGear = false;
-        this.loadingService.hide();
-        this.cdr.detectChanges();
+        this.refreshSubscription = undefined;
       },
       error: (err) => {
+        if (requestId !== this.latestRefreshRequestId) {
+          return;
+        }
+        if (err?.status === 401 || err?.status === 403) {
+          this.isLoadingCctv = false;
+          this.isLoadingGear = false;
+          this.refreshSubscription = undefined;
+          return;
+        }
         console.error('Error loading assets:', err);
-        this.error = 'No se pudieron cargar los datos. Verifique la conexión al servidor.';
+        this.error = 'No se pudieron cargar los datos. Verifique la conexion al servidor.';
         this.toastService.error('Error al cargar los datos');
         this.isLoadingCctv = false;
         this.isLoadingGear = false;
-        this.loadingService.hide();
-        this.cdr.detectChanges();
+        this.refreshSubscription = undefined;
       }
     });
   }
@@ -360,20 +393,17 @@ export class AssetsComponent implements OnInit {
     if (!this.hasSystemNativeHash('otro')) {
       this.currentSystem.report_native_hash_algorithm_other_default = '';
     }
-    this.loadingService.show();
     const obs = this.currentSystem.id ?
       this.assetService.updateSystem(this.currentSystem.id, this.currentSystem) :
       this.assetService.createSystem(this.currentSystem);
-
     obs.subscribe({
       next: () => {
+        this.closeSystemModal();
         this.toastService.success(this.currentSystem.id ? 'Sistema actualizado' : 'Sistema creado');
         this.refreshData();
-        this.closeSystemModal();
       },
       error: () => {
         this.toastService.error('Error al guardar sistema');
-        this.loadingService.hide();
       }
     });
   }
@@ -382,8 +412,7 @@ export class AssetsComponent implements OnInit {
     if (!this.requireManageAssets()) {
       return;
     }
-    if (!confirm(`¿Eliminar sistema ${sys.name}?`)) return;
-    this.loadingService.show();
+    if (!confirm(`Eliminar sistema ${sys.name}?`)) return;
     this.assetService.deleteSystem(sys.id).subscribe({
       next: () => {
         this.toastService.success('Sistema eliminado');
@@ -391,7 +420,6 @@ export class AssetsComponent implements OnInit {
       },
       error: () => {
         this.toastService.error('Error al eliminar sistema');
-        this.loadingService.hide();
       }
     });
   }
@@ -425,20 +453,17 @@ export class AssetsComponent implements OnInit {
     if (!this.requireManageAssets()) {
       return;
     }
-    this.loadingService.show();
     const obs = this.currentServer.id ?
       this.assetService.updateServer(this.currentServer.id, this.currentServer) :
       this.assetService.createServer(this.currentServer);
-
     obs.subscribe({
       next: () => {
+        this.closeServerModal();
         this.toastService.success('Servidor guardado');
         this.refreshData();
-        this.closeServerModal();
       },
       error: () => {
         this.toastService.error('Error al guardar servidor');
-        this.loadingService.hide();
       }
     });
   }
@@ -447,8 +472,7 @@ export class AssetsComponent implements OnInit {
     if (!this.requireManageAssets()) {
       return;
     }
-    if (!confirm(`¿Eliminar servidor ${srv.name}?`)) return;
-    this.loadingService.show();
+    if (!confirm(`Eliminar servidor ${srv.name}?`)) return;
     this.assetService.deleteServer(srv.id).subscribe({
       next: () => {
         this.toastService.success('Servidor eliminado');
@@ -456,7 +480,6 @@ export class AssetsComponent implements OnInit {
       },
       error: () => {
         this.toastService.error('Error al eliminar servidor');
-        this.loadingService.hide();
       }
     });
   }
@@ -503,20 +526,17 @@ export class AssetsComponent implements OnInit {
       this.toastService.error('Espere a que termine la compresion de la foto.');
       return;
     }
-    this.loadingService.show();
     const obs = this.currentCamera.id ?
       this.assetService.updateCamera(this.currentCamera.id, this.currentCamera) :
       this.assetService.createCamera(this.currentCamera);
-
     obs.subscribe({
       next: () => {
-        this.toastService.success('Cámara guardada');
-        this.refreshData();
         this.closeCameraModal();
+        this.toastService.success('Camara guardada');
+        this.refreshData();
       },
       error: () => {
-        this.toastService.error('Error al guardar cámara');
-        this.loadingService.hide();
+        this.toastService.error('Error al guardar camara');
       }
     });
   }
@@ -537,8 +557,6 @@ export class AssetsComponent implements OnInit {
 
     this.isProcessingCameraPhoto = true;
     this.cameraPhotoError = null;
-    this.cdr.detectChanges();
-
     try {
       this.currentCamera.photo_data = await this.compressCameraPhoto(file);
     } catch (error) {
@@ -549,7 +567,6 @@ export class AssetsComponent implements OnInit {
       input.value = '';
     } finally {
       this.isProcessingCameraPhoto = false;
-      this.cdr.detectChanges();
     }
   }
 
@@ -649,16 +666,14 @@ export class AssetsComponent implements OnInit {
     if (!this.requireManageAssets()) {
       return;
     }
-    if (!confirm(`¿Eliminar cámara ${cam.name}?`)) return;
-    this.loadingService.show();
+    if (!confirm(`Eliminar camara ${cam.name}?`)) return;
     this.assetService.deleteCamera(cam.id).subscribe({
       next: () => {
-        this.toastService.success('Cámara eliminada');
+        this.toastService.success('Camara eliminada');
         this.refreshData();
       },
       error: () => {
-        this.toastService.error('Error al eliminar cámara');
-        this.loadingService.hide();
+        this.toastService.error('Error al eliminar camara');
       }
     });
   }
@@ -692,34 +707,28 @@ export class AssetsComponent implements OnInit {
     if (!this.requireManageAssets()) {
       return;
     }
-    this.loadingService.show();
-
     if (this.currentGear.id) {
-      // Update
       this.assetService.updateCameramanGear(this.currentGear.id, this.currentGear).subscribe({
         next: () => {
+          this.closeGearModal();
           this.toastService.success('Equipo actualizado');
           this.refreshData();
-          this.closeGearModal();
         },
         error: (err) => {
           console.error(err);
           this.toastService.error('Error al actualizar equipo');
-          this.loadingService.hide();
         }
       });
     } else {
-      // Create
       this.assetService.createCameramanGear(this.currentGear).subscribe({
         next: () => {
+          this.closeGearModal();
           this.toastService.success('Equipo creado');
           this.refreshData();
-          this.closeGearModal();
         },
         error: (err) => {
           console.error(err);
           this.toastService.error('Error al crear equipo');
-          this.loadingService.hide();
         }
       });
     }
@@ -729,9 +738,7 @@ export class AssetsComponent implements OnInit {
     if (!this.requireManageAssets()) {
       return;
     }
-    if (!confirm(`¿Estás seguro de eliminar ${item.name}?`)) return;
-
-    this.loadingService.show();
+    if (!confirm(`Eliminar ${item.name}?`)) return;
     this.assetService.deleteCameramanGear(item.id).subscribe({
       next: () => {
         this.toastService.success('Equipo eliminado');
@@ -740,7 +747,6 @@ export class AssetsComponent implements OnInit {
       error: (err) => {
         console.error(err);
         this.toastService.error('Error al eliminar equipo');
-        this.loadingService.hide();
       }
     });
   }
