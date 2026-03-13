@@ -44,7 +44,7 @@ El frontend de produccion se sirve desde Django en las mismas rutas del sitio. `
 ### Backend
 
 - **Framework:** Django 5.2 + Django REST Framework
-- **Base de datos:** PostgreSQL via `DATABASE_URL`
+- **Base de datos:** SQLite para desarrollo local, PostgreSQL para tests y produccion
 - **Autenticacion:** JWT con `djangorestframework-simplejwt`
 - **API docs:** drf-spectacular (Swagger + ReDoc)
 - **IA:** Gemini, OpenRouter, Groq, Ollama (configurable via `.env`)
@@ -62,7 +62,7 @@ El frontend de produccion se sirve desde Django en las mismas rutas del sitio. `
 
 - Python 3.11+
 - Node.js 20+
-- PostgreSQL 16+ o una `DATABASE_URL` valida
+- PostgreSQL 16+ solo para tests, staging y produccion
 
 ### Backend
 
@@ -91,6 +91,13 @@ pip install -r requirements.txt
 ```
 
 Variables de entorno: copiar `backend/.env.example` a `backend/.env` y configurar.
+
+Base de datos:
+
+- Desarrollo local: `APP_BRANCH=dev`
+- Produccion: `APP_BRANCH=master` + `DATABASE_URL=...`
+- Integracion/test env: `APP_BRANCH=test` + `DATABASE_URL=...`
+- Tests: siempre PostgreSQL con `DATABASE_URL=...`
 
 ### Frontend
 
@@ -130,6 +137,12 @@ En Railway y en Docker el frontend no se sirve con `ng serve`: Angular se builda
 ```bash
 # Backend
 cd backend
+$env:APP_BRANCH='dev'
+.venv\Scripts\python.exe manage.py runserver
+
+# Tests
+$env:APP_BRANCH='dev'
+$env:DATABASE_URL='postgresql://postgres:password@127.0.0.1:5432/gestorcoc_test'
 .venv\Scripts\python.exe manage.py test personnel.tests
 .venv\Scripts\python.exe manage.py test records.tests
 

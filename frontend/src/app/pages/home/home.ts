@@ -352,7 +352,11 @@ const MODULE_CONFIG: Record<string, DashboardModuleUiConfig> = {
 export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('chartRadar') chartRadar!: ChartComponent;
   @ViewChild('headerFilters') headerFilters!: TemplateRef<any>;
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> dev
   private layoutService = inject(LayoutService);
 
   // Filtros
@@ -407,6 +411,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedPoint = signal<DashboardMapPoint | null>(null);
   lastUpdated = signal<Date | null>(null);
   expandedChart = signal<string | null>(null);
+<<<<<<< HEAD
 
   modules = signal(['Novedades', 'Registros', 'Hechos', 'Personal']);
   selectedModule = signal('Novedades');
@@ -432,6 +437,33 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.novedadesData();
   });
 
+=======
+  
+  modules = signal(['Novedades', 'Registros', 'Hechos', 'Personal']);
+  selectedModule = signal('Novedades');
+  globalFilters = signal<Record<string, string>>(cloneFilters());
+
+  readonly filterFields = computed<DashboardFilterField[]>(() => SHARED_DATE_FILTERS);
+  readonly activeModuleKey = computed<DashboardModule>(() => {
+    const map: Record<string, string> = {
+      'Novedades': 'novedades',
+      'Registros': 'records',
+      'Hechos': 'hechos',
+      'Personal': 'personnel'
+    };
+    return (map[this.selectedModule()] || 'novedades') as DashboardModule;
+  });
+  readonly loading = computed(() => this.moduleLoadingState()[this.activeModuleKey()]);
+
+  readonly activeModuleData = computed(() => {
+    const key = this.activeModuleKey();
+    if (key === 'hechos') return this.hechosData();
+    if (key === 'records') return this.recordsData();
+    if (key === 'personnel') return this.personnelData();
+    return this.novedadesData();
+  });
+
+>>>>>>> dev
   readonly moduleTotal = computed(() => this.activeModuleData()?.totals.records ?? 0);
   readonly pointCount = computed(() => this.mapPoints().length);
   readonly emptyState = computed(() => this.activeModuleData()?.empty_state ?? { is_empty: false, message: '' });
@@ -539,7 +571,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   readonly topUnitsRadarChart = computed(() => {
     const key = this.activeModuleKey();
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> dev
     // Función para obtener el valor de una unidad según módulo activo
     const getUnitValue = (p: DashboardMapPoint): number => {
       if (key === 'hechos') return p.hechos_count;
@@ -547,12 +583,20 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       if (key === 'personnel') return p.personnel_count;
       return p.novedades_count;
     };
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> dev
     // Top 5 units based on active module count
     const points = [...this.mapPoints()]
       .sort((a, b) => getUnitValue(b) - getUnitValue(a))
       .slice(0, 5);
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> dev
     const categories = points.length >= 3 ? points.map(p => p.unit_name.substring(0, 12)) : [];
     const data = points.length >= 3 ? points.map(p => getUnitValue(p)) : [];
     const hasData = data.length >= 3;
@@ -601,8 +645,13 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     const key = this.activeModuleKey();
     const value = key === 'hechos' ? point.hechos_count
       : key === 'records' ? point.records_count
+<<<<<<< HEAD
         : key === 'personnel' ? point.personnel_count
           : point.novedades_count;
+=======
+      : key === 'personnel' ? point.personnel_count
+      : point.novedades_count;
+>>>>>>> dev
     return { label: config.label, value, icon: config.icon, tone: config.tone };
   });
 
@@ -629,7 +678,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     const points = this.activeModuleData()?.series.trend ?? [];
     const categories = points.map((point) => this.formatTrendLabel(point.label));
     const values = points.map((point) => point.value);
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> dev
     // Etiqueta dinámica según módulo
     const seriesLabel = this.selectedModule();
 
