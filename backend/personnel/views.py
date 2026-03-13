@@ -1,14 +1,26 @@
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
 
+from .access import PermissionCode
 from .models import ExternalPerson, Person
+from .permissions import ActionPermissionMixin, HasNamedPermission
 from .serializers import ExternalPersonSerializer, PersonSerializer
 
 
-class PersonViewSet(viewsets.ModelViewSet):
-    queryset = Person.objects.select_related("unit").prefetch_related("assigned_systems").order_by("last_name", "first_name")
+class PersonViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
+    queryset = Person.objects.select_related("unit", "user").prefetch_related("assigned_systems").order_by("last_name", "first_name")
     serializer_class = PersonSerializer
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    action_permissions = {
+        "list": [PermissionCode.VIEW_PERSONNEL],
+        "retrieve": [PermissionCode.VIEW_PERSONNEL],
+        "create": [PermissionCode.MANAGE_PERSONNEL],
+        "update": [PermissionCode.MANAGE_PERSONNEL],
+        "partial_update": [PermissionCode.MANAGE_PERSONNEL],
+        "destroy": [PermissionCode.MANAGE_PERSONNEL],
+    }
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = {
         "role": ["exact"],
@@ -31,9 +43,18 @@ class PersonViewSet(viewsets.ModelViewSet):
     ordering = ["last_name", "first_name"]
 
 
-class ExternalPersonViewSet(viewsets.ModelViewSet):
+class ExternalPersonViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
     queryset = ExternalPerson.objects.all().order_by("last_name", "first_name")
     serializer_class = ExternalPersonSerializer
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    action_permissions = {
+        "list": [PermissionCode.VIEW_PERSONNEL],
+        "retrieve": [PermissionCode.VIEW_PERSONNEL],
+        "create": [PermissionCode.MANAGE_PERSONNEL],
+        "update": [PermissionCode.MANAGE_PERSONNEL],
+        "partial_update": [PermissionCode.MANAGE_PERSONNEL],
+        "destroy": [PermissionCode.MANAGE_PERSONNEL],
+    }
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = {
         "is_active": ["exact"],

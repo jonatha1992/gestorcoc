@@ -13,7 +13,7 @@
                     placeholder="Buscar en registros...">
             </div>
             <div class="flex items-center gap-3">
-                <button (click)="openCreateForm()"
+                <button (click)="openCreateForm()" [class.hidden]="!canManageRecords"
                     class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors shadow-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
@@ -46,7 +46,7 @@
                     class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
                     <option value="">Todos</option>
                     @for (person of people(); track person.id) {
-                    <option [value]="person.id">{{ person.last_name }}, {{ person.first_name }}</option>
+                    <option [value]="person.last_name + ', ' + person.first_name">{{ person.last_name }}, {{ person.first_name }}</option>
                     }
                 </select>
             </div>
@@ -183,7 +183,7 @@
                             <div class="font-semibold text-slate-700">{{ getOperatorName(record) }}</div>
                         </td>
                         <td class="table-body-cell" (click)="$event.stopPropagation()">
-                            @if (getInformeForRecord(record.id)) {
+                            @if (canUseReportTools && getInformeForRecord(record.id)) {
                             <button type="button" (click)="openInforme(record)"
                                 class="inline-flex items-center gap-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
@@ -193,7 +193,7 @@
                                 </svg>
                                 Ver Informe
                             </button>
-                            } @else {
+                            } @else if (canUseReportTools) {
                             <button type="button" (click)="openInforme(record)"
                                 class="inline-flex items-center gap-1.5 text-slate-500 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
@@ -207,7 +207,15 @@
                         </td>
                         <td class="table-body-cell text-right" (click)="$event.stopPropagation()">
                             <div class="inline-flex items-center gap-1.5">
-                                <button type="button" (click)="editRecord(record)" class="table-action-btn"
+                                <button type="button" (click)="verifyRecord(record)" [class.hidden]="!canVerifyCrev || isRecordVerified(record)"
+                                    class="table-action-btn" title="Verificar por CREV">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </button>
+                                <button type="button" (click)="editRecord(record)" [class.hidden]="!canManageRecords" class="table-action-btn"
                                     title="Editar">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
                                         viewBox="0 0 24 24" stroke="currentColor">
@@ -215,7 +223,7 @@
                                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
                                 </button>
-                                <button type="button" (click)="deleteRecord(record)"
+                                <button type="button" (click)="deleteRecord(record)" [class.hidden]="!canManageRecords"
                                     class="table-action-btn table-action-btn-danger" title="Eliminar">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"
                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -651,7 +659,7 @@
                 <button type="button" (click)="showForm.set(false); resetForm()" class="btn-secondary-compact">
                     Cancelar
                 </button>
-                <button type="button" (click)="saveRecord()" class="btn-primary-compact">
+                <button type="button" (click)="saveRecord()" [class.hidden]="!canManageRecords" class="btn-primary-compact">
                     {{ isEditing() ? 'Guardar cambios' : 'Registrar Solicitud' }}
                 </button>
             </div>
@@ -694,7 +702,7 @@
                         </div>
                         <div class="text-xs font-semibold text-slate-500 mt-0.5">Sin informe vinculado</div>
                     </div>
-                    <button type="button" (click)="openInforme(selectedRecord())"
+                    <button type="button" (click)="openInforme(selectedRecord())" [class.hidden]="!canUseReportTools"
                         class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
                         Crear Informe
                     </button>

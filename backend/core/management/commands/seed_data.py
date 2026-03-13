@@ -35,9 +35,9 @@ class Command(BaseCommand):
     GEAR_CONDITIONS = [value for value, _ in CameramanGear.CONDITION_CHOICES]
     HECHO_CATEGORIES = ["POLICIAL", "OPERATIVO", "INFORMATIVO", "RELEVAMIENTO"]
     ROLE_TARGETS = {
-        "low": {"ADMIN": 2, "OP_EXTRACTION": 4, "OP_CONTROL": 3, "OP_VIEWER": 3},
-        "medium": {"ADMIN": 4, "OP_EXTRACTION": 6, "OP_CONTROL": 5, "OP_VIEWER": 5},
-        "high": {"ADMIN": 8, "OP_EXTRACTION": 12, "OP_CONTROL": 10, "OP_VIEWER": 10},
+        "low": {"ADMIN": 1, "COORDINADOR_COC": 2, "OPERADOR": 5, "CREV": 2, "COORDINADOR_CREV": 2},
+        "medium": {"ADMIN": 2, "COORDINADOR_COC": 3, "OPERADOR": 8, "CREV": 4, "COORDINADOR_CREV": 3},
+        "high": {"ADMIN": 4, "COORDINADOR_COC": 6, "OPERADOR": 16, "CREV": 8, "COORDINADOR_CREV": 6},
     }
 
     def add_arguments(self, parser):
@@ -271,7 +271,7 @@ class Command(BaseCommand):
             "Dr. Carlos Sosa",
             "N/C",
         ]
-        supervisors = [person for person in people if person.role == "ADMIN"]
+        supervisors = [person for person in people if person.role in {"ADMIN", "CREV", "COORDINADOR_CREV"}]
         generator_units = list(Unit.objects.exclude(parent__isnull=True))
         base_order = FilmRecord.objects.aggregate(max_value=Max("order_number")).get("max_value") or 0
         sistemas_cctv = [
@@ -475,7 +475,7 @@ class Command(BaseCommand):
             record.save(update_fields=["entry_date"])
             self.normalized["records_entry_date"] += 1
 
-        supervisors = list(Person.objects.filter(role="ADMIN"))
+        supervisors = list(Person.objects.filter(role__in=["ADMIN", "CREV", "COORDINADOR_CREV"]))
         if supervisors:
             for record in FilmRecord.objects.filter(is_integrity_verified=True, verified_by_crev__isnull=True):
                 record.verified_by_crev = random.choice(supervisors)

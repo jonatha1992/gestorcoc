@@ -7,11 +7,14 @@ from django.db.models.functions import TruncDate, TruncMonth, Coalesce
 from datetime import timedelta
 from rest_framework import viewsets, views, status
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
+from personnel.access import PermissionCode
+from personnel.permissions import ActionPermissionMixin, HasNamedPermission
 from .models import FilmRecord, Catalog, VideoAnalysisReport
 from .serializers import (
     FilmRecordSerializer,
@@ -22,7 +25,7 @@ from .serializers import (
 )
 from .services import IntegrityService
 
-class FilmRecordViewSet(viewsets.ModelViewSet):
+class FilmRecordViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
     """
     ViewSet para gestión completa de Registros Fílmicos.
     Incluye búsqueda, filtrado y acción de verificación CREV.
@@ -33,6 +36,18 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
         'generator_unit',
     ).prefetch_related('involved_people').all()
     serializer_class = FilmRecordSerializer
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    action_permissions = {
+        'list': [PermissionCode.VIEW_RECORDS],
+        'retrieve': [PermissionCode.VIEW_RECORDS],
+        'create': [PermissionCode.MANAGE_RECORDS],
+        'update': [PermissionCode.MANAGE_RECORDS],
+        'partial_update': [PermissionCode.MANAGE_RECORDS],
+        'destroy': [PermissionCode.MANAGE_RECORDS],
+        'verify_by_crev': [PermissionCode.VERIFY_CREV],
+        'verification_certificate': [PermissionCode.VIEW_RECORDS],
+        'save_report_draft': [PermissionCode.USE_REPORTS],
+    }
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     
     # Filtros
@@ -97,25 +112,11 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
                 'error': 'El registro debe tener backup y hash calculado antes de ser verificado'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        verified_by_id = request.data.get('verified_by')
         observations = request.data.get('observations', '')
-        
-        if not verified_by_id:
+        verified_by = getattr(request.user, 'person', None)
+        if verified_by is None:
             return Response({
-                'error': 'Debe especificar el ID del verificador CREV (verified_by)'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            from personnel.models import Person
-            verified_by = Person.objects.get(id=verified_by_id)
-        except Person.DoesNotExist:
-            return Response({
-                'error': f'No se encontró una persona con ID {verified_by_id}'
-            }, status=status.HTTP_404_NOT_FOUND)
-
-        if verified_by.role != 'ADMIN':
-            return Response({
-                'error': 'Solo un Administrador puede verificar registros.'
+                'error': 'El usuario autenticado debe estar vinculado a una persona para verificar registros.'
             }, status=status.HTTP_400_BAD_REQUEST)
 
         film_record.verified_by_crev = verified_by
@@ -152,6 +153,14 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
         numero_informe = payload.get('numero_informe') or form_data.get('numero_informe', '')
         report_date = payload.get('report_date') or form_data.get('report_date')
 
+        if status_value == 'FINALIZADO' and not (
+            request.user.is_superuser or request.user.has_perm(f'personnel.{PermissionCode.MANAGE_CREV_FLOW}')
+        ):
+            return Response(
+                {'detail': 'Solo Coordinacion CREV o Admin puede finalizar informes.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         report = VideoAnalysisReport.objects.filter(film_record=film_record).first()
         if report and report.status == 'FINALIZADO':
             return Response(
@@ -174,18 +183,49 @@ class FilmRecordViewSet(viewsets.ModelViewSet):
         saved_report = serializer.save(film_record=film_record)
         return Response(VideoAnalysisReportSerializer(saved_report).data, status=status.HTTP_200_OK)
 
-class CatalogViewSet(viewsets.ModelViewSet):
+class CatalogViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
     queryset = Catalog.objects.all()
     serializer_class = CatalogSerializer
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    action_permissions = {
+        'list': [PermissionCode.VIEW_RECORDS],
+        'retrieve': [PermissionCode.VIEW_RECORDS],
+        'create': [PermissionCode.MANAGE_CREV_FLOW],
+        'update': [PermissionCode.MANAGE_CREV_FLOW],
+        'partial_update': [PermissionCode.MANAGE_CREV_FLOW],
+        'destroy': [PermissionCode.MANAGE_CREV_FLOW],
+    }
 
-class VideoAnalysisReportViewSet(viewsets.ModelViewSet):
+class VideoAnalysisReportViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
     queryset = VideoAnalysisReport.objects.select_related('film_record').all()
     serializer_class = VideoAnalysisReportSerializer
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    action_permissions = {
+        'list': [PermissionCode.USE_REPORTS],
+        'retrieve': [PermissionCode.USE_REPORTS],
+        'create': [PermissionCode.USE_REPORTS],
+        'update': [PermissionCode.USE_REPORTS],
+        'partial_update': [PermissionCode.USE_REPORTS],
+        'destroy': [PermissionCode.MANAGE_CREV_FLOW],
+    }
     filter_backends = [DjangoFilterBackend]
     filterset_fields = {'film_record': ['exact']}
 
+    def create(self, request, *args, **kwargs):
+        if (request.data or {}).get('status') == 'FINALIZADO' and not self._can_manage_crev_flow(request):
+            return Response(
+                {'detail': 'Solo Coordinacion CREV o Admin puede finalizar informes.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().create(request, *args, **kwargs)
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
+        if (request.data or {}).get('status') == 'FINALIZADO' and not self._can_manage_crev_flow(request):
+            return Response(
+                {'detail': 'Solo Coordinacion CREV o Admin puede finalizar informes.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         if instance.status == 'FINALIZADO':
             return Response(
                 {'detail': 'Un informe finalizado no puede ser modificado.'},
@@ -195,6 +235,11 @@ class VideoAnalysisReportViewSet(viewsets.ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
+        if (request.data or {}).get('status') == 'FINALIZADO' and not self._can_manage_crev_flow(request):
+            return Response(
+                {'detail': 'Solo Coordinacion CREV o Admin puede finalizar informes.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         if instance.status == 'FINALIZADO':
             return Response(
                 {'detail': 'Un informe finalizado no puede ser modificado.'},
@@ -202,8 +247,13 @@ class VideoAnalysisReportViewSet(viewsets.ModelViewSet):
             )
         return super().partial_update(request, *args, **kwargs)
 
+    def _can_manage_crev_flow(self, request):
+        return request.user.is_superuser or request.user.has_perm(f'personnel.{PermissionCode.MANAGE_CREV_FLOW}')
+
 class IntegrityReportView(views.APIView):
     parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    required_permissions = [PermissionCode.USE_INTEGRITY]
 
     def post(self, request, *args, **kwargs):
         file_obj = request.FILES.get('file')
@@ -240,6 +290,9 @@ class IntegrityReportView(views.APIView):
         )
 
 class IntegritySummaryReportView(views.APIView):
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    required_permissions = [PermissionCode.USE_INTEGRITY]
+
     def post(self, request, *args, **kwargs):
         payload = request.data if isinstance(request.data, dict) else {}
         entries = payload.get("entries", [])
@@ -257,6 +310,9 @@ class IntegritySummaryReportView(views.APIView):
         )
 
 class VideoAnalysisReportView(views.APIView):
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    required_permissions = [PermissionCode.USE_REPORTS]
+
     def post(self, request, *args, **kwargs):
         try:
             payload = request.data if isinstance(request.data, dict) else {}
@@ -282,6 +338,9 @@ class VideoAnalysisReportView(views.APIView):
             return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class VideoAnalysisImproveTextView(views.APIView):
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    required_permissions = [PermissionCode.USE_REPORTS]
+
     def post(self, request, *args, **kwargs):
         try:
             payload = request.data if isinstance(request.data, dict) else {}
@@ -306,6 +365,9 @@ class VideoAnalysisImproveTextView(views.APIView):
             return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class AIUsageSummaryView(views.APIView):
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    required_permissions = [PermissionCode.MANAGE_CREV_FLOW]
+
     def get(self, request):
         from records.models import AIUsageLog
         rows = (
@@ -318,6 +380,9 @@ class AIUsageSummaryView(views.APIView):
         return Response(list(rows))
 
 class DashboardStatsView(views.APIView):
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    required_permissions = [PermissionCode.VIEW_DASHBOARD]
+
     def get(self, request):
         from records.models import FilmRecord
         from hechos.models import Hecho
@@ -441,6 +506,9 @@ class DashboardQueryMixin:
         return qs
 
 class DashboardNovedadesView(DashboardQueryMixin, views.APIView):
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    required_permissions = [PermissionCode.VIEW_DASHBOARD]
+
     def get(self, request):
         rows = self._apply_novedades_filters(request)
         counts = rows.aggregate(
@@ -468,6 +536,9 @@ class DashboardNovedadesView(DashboardQueryMixin, views.APIView):
         })
 
 class DashboardHechosView(DashboardQueryMixin, views.APIView):
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    required_permissions = [PermissionCode.VIEW_DASHBOARD]
+
     def get(self, request):
         rows = self._apply_hechos_filters(request)
         today = timezone.localdate()
@@ -499,6 +570,9 @@ class DashboardHechosView(DashboardQueryMixin, views.APIView):
         })
 
 class DashboardRecordsView(DashboardQueryMixin, views.APIView):
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    required_permissions = [PermissionCode.VIEW_DASHBOARD]
+
     def get(self, request):
         rows = self._apply_records_filters(request)
         today = timezone.localdate()
@@ -530,6 +604,9 @@ class DashboardRecordsView(DashboardQueryMixin, views.APIView):
         })
 
 class DashboardPersonnelView(DashboardQueryMixin, views.APIView):
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    required_permissions = [PermissionCode.VIEW_DASHBOARD]
+
     def get(self, request):
         rows = self._apply_personnel_filters(request)
         counts = rows.aggregate(
@@ -558,6 +635,9 @@ class DashboardPersonnelView(DashboardQueryMixin, views.APIView):
         })
 
 class DashboardMapView(DashboardQueryMixin, views.APIView):
+    permission_classes = [IsAuthenticated, HasNamedPermission]
+    required_permissions = [PermissionCode.VIEW_DASHBOARD]
+
     def get(self, request):
         from assets.models import Unit, Camera
         

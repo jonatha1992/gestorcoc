@@ -5,6 +5,8 @@ import { ApiService } from '../../services/api.service';
 import { LoadingService } from '../../services/loading.service';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../services/toast.service';
+import { AuthService } from '../../services/auth.service';
+import { PermissionCodes } from '../../auth/auth.models';
 import { forkJoin } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 
@@ -21,6 +23,7 @@ export class AssetsComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
+  readonly authService = inject(AuthService);
   systems: any[] = [];
   units: any[] = [];
   groupedSystems: { unitId: number, unitName: string, unitCode: string, systems: any[] }[] = [];
@@ -283,7 +286,22 @@ export class AssetsComponent implements OnInit {
     { value: 'otro', label: 'Otro' },
   ];
 
+  get canManageAssets(): boolean {
+    return this.authService.hasPermission(PermissionCodes.MANAGE_ASSETS);
+  }
+
+  private requireManageAssets(): boolean {
+    if (this.canManageAssets) {
+      return true;
+    }
+    this.toastService.error('No tiene permiso para modificar equipamiento.');
+    return false;
+  }
+
   openSystemModal() {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     this.currentSystem = {
       is_active: true,
       report_authenticity_mode_default: '',
@@ -296,6 +314,9 @@ export class AssetsComponent implements OnInit {
   }
 
   editSystem(sys: any) {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     this.currentSystem = {
       ...sys,
       unit_id: sys.unit?.id,
@@ -330,6 +351,9 @@ export class AssetsComponent implements OnInit {
   }
 
   saveSystem() {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     if (this.currentSystem.report_authenticity_mode_default !== 'otro') {
       this.currentSystem.report_authenticity_detail_default = '';
     }
@@ -355,6 +379,9 @@ export class AssetsComponent implements OnInit {
   }
 
   deleteSystem(sys: any) {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     if (!confirm(`¿Eliminar sistema ${sys.name}?`)) return;
     this.loadingService.show();
     this.assetService.deleteSystem(sys.id).subscribe({
@@ -374,11 +401,17 @@ export class AssetsComponent implements OnInit {
   currentServer: any = {};
 
   openServerModal(systemId: number) {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     this.currentServer = { system: systemId, is_active: true };
     this.showServerModal = true;
   }
 
   editServer(srv: any) {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     this.currentServer = { ...srv };
     this.showServerModal = true;
   }
@@ -389,6 +422,9 @@ export class AssetsComponent implements OnInit {
   }
 
   saveServer() {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     this.loadingService.show();
     const obs = this.currentServer.id ?
       this.assetService.updateServer(this.currentServer.id, this.currentServer) :
@@ -408,6 +444,9 @@ export class AssetsComponent implements OnInit {
   }
 
   deleteServer(srv: any) {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     if (!confirm(`¿Eliminar servidor ${srv.name}?`)) return;
     this.loadingService.show();
     this.assetService.deleteServer(srv.id).subscribe({
@@ -427,11 +466,17 @@ export class AssetsComponent implements OnInit {
   currentCamera: any = {};
 
   openCameraModal(serverId: number) {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     this.currentCamera = { server: serverId, status: 'ONLINE' };
     this.showCameraModal = true;
   }
 
   editCamera(cam: any) {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     this.currentCamera = { ...cam };
     this.showCameraModal = true;
   }
@@ -442,6 +487,9 @@ export class AssetsComponent implements OnInit {
   }
 
   saveCamera() {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     this.loadingService.show();
     const obs = this.currentCamera.id ?
       this.assetService.updateCamera(this.currentCamera.id, this.currentCamera) :
@@ -461,6 +509,9 @@ export class AssetsComponent implements OnInit {
   }
 
   deleteCamera(cam: any) {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     if (!confirm(`¿Eliminar cámara ${cam.name}?`)) return;
     this.loadingService.show();
     this.assetService.deleteCamera(cam.id).subscribe({
@@ -480,11 +531,17 @@ export class AssetsComponent implements OnInit {
   currentGear: any = {};
 
   openGearModal() {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     this.currentGear = { condition: 'GOOD' }; // Default
     this.showGearModal = true;
   }
 
   editGear(item: any) {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     this.currentGear = { ...item };
     this.showGearModal = true;
   }
@@ -495,6 +552,9 @@ export class AssetsComponent implements OnInit {
   }
 
   saveGear() {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     this.loadingService.show();
 
     if (this.currentGear.id) {
@@ -529,6 +589,9 @@ export class AssetsComponent implements OnInit {
   }
 
   deleteGear(item: any) {
+    if (!this.requireManageAssets()) {
+      return;
+    }
     if (!confirm(`¿Estás seguro de eliminar ${item.name}?`)) return;
 
     this.loadingService.show();

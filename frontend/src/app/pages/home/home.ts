@@ -309,25 +309,28 @@ const MODULE_CONFIG: Record<string, DashboardModuleUiConfig> = {
     filters: [],
     shortLabels: {
       ADMIN: 'Administrador',
-      OP_EXTRACTION: 'Operador basico',
-      OP_CONTROL: 'Operador de camaras',
-      OP_VIEWER: 'Solo visualizacion',
+      OPERADOR: 'Operador',
+      COORDINADOR_COC: 'Coordinador COC',
+      CREV: 'CREV',
+      COORDINADOR_CREV: 'Coordinador CREV',
       active: 'Activos',
       inactive: 'Inactivos',
     },
     seriesIcons: {
       ADMIN: 'shield',
-      OP_EXTRACTION: 'eye',
-      OP_CONTROL: 'camera',
-      OP_VIEWER: 'badge',
+      OPERADOR: 'eye',
+      COORDINADOR_COC: 'users',
+      CREV: 'camera',
+      COORDINADOR_CREV: 'badge',
       active: 'check-circle',
       inactive: 'clock',
     },
     seriesTones: {
       ADMIN: 'sky',
-      OP_EXTRACTION: 'cyan',
-      OP_CONTROL: 'amber',
-      OP_VIEWER: 'slate',
+      OPERADOR: 'cyan',
+      COORDINADOR_COC: 'amber',
+      CREV: 'emerald',
+      COORDINADOR_CREV: 'slate',
       active: 'emerald',
       inactive: 'rose',
     },
@@ -349,7 +352,6 @@ const MODULE_CONFIG: Record<string, DashboardModuleUiConfig> = {
 export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('chartRadar') chartRadar!: ChartComponent;
   @ViewChild('headerFilters') headerFilters!: TemplateRef<any>;
-  
   private layoutService = inject(LayoutService);
 
   // Filtros
@@ -404,7 +406,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedPoint = signal<DashboardMapPoint | null>(null);
   lastUpdated = signal<Date | null>(null);
   expandedChart = signal<string | null>(null);
-  
+
   modules = signal(['Novedades', 'Registros', 'Hechos', 'Personal']);
   selectedModule = signal('Novedades');
   globalFilters = signal<Record<string, string>>(cloneFilters());
@@ -536,7 +538,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   readonly topUnitsRadarChart = computed(() => {
     const key = this.activeModuleKey();
-    
     // Función para obtener el valor de una unidad según módulo activo
     const getUnitValue = (p: DashboardMapPoint): number => {
       if (key === 'hechos') return p.hechos_count;
@@ -544,12 +545,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       if (key === 'personnel') return p.personnel_count;
       return p.novedades_count;
     };
-    
     // Top 5 units based on active module count
     const points = [...this.mapPoints()]
       .sort((a, b) => getUnitValue(b) - getUnitValue(a))
       .slice(0, 5);
-      
     const categories = points.length >= 3 ? points.map(p => p.unit_name.substring(0, 12)) : [];
     const data = points.length >= 3 ? points.map(p => getUnitValue(p)) : [];
     const hasData = data.length >= 3;
@@ -598,8 +597,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     const key = this.activeModuleKey();
     const value = key === 'hechos' ? point.hechos_count
       : key === 'records' ? point.records_count
-      : key === 'personnel' ? point.personnel_count
-      : point.novedades_count;
+        : key === 'personnel' ? point.personnel_count
+          : point.novedades_count;
     return { label: config.label, value, icon: config.icon, tone: config.tone };
   });
 
@@ -626,7 +625,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     const points = this.activeModuleData()?.series.trend ?? [];
     const categories = points.map((point) => this.formatTrendLabel(point.label));
     const values = points.map((point) => point.value);
-    
     // Etiqueta dinámica según módulo
     const seriesLabel = this.selectedModule();
 
@@ -930,7 +928,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     return 'Periodo actual';
   }
 
-  private decorateSeries(points: DashboardSeriesPoint[], section: 'primary' | 'secondary', moduleName: 'novedades' | 'hechos'): DashboardSeriesView[] {
+  private decorateSeries(
+    points: DashboardSeriesPoint[],
+    section: 'primary' | 'secondary',
+    moduleName: DashboardModule | 'general',
+  ): DashboardSeriesView[] {
     const config = MODULE_CONFIG[moduleName] || MODULE_CONFIG['novedades'];
     const total = points.reduce((acc, item) => acc + item.value, 0);
     return points.map((point, index) => {
