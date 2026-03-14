@@ -136,6 +136,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+_app_branch = os.environ.get('APP_BRANCH', 'dev').strip().lower() or 'dev'
 _db_url = os.environ.get('DATABASE_URL', '').strip()
 
 

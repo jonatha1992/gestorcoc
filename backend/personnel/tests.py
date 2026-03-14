@@ -1,13 +1,15 @@
 import os
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from assets.models import Unit
 from personnel.access import GroupName, assign_role_group, ensure_role_groups
+from personnel.management.commands.seed_system_users import Command as SeedSystemUsersCommand
 from personnel.models import Person, UserAccountProfile
 from records.models import FilmRecord
 
@@ -226,3 +228,17 @@ class SeedSystemUsersCommandTests(TestCase):
         self.assertEqual(coord_coc_user.person.role, Person.ROLE_COORDINADOR_COC)
         self.assertFalse(hasattr(generico_user, 'person'))
         self.assertTrue(UserAccountProfile.objects.get(user=admin_user).must_change_password)
+
+    @override_settings(DEBUG=False)
+    def test_seed_system_users_requires_explicit_passwords_outside_debug(self):
+        previous_default_password = os.environ.pop('SYSTEM_USERS_DEFAULT_PASSWORD', None)
+        previous_admin_password = os.environ.pop('SYSTEM_USER_PASSWORD_ADMIN', None)
+
+        try:
+            with self.assertRaises(ImproperlyConfigured):
+                SeedSystemUsersCommand()._get_password('admin')
+        finally:
+            if previous_default_password is not None:
+                os.environ['SYSTEM_USERS_DEFAULT_PASSWORD'] = previous_default_password
+            if previous_admin_password is not None:
+                os.environ['SYSTEM_USER_PASSWORD_ADMIN'] = previous_admin_password

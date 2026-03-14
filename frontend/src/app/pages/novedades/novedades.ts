@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, inject, ViewChild, ElementRef, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NovedadService } from '../../services/novedad.service';
@@ -51,6 +51,8 @@ export class NovedadesComponent implements OnInit {
   private assetService = inject(AssetService);
   private toastService = inject(ToastService);
   readonly authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
+  private ngZone = inject(NgZone);
 
   @ViewChild('sigPad') sigPad!: ElementRef<HTMLCanvasElement>;
 
@@ -123,7 +125,8 @@ export class NovedadesComponent implements OnInit {
 
   ngOnInit() {
     this.loadData();
-    this.loadAssets();
+    // Ya no cargamos todos los assets al inicio para mejorar performance
+    // this.loadAssets(); 
   }
 
   loadData() {
@@ -141,20 +144,26 @@ export class NovedadesComponent implements OnInit {
       })
       .subscribe({
         next: (data: any) => {
-          const rawRows = data?.results ?? data ?? [];
-          const normalizedRows = (Array.isArray(rawRows) ? rawRows : []).map((row: any) =>
-            this.normalizeNovedadRow(row),
-          );
-          this.logNovedadShapeWarnings(normalizedRows);
-          this.novedades = normalizedRows;
-          this.totalCount = data?.count ?? normalizedRows.length;
-          this.isLoadingTable = false;
+          this.ngZone.run(() => {
+            const rawRows = data?.results ?? data ?? [];
+            const normalizedRows = (Array.isArray(rawRows) ? rawRows : []).map((row: any) =>
+              this.normalizeNovedadRow(row),
+            );
+            this.logNovedadShapeWarnings(normalizedRows);
+            this.novedades = normalizedRows;
+            this.totalCount = data?.count ?? normalizedRows.length;
+            this.isLoadingTable = false;
+            this.cdr.detectChanges();
+          });
         },
         error: (err) => {
-          console.error('Error fetching novedades:', err);
-          this.novedades = [];
-          this.totalCount = 0;
-          this.isLoadingTable = false;
+          this.ngZone.run(() => {
+            console.error('Error fetching novedades:', err);
+            this.novedades = [];
+            this.totalCount = 0;
+            this.isLoadingTable = false;
+            this.cdr.detectChanges();
+          });
         },
       });
   }

@@ -101,6 +101,7 @@ Base de datos:
 - SQLite ya no se usa en este proyecto
 - Bootstrap recomendado en `dev`: `migrate` -> `seed_data --volume low` -> `seed_system_users`
 - Password temporal por defecto en `dev` para usuarios seed: `Temp123456!`
+- Con `DEBUG=False`, `seed_system_users` exige `SYSTEM_USERS_DEFAULT_PASSWORD` o `SYSTEM_USER_PASSWORD_<USUARIO>` y ya no usa fallback implicito
 
 ### Frontend
 

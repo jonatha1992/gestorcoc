@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AssetService } from '../../services/asset.service';
 import { ApiService } from '../../services/api.service';
@@ -8,6 +8,7 @@ import { AuthService } from '../../services/auth.service';
 import { PermissionCodes } from '../../auth/auth.models';
 import { Subscription, forkJoin, take } from 'rxjs';
 import { timeout } from 'rxjs/operators';
+import { buildCameraPhotoDownload } from './camera-photo.utils';
 
 @Component({
   selector: 'app-assets',
@@ -21,6 +22,8 @@ export class AssetsComponent implements OnInit, OnDestroy {
   private apiService = inject(ApiService);
   private toastService = inject(ToastService);
   readonly authService = inject(AuthService);
+  private ngZone = inject(NgZone);
+  private cdr = inject(ChangeDetectorRef);
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
   private refreshSubscription?: Subscription;
   private latestRefreshRequestId = 0;
@@ -177,44 +180,51 @@ export class AssetsComponent implements OnInit, OnDestroy {
       timeout(30000)
     ).subscribe({
       next: (results) => {
-        if (requestId !== this.latestRefreshRequestId) {
-          return;
-        }
-        const systemsArr = (results.systems as any)?.results ?? results.systems;
-        if (systemsArr) {
-          this.systems = systemsArr;
-          this.totalCameras = this.systems.reduce((acc: number, sys: any) => acc + (sys.camera_count || 0), 0);
-          this.totalServers = this.systems.reduce((acc: number, sys: any) => acc + (sys.servers?.length || 0), 0);
-        }
-        const unitsArr = (results.units as any)?.results ?? results.units;
-        if (unitsArr) {
-          this.units = unitsArr;
-          this.groupSystems();
-        }
-        const gearArr = (results.gear as any)?.results ?? results.gear;
-        if (gearArr) {
-          this.gear = gearArr;
-        }
-        this.isLoadingCctv = false;
-        this.isLoadingGear = false;
-        this.refreshSubscription = undefined;
-      },
-      error: (err) => {
-        if (requestId !== this.latestRefreshRequestId) {
-          return;
-        }
-        if (err?.status === 401 || err?.status === 403) {
+        this.ngZone.run(() => {
+          if (requestId !== this.latestRefreshRequestId) {
+            return;
+          }
+          const systemsArr = (results.systems as any)?.results ?? results.systems;
+          if (systemsArr) {
+            this.systems = systemsArr;
+            this.totalCameras = this.systems.reduce((acc: number, sys: any) => acc + (sys.camera_count || 0), 0);
+            this.totalServers = this.systems.reduce((acc: number, sys: any) => acc + (sys.servers?.length || 0), 0);
+          }
+          const unitsArr = (results.units as any)?.results ?? results.units;
+          if (unitsArr) {
+            this.units = unitsArr;
+            this.groupSystems();
+          }
+          const gearArr = (results.gear as any)?.results ?? results.gear;
+          if (gearArr) {
+            this.gear = gearArr;
+          }
           this.isLoadingCctv = false;
           this.isLoadingGear = false;
           this.refreshSubscription = undefined;
-          return;
-        }
-        console.error('Error loading assets:', err);
-        this.error = 'No se pudieron cargar los datos. Verifique la conexion al servidor.';
-        this.toastService.error('Error al cargar los datos');
-        this.isLoadingCctv = false;
-        this.isLoadingGear = false;
-        this.refreshSubscription = undefined;
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err) => {
+        this.ngZone.run(() => {
+          if (requestId !== this.latestRefreshRequestId) {
+            return;
+          }
+          if (err?.status === 401 || err?.status === 403) {
+            this.isLoadingCctv = false;
+            this.isLoadingGear = false;
+            this.refreshSubscription = undefined;
+            this.cdr.detectChanges();
+            return;
+          }
+          console.error('Error loading assets:', err);
+          this.error = 'No se pudieron cargar los datos. Verifique la conexion al servidor.';
+          this.toastService.error('Error al cargar los datos');
+          this.isLoadingCctv = false;
+          this.isLoadingGear = false;
+          this.refreshSubscription = undefined;
+          this.cdr.detectChanges();
+        });
       }
     });
   }
@@ -398,12 +408,18 @@ export class AssetsComponent implements OnInit, OnDestroy {
       this.assetService.createSystem(this.currentSystem);
     obs.subscribe({
       next: () => {
-        this.closeSystemModal();
-        this.toastService.success(this.currentSystem.id ? 'Sistema actualizado' : 'Sistema creado');
-        this.refreshData();
+        this.ngZone.run(() => {
+          this.closeSystemModal();
+          this.toastService.success(this.currentSystem.id ? 'Sistema actualizado' : 'Sistema creado');
+          this.refreshData();
+          this.cdr.detectChanges();
+        });
       },
       error: () => {
-        this.toastService.error('Error al guardar sistema');
+        this.ngZone.run(() => {
+          this.toastService.error('Error al guardar sistema');
+          this.cdr.detectChanges();
+        });
       }
     });
   }
@@ -415,11 +431,17 @@ export class AssetsComponent implements OnInit, OnDestroy {
     if (!confirm(`Eliminar sistema ${sys.name}?`)) return;
     this.assetService.deleteSystem(sys.id).subscribe({
       next: () => {
-        this.toastService.success('Sistema eliminado');
-        this.refreshData();
+        this.ngZone.run(() => {
+          this.toastService.success('Sistema eliminado');
+          this.refreshData();
+          this.cdr.detectChanges();
+        });
       },
       error: () => {
-        this.toastService.error('Error al eliminar sistema');
+        this.ngZone.run(() => {
+          this.toastService.error('Error al eliminar sistema');
+          this.cdr.detectChanges();
+        });
       }
     });
   }
@@ -458,12 +480,18 @@ export class AssetsComponent implements OnInit, OnDestroy {
       this.assetService.createServer(this.currentServer);
     obs.subscribe({
       next: () => {
-        this.closeServerModal();
-        this.toastService.success('Servidor guardado');
-        this.refreshData();
+        this.ngZone.run(() => {
+          this.closeServerModal();
+          this.toastService.success('Servidor guardado');
+          this.refreshData();
+          this.cdr.detectChanges();
+        });
       },
       error: () => {
-        this.toastService.error('Error al guardar servidor');
+        this.ngZone.run(() => {
+          this.toastService.error('Error al guardar servidor');
+          this.cdr.detectChanges();
+        });
       }
     });
   }
@@ -475,18 +503,26 @@ export class AssetsComponent implements OnInit, OnDestroy {
     if (!confirm(`Eliminar servidor ${srv.name}?`)) return;
     this.assetService.deleteServer(srv.id).subscribe({
       next: () => {
-        this.toastService.success('Servidor eliminado');
-        this.refreshData();
+        this.ngZone.run(() => {
+          this.toastService.success('Servidor eliminado');
+          this.refreshData();
+          this.cdr.detectChanges();
+        });
       },
       error: () => {
-        this.toastService.error('Error al eliminar servidor');
+        this.ngZone.run(() => {
+          this.toastService.error('Error al eliminar servidor');
+          this.cdr.detectChanges();
+        });
       }
     });
   }
 
   // Camera CRUD
   showCameraModal = false;
+  showCameraPreviewModal = false;
   currentCamera: any = {};
+  previewCamera: any = null;
   readonly allowedCameraPhotoMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
   readonly cameraPhotoMaxBytes = 250 * 1024;
   readonly cameraPhotoMaxDimension = 960;
@@ -497,6 +533,7 @@ export class AssetsComponent implements OnInit, OnDestroy {
     if (!this.requireManageAssets()) {
       return;
     }
+    this.closeCameraPreview();
     this.currentCamera = { server: serverId, status: 'ONLINE', resolution: '1080p', photo_data: '' };
     this.cameraPhotoError = null;
     this.showCameraModal = true;
@@ -506,6 +543,7 @@ export class AssetsComponent implements OnInit, OnDestroy {
     if (!this.requireManageAssets()) {
       return;
     }
+    this.closeCameraPreview();
     this.currentCamera = { ...cam, photo_data: cam.photo_data || '' };
     this.cameraPhotoError = null;
     this.showCameraModal = true;
@@ -516,6 +554,26 @@ export class AssetsComponent implements OnInit, OnDestroy {
     this.currentCamera = {};
     this.cameraPhotoError = null;
     this.isProcessingCameraPhoto = false;
+  }
+
+  hasCameraPhoto(camera: any): boolean {
+    return !!String(camera?.photo_data || '').trim();
+  }
+
+  openCameraPreview(camera: any) {
+    if (!this.hasCameraPhoto(camera)) {
+      return;
+    }
+    this.previewCamera = {
+      ...camera,
+      photo_data: camera.photo_data || '',
+    };
+    this.showCameraPreviewModal = true;
+  }
+
+  closeCameraPreview() {
+    this.showCameraPreviewModal = false;
+    this.previewCamera = null;
   }
 
   saveCamera() {
@@ -531,12 +589,18 @@ export class AssetsComponent implements OnInit, OnDestroy {
       this.assetService.createCamera(this.currentCamera);
     obs.subscribe({
       next: () => {
-        this.closeCameraModal();
-        this.toastService.success('Camara guardada');
-        this.refreshData();
+        this.ngZone.run(() => {
+          this.closeCameraModal();
+          this.toastService.success('Camara guardada');
+          this.refreshData();
+          this.cdr.detectChanges();
+        });
       },
       error: () => {
-        this.toastService.error('Error al guardar camara');
+        this.ngZone.run(() => {
+          this.toastService.error('Error al guardar camara');
+          this.cdr.detectChanges();
+        });
       }
     });
   }
@@ -558,6 +622,8 @@ export class AssetsComponent implements OnInit, OnDestroy {
     this.isProcessingCameraPhoto = true;
     this.cameraPhotoError = null;
     try {
+      // FileReader e Image.onload corren fuera de NgZone; compressCameraPhoto
+      // resuelve dentro de ngZone.run() para que Angular detecte los cambios.
       this.currentCamera.photo_data = await this.compressCameraPhoto(file);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo procesar la foto.';
@@ -566,7 +632,10 @@ export class AssetsComponent implements OnInit, OnDestroy {
       this.toastService.error(message);
       input.value = '';
     } finally {
-      this.isProcessingCameraPhoto = false;
+      this.ngZone.run(() => {
+        this.isProcessingCameraPhoto = false;
+        this.cdr.detectChanges();
+      });
     }
   }
 
@@ -583,187 +652,234 @@ export class AssetsComponent implements OnInit, OnDestroy {
     return `${Math.max(1, Math.round(sizeKb))} KB`;
   }
 
-  private async compressCameraPhoto(file: File): Promise<string> {
-    const source = await this.readFileAsDataUrl(file);
-    const image = await this.loadImage(source);
-    let width = image.width;
-    let height = image.height;
-    const maxSide = Math.max(width, height);
+  downloadCameraPhoto(camera: any, event?: Event) {
+    event?.preventDefault();
+    event?.stopPropagation();
 
-    if (maxSide > this.cameraPhotoMaxDimension) {
-      const ratio = this.cameraPhotoMaxDimension / maxSide;
-      width = Math.max(1, Math.round(width * ratio));
-      height = Math.max(1, Math.round(height * ratio));
+    const download = buildCameraPhotoDownload(camera?.photo_data || '', camera?.name);
+    if (!download) {
+      this.toastService.error('La foto no tiene un formato descargable.');
+      return;
     }
 
-    let bestCandidate = '';
-    const qualitySteps = [0.82, 0.72, 0.62, 0.52, 0.44];
+    const objectUrl = window.URL.createObjectURL(download.blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = download.fileName;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 0);
+    }
 
-    for (let attempt = 0; attempt < 4; attempt += 1) {
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        throw new Error('No se pudo preparar la compresion de la imagen.');
+    deleteCamera(cam: any) {
+      if (!this.requireManageAssets()) {
+        return;
       }
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, width, height);
-      ctx.drawImage(image, 0, 0, width, height);
-
-      for (const quality of qualitySteps) {
-        const candidate = canvas.toDataURL('image/webp', quality);
-        if (!bestCandidate || this.estimateDataUrlBytes(candidate) < this.estimateDataUrlBytes(bestCandidate)) {
-          bestCandidate = candidate;
-        }
-        if (this.estimateDataUrlBytes(candidate) <= this.cameraPhotoMaxBytes) {
-          return candidate;
-        }
-      }
-
-      width = Math.max(1, Math.round(width * 0.82));
-      height = Math.max(1, Math.round(height * 0.82));
-    }
-
-    if (bestCandidate) {
-      throw new Error(
-        `La imagen sigue superando ${Math.round(this.cameraPhotoMaxBytes / 1024)} KB luego de comprimirla.`
-      );
-    }
-
-    throw new Error('No se pudo generar la foto comprimida.');
-  }
-
-  private readFileAsDataUrl(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error(`No se pudo leer ${file.name}.`));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  private loadImage(source: string): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error('No se pudo decodificar la imagen seleccionada.'));
-      image.src = source;
-    });
-  }
-
-  private estimateDataUrlBytes(dataUrl: string): number {
-    const payload = (dataUrl.split(',', 2)[1] || '').replace(/\s/g, '');
-    if (!payload) {
-      return 0;
-    }
-    const padding = payload.endsWith('==') ? 2 : payload.endsWith('=') ? 1 : 0;
-    return Math.ceil((payload.length * 3) / 4) - padding;
-  }
-
-  deleteCamera(cam: any) {
-    if (!this.requireManageAssets()) {
-      return;
-    }
-    if (!confirm(`Eliminar camara ${cam.name}?`)) return;
-    this.assetService.deleteCamera(cam.id).subscribe({
-      next: () => {
-        this.toastService.success('Camara eliminada');
-        this.refreshData();
-      },
-      error: () => {
-        this.toastService.error('Error al eliminar camara');
-      }
-    });
-  }
-
-  // Gear CRUD Logic
-  showGearModal = false;
-  currentGear: any = {};
-
-  openGearModal() {
-    if (!this.requireManageAssets()) {
-      return;
-    }
-    this.currentGear = { condition: 'GOOD' }; // Default
-    this.showGearModal = true;
-  }
-
-  editGear(item: any) {
-    if (!this.requireManageAssets()) {
-      return;
-    }
-    this.currentGear = { ...item };
-    this.showGearModal = true;
-  }
-
-  closeGearModal() {
-    this.showGearModal = false;
-    this.currentGear = {};
-  }
-
-  saveGear() {
-    if (!this.requireManageAssets()) {
-      return;
-    }
-    if (this.currentGear.id) {
-      this.assetService.updateCameramanGear(this.currentGear.id, this.currentGear).subscribe({
+      if (!confirm(`Eliminar camara ${cam.name}?`)) return;
+      this.assetService.deleteCamera(cam.id).subscribe({
         next: () => {
-          this.closeGearModal();
-          this.toastService.success('Equipo actualizado');
-          this.refreshData();
+          this.ngZone.run(() => {
+            this.toastService.success('Camara eliminada');
+            this.refreshData();
+            this.cdr.detectChanges();
+          });
         },
-        error: (err) => {
-          console.error(err);
-          this.toastService.error('Error al actualizar equipo');
-        }
-      });
-    } else {
-      this.assetService.createCameramanGear(this.currentGear).subscribe({
-        next: () => {
-          this.closeGearModal();
-          this.toastService.success('Equipo creado');
-          this.refreshData();
-        },
-        error: (err) => {
-          console.error(err);
-          this.toastService.error('Error al crear equipo');
+        error: () => {
+          this.ngZone.run(() => {
+            this.toastService.error('Error al eliminar camara');
+            this.cdr.detectChanges();
+          });
         }
       });
     }
-  }
 
-  deleteGear(item: any) {
-    if (!this.requireManageAssets()) {
-      return;
-    }
-    if (!confirm(`Eliminar ${item.name}?`)) return;
-    this.assetService.deleteCameramanGear(item.id).subscribe({
-      next: () => {
-        this.toastService.success('Equipo eliminado');
-        this.refreshData();
-      },
-      error: (err) => {
-        console.error(err);
-        this.toastService.error('Error al eliminar equipo');
+    // Gear CRUD Logic
+    showGearModal = false;
+    currentGear: any = {};
+
+    openGearModal() {
+      if (!this.requireManageAssets()) {
+        return;
       }
-    });
-  }
+      this.currentGear = { condition: 'GOOD' }; // Default
+      this.showGearModal = true;
+    }
 
-  getConditionLabel(code: string): string {
-    const map: any = { 'NEW': 'Nuevo', 'GOOD': 'Bueno', 'FAIR': 'Regular', 'POOR': 'Malo', 'BROKEN': 'Roto' };
-    return map[code] || code;
-  }
+    editGear(item: any) {
+      if (!this.requireManageAssets()) {
+        return;
+      }
+      this.currentGear = { ...item };
+      this.showGearModal = true;
+    }
 
-  getConditionClass(code: string): string {
-    const map: any = {
-      'NEW': 'bg-emerald-100 text-emerald-700',
-      'GOOD': 'bg-emerald-100 text-emerald-700',
-      'FAIR': 'bg-yellow-100 text-yellow-700',
-      'POOR': 'bg-orange-100 text-orange-700',
-      'BROKEN': 'bg-rose-100 text-rose-700'
-    };
-    return map[code] || 'bg-slate-100 text-slate-700';
+    closeGearModal() {
+      this.showGearModal = false;
+      this.currentGear = {};
+    }
+
+    saveGear() {
+      if (!this.requireManageAssets()) {
+        return;
+      }
+      if (this.currentGear.id) {
+        this.assetService.updateCameramanGear(this.currentGear.id, this.currentGear).subscribe({
+          next: () => {
+            this.ngZone.run(() => {
+              this.closeGearModal();
+              this.toastService.success('Equipo actualizado');
+              this.refreshData();
+              this.cdr.detectChanges();
+            });
+          },
+          error: (err) => {
+            this.ngZone.run(() => {
+              console.error(err);
+              this.toastService.error('Error al actualizar equipo');
+              this.cdr.detectChanges();
+            });
+          }
+        });
+      } else {
+        this.assetService.createCameramanGear(this.currentGear).subscribe({
+          next: () => {
+            this.ngZone.run(() => {
+              this.closeGearModal();
+              this.toastService.success('Equipo creado');
+              this.refreshData();
+              this.cdr.detectChanges();
+            });
+          },
+          error: (err) => {
+            this.ngZone.run(() => {
+              console.error(err);
+              this.toastService.error('Error al crear equipo');
+              this.cdr.detectChanges();
+            });
+          }
+        });
+      }
+    }
+
+    deleteGear(item: any) {
+      if (!this.requireManageAssets()) {
+        return;
+      }
+      if (!confirm(`Eliminar ${item.name}?`)) return;
+      this.assetService.deleteCameramanGear(item.id).subscribe({
+        next: () => {
+          this.ngZone.run(() => {
+            this.toastService.success('Equipo eliminado');
+            this.refreshData();
+            this.cdr.detectChanges();
+          });
+        },
+        error: (err) => {
+          this.ngZone.run(() => {
+            console.error(err);
+            this.toastService.error('Error al eliminar equipo');
+            this.cdr.detectChanges();
+          });
+        }
+      });
+    }
+
+    getConditionLabel(code: string): string {
+      const map: any = { 'NEW': 'Nuevo', 'GOOD': 'Bueno', 'FAIR': 'Regular', 'POOR': 'Malo', 'BROKEN': 'Roto' };
+      return map[code] || code;
+    }
+
+    getConditionClass(code: string): string {
+      const map: any = {
+        'NEW': 'bg-emerald-100 text-emerald-700',
+        'GOOD': 'bg-emerald-100 text-emerald-700',
+        'FAIR': 'bg-yellow-100 text-yellow-700',
+        'POOR': 'bg-orange-100 text-orange-700',
+        'BROKEN': 'bg-rose-100 text-rose-700'
+      };
+      return map[code] || 'bg-slate-100 text-slate-700';
+    }
+
+    private async compressCameraPhoto(file: File): Promise<string> {
+      const source = await this.readFileAsDataUrl(file);
+      const image = await this.loadImage(source);
+      let width = image.width;
+      let height = image.height;
+      const maxSide = Math.max(width, height);
+
+      if (maxSide > this.cameraPhotoMaxDimension) {
+        const ratio = this.cameraPhotoMaxDimension / maxSide;
+        width = Math.max(1, Math.round(width * ratio));
+        height = Math.max(1, Math.round(height * ratio));
+      }
+
+      let bestCandidate = '';
+      const qualitySteps = [0.82, 0.72, 0.62, 0.52, 0.44];
+
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          throw new Error('No se pudo preparar la compresion de la imagen.');
+        }
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(image, 0, 0, width, height);
+
+        for (const quality of qualitySteps) {
+          const candidate = canvas.toDataURL('image/webp', quality);
+          if (!bestCandidate || this.estimateDataUrlBytes(candidate) < this.estimateDataUrlBytes(bestCandidate)) {
+            bestCandidate = candidate;
+          }
+          if (this.estimateDataUrlBytes(candidate) <= this.cameraPhotoMaxBytes) {
+            return candidate;
+          }
+        }
+
+        width = Math.max(1, Math.round(width * 0.82));
+        height = Math.max(1, Math.round(height * 0.82));
+      }
+
+      if (bestCandidate) {
+        throw new Error(
+          `La imagen sigue superando ${Math.round(this.cameraPhotoMaxBytes / 1024)} KB luego de comprimirla.`
+        );
+      }
+
+      throw new Error('No se pudo generar la foto comprimida.');
+    }
+
+    private readFileAsDataUrl(file: File): Promise<string> {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        // Ejecuta el resolve dentro de NgZone para que Angular detecte el cambio
+        reader.onload = () => this.ngZone.run(() => resolve(String(reader.result || '')));
+        reader.onerror = () => this.ngZone.run(() => reject(new Error(`No se pudo leer ${file.name}.`)));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    private loadImage(source: string): Promise<HTMLImageElement> {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        // Ejecuta el resolve dentro de NgZone para que Angular detecte el cambio
+        image.onload = () => this.ngZone.run(() => resolve(image));
+        image.onerror = () => this.ngZone.run(() => reject(new Error('No se pudo decodificar la imagen seleccionada.')));
+        image.src = source;
+      });
+    }
+
+    private estimateDataUrlBytes(dataUrl: string): number {
+      const payload = (dataUrl.split(',', 2)[1] || '').replace(/\s/g, '');
+      if (!payload) {
+        return 0;
+      }
+      const padding = payload.endsWith('==') ? 2 : payload.endsWith('=') ? 1 : 0;
+      return Math.ceil((payload.length * 3) / 4) - padding;
+    }
   }
-}

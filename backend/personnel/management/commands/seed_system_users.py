@@ -1,7 +1,9 @@
 import os
 import re
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ImproperlyConfigured
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -196,4 +198,8 @@ class Command(BaseCommand):
         password = os.getenv(env_name) or os.getenv("SYSTEM_USERS_DEFAULT_PASSWORD")
         if password:
             return password
-        return DEV_DEFAULT_PASSWORD
+        if settings.DEBUG:
+            return DEV_DEFAULT_PASSWORD
+        raise ImproperlyConfigured(
+            f"Falta definir {env_name} o SYSTEM_USERS_DEFAULT_PASSWORD para sincronizar al usuario '{username}'."
+        )

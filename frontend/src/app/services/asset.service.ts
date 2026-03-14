@@ -99,19 +99,19 @@ export class AssetService {
 
     createSystem(data: any): Observable<any> {
         return this.api.post<any>('api/systems/', data).pipe(
-            tap(() => this.cache.invalidate(KEYS.systems))
+            tap(() => this.invalidateKeys(KEYS.systems))
         );
     }
 
     updateSystem(id: number, data: any): Observable<any> {
         return this.api.put<any>(`api/systems/${id}/`, data).pipe(
-            tap(() => this.cache.invalidate(KEYS.systems))
+            tap(() => this.invalidateKeys(KEYS.systems))
         );
     }
 
     deleteSystem(id: number): Observable<any> {
         return this.api.delete<any>(`api/systems/${id}/`).pipe(
-            tap(() => this.cache.invalidate(KEYS.systems))
+            tap(() => this.invalidateKeys(KEYS.systems))
         );
     }
 
@@ -129,19 +129,19 @@ export class AssetService {
 
     createCamera(data: any): Observable<any> {
         return this.api.post<any>('api/cameras/', data).pipe(
-            tap(() => this.cache.invalidate(KEYS.cameras))
+            tap(() => this.invalidateKeys(KEYS.cameras, KEYS.systems))
         );
     }
 
     updateCamera(id: number, data: any): Observable<any> {
         return this.api.put<any>(`api/cameras/${id}/`, data).pipe(
-            tap(() => this.cache.invalidate(KEYS.cameras))
+            tap(() => this.invalidateKeys(KEYS.cameras, KEYS.systems))
         );
     }
 
     deleteCamera(id: number): Observable<any> {
         return this.api.delete<any>(`api/cameras/${id}/`).pipe(
-            tap(() => this.cache.invalidate(KEYS.cameras))
+            tap(() => this.invalidateKeys(KEYS.cameras, KEYS.systems))
         );
     }
 
@@ -159,19 +159,19 @@ export class AssetService {
 
     createServer(data: any): Observable<any> {
         return this.api.post<any>('api/servers/', data).pipe(
-            tap(() => this.cache.invalidate(KEYS.servers))
+            tap(() => this.invalidateKeys(KEYS.servers, KEYS.systems))
         );
     }
 
     updateServer(id: number, data: any): Observable<any> {
         return this.api.put<any>(`api/servers/${id}/`, data).pipe(
-            tap(() => this.cache.invalidate(KEYS.servers))
+            tap(() => this.invalidateKeys(KEYS.servers, KEYS.systems))
         );
     }
 
     deleteServer(id: number): Observable<any> {
         return this.api.delete<any>(`api/servers/${id}/`).pipe(
-            tap(() => this.cache.invalidate(KEYS.servers))
+            tap(() => this.invalidateKeys(KEYS.servers, KEYS.systems))
         );
     }
 
@@ -203,6 +203,12 @@ export class AssetService {
         return this.api.delete<any>(`api/cameraman-gear/${id}/`).pipe(
             tap(() => this.cache.invalidate(KEYS.gear))
         );
+    }
+
+    private invalidateKeys(...keys: string[]): void {
+        for (const key of new Set(keys)) {
+            this.cache.invalidate(key);
+        }
     }
 
     private hasActiveFilters<T extends object>(filters: T): boolean {
