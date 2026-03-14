@@ -33,6 +33,7 @@ urlpatterns = [
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema', authentication_classes=[], permission_classes=[AllowAny]), name='swagger-ui-alt'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema', authentication_classes=[], permission_classes=[AllowAny]), name='redoc'),
     path('api/auth/', include('personnel.auth_urls')),
+    path('api/', include('core.urls')),
     path('api/', include('assets.urls')),
     path('api/', include('novedades.urls')),
     path('api/', include('personnel.urls')),

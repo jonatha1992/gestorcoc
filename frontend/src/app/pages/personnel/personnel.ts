@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -20,6 +20,8 @@ export class PersonnelComponent implements OnInit {
   private assetService = inject(AssetService);
   private toastService = inject(ToastService);
   readonly authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
+  private ngZone = inject(NgZone);
 
   readonly ROLE_LABELS: Record<string, string> = { ...RoleLabels };
   readonly ROLE_OPTIONS = [
@@ -73,7 +75,16 @@ export class PersonnelComponent implements OnInit {
   ngOnInit() {
     this.loadUnits();
     this.loadPeople();
-    this.loadSystems();
+    // Ya no cargamos sistemas al inicio, se cargan al abrir el formulario
+    // this.loadSystems();
+  }
+
+  getRoleLabel(role: string): string {
+    return this.ROLE_LABELS[role] ?? role;
+  }
+
+  getRankLabel(rank: string): string {
+    return this.RANK_LABELS[rank] ?? rank;
   }
 
   getRoleLabel(role: string): string {
@@ -87,19 +98,25 @@ export class PersonnelComponent implements OnInit {
   loadUnits() {
     this.assetService.getUnits().subscribe({
       next: (data) => {
-        const results = (data as any)?.results ?? data;
-        const sorted = [...(results || [])].sort((a, b) =>
-          (a.name || '').localeCompare((b.name || ''), 'es', { sensitivity: 'base' })
-        );
-        this.units.set(sorted);
+        this.ngZone.run(() => {
+          const results = (data as any)?.results ?? data;
+          const sorted = [...(results || [])].sort((a, b) =>
+            (a.name || '').localeCompare((b.name || ''), 'es', { sensitivity: 'base' })
+          );
+          this.units.set(sorted);
 
-        if (!this.currentPerson.unit && sorted.length > 0) {
-          this.currentPerson.unit = sorted[0].code;
-        }
+          if (!this.currentPerson.unit && sorted.length > 0) {
+            this.currentPerson.unit = sorted[0].code;
+          }
+          this.cdr.detectChanges();
+        });
       },
       error: (err) => {
-        console.error('Error fetching units:', err);
-        this.toastService.show('Error al cargar unidades', 'error');
+        this.ngZone.run(() => {
+          console.error('Error fetching units:', err);
+          this.toastService.show('Error al cargar unidades', 'error');
+          this.cdr.detectChanges();
+        });
       }
     });
   }
@@ -113,11 +130,19 @@ export class PersonnelComponent implements OnInit {
       guard_group: this.filterGuardGroup || undefined,
     }).subscribe({
       next: (data) => {
-        const results = (data as any)?.results ?? data;
-        this.people.set(results);
-        this.totalCount = (data as any)?.count ?? results.length;
+        this.ngZone.run(() => {
+          const results = (data as any)?.results ?? data;
+          this.people.set(results);
+          this.totalCount = (data as any)?.count ?? results.length;
+          this.cdr.detectChanges();
+        });
       },
-      error: (err) => console.error('Error fetching people:', err)
+      error: (err) => {
+        this.ngZone.run(() => {
+          console.error('Error fetching people:', err);
+          this.cdr.detectChanges();
+        });
+      }
     });
   }
 
@@ -163,9 +188,22 @@ export class PersonnelComponent implements OnInit {
   }
 
   loadSystems() {
+    // Si ya tenemos sistemas, no volvemos a cargar
+    if (this.systems().length > 0) return;
+    
     this.assetService.getSystems().subscribe({
-      next: (data) => this.systems.set((data as any)?.results ?? data),
-      error: (err) => console.error('Error fetching systems:', err)
+      next: (data) => {
+        this.ngZone.run(() => {
+          this.systems.set((data as any)?.results ?? data);
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err) => {
+        this.ngZone.run(() => {
+          console.error('Error fetching systems:', err);
+          this.cdr.detectChanges();
+        });
+      }
     });
   }
 
@@ -188,6 +226,7 @@ export class PersonnelComponent implements OnInit {
     if (!this.requireManagePersonnel()) {
       return;
     }
+    this.loadSystems();
     this.isEditing = false;
     this.currentPerson = this.getEmptyPerson();
     this.showForm.set(true);
@@ -197,6 +236,7 @@ export class PersonnelComponent implements OnInit {
     if (!this.requireManagePersonnel()) {
       return;
     }
+    this.loadSystems();
     this.isEditing = true;
     this.currentPerson = {
       ...person,
@@ -231,10 +271,18 @@ export class PersonnelComponent implements OnInit {
     const updatedPerson = { ...person, is_active: !person.is_active };
     this.personnelService.updatePerson(person.id, updatedPerson).subscribe({
       next: () => {
-        this.toastService.show(updatedPerson.is_active ? 'Personal activado' : 'Personal desactivado', 'success');
-        this.loadPeople();
+        this.ngZone.run(() => {
+          this.toastService.show(updatedPerson.is_active ? 'Personal activado' : 'Personal desactivado', 'success');
+          this.loadPeople();
+          this.cdr.detectChanges();
+        });
       },
-      error: () => this.toastService.show('Error al cambiar estado', 'error')
+      error: () => {
+        this.ngZone.run(() => {
+          this.toastService.show('Error al cambiar estado', 'error');
+          this.cdr.detectChanges();
+        });
+      }
     });
   }
 
@@ -245,10 +293,18 @@ export class PersonnelComponent implements OnInit {
     if (confirm('ADVERTENCIA: Esta seguro de eliminar permanentemente a este usuario? Esta accion no se puede deshacer.')) {
       this.personnelService.deletePerson(id).subscribe({
         next: () => {
-          this.toastService.show('Personal eliminado correctamente', 'success');
-          this.loadPeople();
+          this.ngZone.run(() => {
+            this.toastService.show('Personal eliminado correctamente', 'success');
+            this.loadPeople();
+            this.cdr.detectChanges();
+          });
         },
-        error: () => this.toastService.show('Error al eliminar usuario', 'error')
+        error: () => {
+          this.ngZone.run(() => {
+            this.toastService.show('Error al eliminar usuario', 'error');
+            this.cdr.detectChanges();
+          });
+        }
       });
     }
   }
@@ -270,13 +326,19 @@ export class PersonnelComponent implements OnInit {
 
     request.subscribe({
       next: () => {
-        this.toastService.show(this.isEditing ? 'Personal actualizado' : 'Personal registrado', 'success');
-        this.closeForm();
-        this.loadPeople();
+        this.ngZone.run(() => {
+          this.toastService.show(this.isEditing ? 'Personal actualizado' : 'Personal registrado', 'success');
+          this.closeForm();
+          this.loadPeople();
+          this.cdr.detectChanges();
+        });
       },
       error: (err) => {
-        console.error('Error saving person:', err);
-        this.toastService.show('Error al guardar personal', 'error');
+        this.ngZone.run(() => {
+          console.error('Error saving person:', err);
+          this.toastService.show('Error al guardar personal', 'error');
+          this.cdr.detectChanges();
+        });
       }
     });
   }

@@ -91,8 +91,8 @@ class Command(BaseCommand):
             ("AEP", "COC Aeroparque", "Aeroparque Jorge Newbery", "Buenos Aires", Decimal("-34.559167"), Decimal("-58.415611"), True, self.ROOT_UNIT_CODE),
             ("EZE", "COC Ezeiza", "Ministro Pistarini (Ezeiza)", "Buenos Aires", Decimal("-34.822222"), Decimal("-58.535833"), True, self.ROOT_UNIT_CODE),
             ("FDO", "COC San Fernando", "San Fernando", "Buenos Aires", Decimal("-34.453333"), Decimal("-58.589611"), True, self.ROOT_UNIT_CODE),
-            ("BHI", "COC Bahía Blanca", "Comandante Espora", "Buenos Aires", Decimal("-38.724167"), Decimal("-62.169278"), False, self.ROOT_UNIT_CODE),
-            ("MDQ", "COC Mar del Plata", "Astor Piazzolla", "Buenos Aires", Decimal("-37.934167"), Decimal("-57.573333"), False, self.ROOT_UNIT_CODE),
+            ("BHI", "COC Bahía Blanca", "Comandante Espora", "Buenos Aires", Decimal("-38.724167"), Decimal("-62.169278"), True, self.ROOT_UNIT_CODE),
+            ("MDQ", "COC Mar del Plata", "Astor Piazzolla", "Buenos Aires", Decimal("-37.934167"), Decimal("-57.573333"), True, self.ROOT_UNIT_CODE),
         ]
         units = {}
         for code, name, airport, province, lat, lon, map_enabled, parent_code in defs:
@@ -403,12 +403,14 @@ class Command(BaseCommand):
             elif gear:
                 payload["cameraman_gear"] = gear[i % len(gear)]
             nov = Novedad.objects.create(**payload)
+            recent = i < max(6, self.TARGETS[self.volume]["novedades"] // 4)
+            created_at = self.fake.date_time_between(
+                start_date="-14d" if recent else "-365d",
+                end_date="now",
+                tzinfo=timezone.get_current_timezone(),
+            )
             Novedad.objects.filter(pk=nov.pk).update(
-                created_at=self.fake.date_time_between(
-                    start_date="-365d",
-                    end_date="now",
-                    tzinfo=timezone.get_current_timezone(),
-                )
+                created_at=created_at
             )
             self.created["novedades"] += 1
 

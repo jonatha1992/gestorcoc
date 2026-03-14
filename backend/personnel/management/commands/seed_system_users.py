@@ -1,8 +1,10 @@
 import os
 import re
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand, CommandError
+from django.core.exceptions import ImproperlyConfigured
+from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from assets.models import Unit
@@ -11,6 +13,7 @@ from personnel.models import Person, UserAccountProfile
 
 
 User = get_user_model()
+DEV_DEFAULT_PASSWORD = "Temp123456!"
 
 
 USER_SPECS = [
@@ -195,6 +198,8 @@ class Command(BaseCommand):
         password = os.getenv(env_name) or os.getenv("SYSTEM_USERS_DEFAULT_PASSWORD")
         if password:
             return password
-        raise CommandError(
-            f"Falta definir {env_name} o SYSTEM_USERS_DEFAULT_PASSWORD para crear la cuenta {username}."
+        if settings.DEBUG:
+            return DEV_DEFAULT_PASSWORD
+        raise ImproperlyConfigured(
+            f"Falta definir {env_name} o SYSTEM_USERS_DEFAULT_PASSWORD para sincronizar al usuario '{username}'."
         )
