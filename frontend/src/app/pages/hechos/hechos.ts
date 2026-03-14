@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HechosService, Hecho } from '../../services/hechos';
@@ -25,6 +25,8 @@ export class HechosComponent implements OnInit {
   private assetService = inject(AssetService);
   private toastService = inject(ToastService);
   readonly authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
+  private ngZone = inject(NgZone);
 
   hechos = signal<Hecho[]>([]);
   cameras = signal<any[]>([]);
@@ -47,10 +49,9 @@ export class HechosComponent implements OnInit {
   filterDateTo = getTodayDateInputValue();
   private searchTimer: any;
 
-  currentHecho: Partial<Hecho> = {
-    category: 'OPERATIVO',
-    timestamp: getNowDateTimeLocalInputValue(),
-  };
+  currentHecho: Partial<Hecho> = {};
+  isEditing = false;
+  editingHechoId: number | null = null;
 
   get canManageHechos(): boolean {
     return this.authService.hasPermission(PermissionCodes.MANAGE_HECHOS);
@@ -66,7 +67,8 @@ export class HechosComponent implements OnInit {
 
   ngOnInit() {
     this.loadHechos();
-    this.loadCameras();
+    // No cargamos cámaras al inicio, se cargan al abrir el formulario
+    // this.loadCameras();
   }
 
   loadHechos() {
@@ -83,10 +85,18 @@ export class HechosComponent implements OnInit {
       })
       .subscribe({
         next: (data: any) => {
-          this.hechos.set(data?.results ?? data);
-          this.totalCount = data?.count ?? this.hechos().length;
+          this.ngZone.run(() => {
+            const results = (data as any)?.results ?? data;
+            this.hechos.set(results);
+            this.totalCount = (data as any)?.count ?? results.length;
+            this.cdr.detectChanges();
+          });
         },
-        error: (err) => console.error('Error loading hechos', err),
+        error: (err) => this.ngZone.run(() => {
+          console.error('Error loading hechos', err);
+          this.toastService.show('Error al cargar hechos', 'error');
+          this.cdr.detectChanges();
+        }),
       });
   }
 
@@ -135,9 +145,19 @@ export class HechosComponent implements OnInit {
   }
 
   loadCameras() {
+    if (this.cameras().length > 0) return;
+
     this.assetService.getCameras().subscribe({
-      next: (data) => this.cameras.set((data as any)?.results ?? data),
-      error: (err) => console.error('Error loading cameras', err),
+      next: (data) => {
+        this.ngZone.run(() => {
+          this.cameras.set((data as any)?.results ?? data);
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err) => this.ngZone.run(() => {
+        console.error('Error loading cameras', err);
+        this.cdr.detectChanges();
+      }),
     });
   }
 
@@ -145,26 +165,25 @@ export class HechosComponent implements OnInit {
     if (!this.requireManageHechos()) {
       return;
     }
-    this.currentHecho = {
-      category: 'OPERATIVO',
-      timestamp: getNowDateTimeLocalInputValue(),
-      is_solved: false,
-      coc_intervention: false,
-      generated_cause: false,
-    };
+    this.loadCameras();
+    this.resetForm();
+    this.isEditing = false;
     this.showForm.set(true);
   }
 
-  editHecho(hecho: Hecho) {
+  editHecho(hecho: any) {
     if (!this.requireManageHechos()) {
       return;
     }
+    this.loadCameras();
     this.currentHecho = {
       ...hecho,
-      camera: (hecho as any).camera ?? (hecho as any).camera_details?.id ?? null,
+      camera: hecho.camera?.id || hecho.camera || '',
       timestamp: toDateTimeLocalInputValue(hecho.timestamp),
       end_time: toDateTimeLocalInputValue(hecho.end_time),
     };
+    this.isEditing = true;
+    this.editingHechoId = hecho.id;
     this.showForm.set(true);
   }
 
@@ -185,6 +204,19 @@ export class HechosComponent implements OnInit {
 
   closeForm() {
     this.showForm.set(false);
+    this.resetForm();
+  }
+
+  resetForm() {
+    this.currentHecho = {
+      category: 'OPERATIVO',
+      timestamp: getNowDateTimeLocalInputValue(),
+      is_solved: false,
+      coc_intervention: false,
+      generated_cause: false,
+    };
+    this.isEditing = false;
+    this.editingHechoId = null;
   }
 
   saveHecho() {

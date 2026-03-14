@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -80,6 +80,8 @@ export class RecordsComponent implements OnInit {
   private informeService = inject(InformeService);
   private router = inject(Router);
   readonly authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
+  private ngZone = inject(NgZone);
 
   records = signal<any[]>([]);
   people = signal<any[]>([]);
@@ -145,7 +147,8 @@ export class RecordsComponent implements OnInit {
 
   ngOnInit() {
     this.loadData();
-    this.loadMetadata();
+    // No cargamos metadatos al inicio, se cargan al abrir el formulario
+    // this.loadMetadata();
   }
 
   loadData() {
@@ -159,13 +162,19 @@ export class RecordsComponent implements OnInit {
       entry_date__lte: this.filterDateTo || undefined,
     }).subscribe({
       next: (data) => {
-        const results = (data as any)?.results ?? data;
-        this.records.set(results);
-        this.totalCount = (data as any)?.count ?? results.length;
-        this.updateStats();
-        this.loadInformesMap();
+        this.ngZone.run(() => {
+          const results = (data as any)?.results ?? data;
+          this.records.set(results);
+          this.totalCount = (data as any)?.count ?? results.length;
+          this.updateStats();
+          this.loadInformesMap();
+          this.cdr.detectChanges();
+        });
       },
-      error: () => this.toastService.show('Error al cargar registros', 'error')
+      error: () => this.ngZone.run(() => {
+        this.toastService.show('Error al cargar registros', 'error');
+        this.cdr.detectChanges();
+      })
     });
   }
 
@@ -215,14 +224,17 @@ export class RecordsComponent implements OnInit {
   loadInformesMap() {
     this.informeService.listReports().subscribe({
       next: (informes) => {
-        const list: any[] = (informes as any)?.results ?? informes;
-        const map: Record<number, any> = {};
-        for (const informe of list) {
-          if (informe.film_record != null) {
-            map[informe.film_record] = informe;
+        this.ngZone.run(() => {
+          const list: any[] = (informes as any)?.results ?? informes;
+          const map: Record<number, any> = {};
+          for (const informe of list) {
+            if (informe.film_record != null) {
+              map[informe.film_record] = informe;
+            }
           }
-        }
-        this.informesMap.set(map);
+          this.informesMap.set(map);
+          this.cdr.detectChanges();
+        });
       },
       error: () => { }
     });
@@ -265,19 +277,32 @@ export class RecordsComponent implements OnInit {
   }
 
   loadMetadata() {
-    this.personnelService.getPeople().subscribe({
-      next: (data) => {
-        this.people.set((data as any)?.results ?? data);
-      }
-    });
+    if (this.people().length === 0) {
+      this.personnelService.getPeople().subscribe({
+        next: (data) => {
+          this.ngZone.run(() => {
+            this.people.set((data as any)?.results ?? data);
+            this.cdr.detectChanges();
+          });
+        }
+      });
+    }
 
-    this.assetService.getUnits().subscribe({
-      next: (data) => {
-        const units = (data as any)?.results ?? data;
-        this.units.set(Array.isArray(units) ? units : []);
-      },
-      error: () => this.units.set([])
-    });
+    if (this.units().length === 0) {
+      this.assetService.getUnits().subscribe({
+        next: (data) => {
+          this.ngZone.run(() => {
+            const units = (data as any)?.results ?? data;
+            this.units.set(Array.isArray(units) ? units : []);
+            this.cdr.detectChanges();
+          });
+        },
+        error: () => this.ngZone.run(() => {
+          this.units.set([]);
+          this.cdr.detectChanges();
+        })
+      });
+    }
   }
 
   updateStats() {
@@ -290,6 +315,7 @@ export class RecordsComponent implements OnInit {
     if (!this.requireManageRecords()) {
       return;
     }
+    this.loadMetadata();
     this.resetForm();
     this.invalidFields.clear();
     this.validationMessage = '';
@@ -304,6 +330,7 @@ export class RecordsComponent implements OnInit {
     if (!this.requireManageRecords()) {
       return;
     }
+    this.loadMetadata();
     const involvedPeople = Array.isArray(record?.involved_people)
       ? record.involved_people.map((person: any) => ({
         role: person?.role || 'OTRO',
@@ -384,16 +411,22 @@ export class RecordsComponent implements OnInit {
 
     this.recordsService.verifyByCrev(record.id, observations).subscribe({
       next: (response) => {
-        const updatedRecord = response?.record ?? response;
-        this.toastService.show('Registro verificado por CREV.', 'success');
-        if (this.selectedRecord()?.id === updatedRecord?.id) {
-          this.selectedRecord.set(updatedRecord);
-        }
-        this.loadData();
+        this.ngZone.run(() => {
+          const updatedRecord = response?.record ?? response;
+          this.toastService.show('Registro verificado por CREV.', 'success');
+          if (this.selectedRecord()?.id === updatedRecord?.id) {
+            this.selectedRecord.set(updatedRecord);
+          }
+          this.loadData();
+          this.cdr.detectChanges();
+        });
       },
       error: (error) => {
-        const detail = error?.error?.error || error?.error?.detail || 'No se pudo verificar el registro.';
-        this.toastService.show(detail, 'error');
+        this.ngZone.run(() => {
+          const detail = error?.error?.error || error?.error?.detail || 'No se pudo verificar el registro.';
+          this.toastService.show(detail, 'error');
+          this.cdr.detectChanges();
+        });
       }
     });
   }
@@ -513,10 +546,16 @@ export class RecordsComponent implements OnInit {
 
     this.recordsService.deleteRecord(record.id).subscribe({
       next: () => {
-        this.toastService.show('Registro eliminado', 'success');
-        this.loadData();
+        this.ngZone.run(() => {
+          this.toastService.show('Registro eliminado', 'success');
+          this.loadData();
+          this.cdr.detectChanges();
+        });
       },
-      error: () => this.toastService.show('Error al eliminar registro', 'error')
+      error: () => this.ngZone.run(() => {
+        this.toastService.show('Error al eliminar registro', 'error');
+        this.cdr.detectChanges();
+      })
     });
   }
 
@@ -572,12 +611,18 @@ export class RecordsComponent implements OnInit {
   private persistRecord(request$: Observable<any>, successMessage: string, errorMessage: string) {
     request$.subscribe({
       next: () => {
-        this.toastService.show(successMessage, 'success');
-        this.showForm.set(false);
-        this.resetForm();
-        this.loadData();
+        this.ngZone.run(() => {
+          this.toastService.show(successMessage, 'success');
+          this.showForm.set(false);
+          this.resetForm();
+          this.loadData();
+          this.cdr.detectChanges();
+        });
       },
-      error: () => this.toastService.show(errorMessage, 'error')
+      error: () => this.ngZone.run(() => {
+        this.toastService.show(errorMessage, 'error');
+        this.cdr.detectChanges();
+      })
     });
   }
 
