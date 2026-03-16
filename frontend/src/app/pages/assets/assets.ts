@@ -314,21 +314,6 @@ export class AssetsComponent implements OnInit, OnDestroy {
   // System CRUD
   showSystemModal = false;
   currentSystem: any = {};
-  readonly reportAuthenticityModeOptions = [
-    { value: '', label: 'Sin sugerencia' },
-    { value: 'vms_propio', label: 'Propio VMS' },
-    { value: 'hash_preventivo', label: 'Hash preventivo externo' },
-    { value: 'sin_autenticacion', label: 'Sin autenticacion' },
-    { value: 'otro', label: 'Otro metodo' },
-  ];
-  readonly reportHashOptions = [
-    { value: 'sha1', label: 'SHA-1' },
-    { value: 'sha3', label: 'SHA-3' },
-    { value: 'sha256', label: 'SHA-256' },
-    { value: 'sha512', label: 'SHA-512' },
-    { value: 'otro', label: 'Otro' },
-  ];
-
   get canManageAssets(): boolean {
     return this.authService.hasPermission(PermissionCodes.MANAGE_ASSETS);
   }
@@ -347,11 +332,8 @@ export class AssetsComponent implements OnInit, OnDestroy {
     }
     this.currentSystem = {
       is_active: true,
-      report_authenticity_mode_default: '',
-      report_authenticity_detail_default: '',
-      report_native_hash_algorithms_default: [],
-      report_native_hash_algorithm_other_default: '',
-      report_hash_program_default: '',
+      retention_days: 30,
+      vms_version: '',
     };
     this.showSystemModal = true;
   }
@@ -363,11 +345,8 @@ export class AssetsComponent implements OnInit, OnDestroy {
     this.currentSystem = {
       ...sys,
       unit_id: sys.unit?.id,
-      report_authenticity_mode_default: sys.report_authenticity_mode_default || '',
-      report_authenticity_detail_default: sys.report_authenticity_detail_default || '',
-      report_native_hash_algorithms_default: [...(sys.report_native_hash_algorithms_default || [])],
-      report_native_hash_algorithm_other_default: sys.report_native_hash_algorithm_other_default || '',
-      report_hash_program_default: sys.report_hash_program_default || '',
+      retention_days: sys.retention_days || 30,
+      vms_version: sys.vms_version || '',
     };
     this.showSystemModal = true;
   }
@@ -377,31 +356,9 @@ export class AssetsComponent implements OnInit, OnDestroy {
     this.currentSystem = {};
   }
 
-  toggleSystemNativeHash(algorithm: string) {
-    const current = Array.isArray(this.currentSystem.report_native_hash_algorithms_default)
-      ? this.currentSystem.report_native_hash_algorithms_default
-      : [];
-    if (current.includes(algorithm)) {
-      this.currentSystem.report_native_hash_algorithms_default = current.filter((item: string) => item !== algorithm);
-    } else {
-      this.currentSystem.report_native_hash_algorithms_default = [...current, algorithm];
-    }
-  }
-
-  hasSystemNativeHash(algorithm: string): boolean {
-    return Array.isArray(this.currentSystem.report_native_hash_algorithms_default)
-      && this.currentSystem.report_native_hash_algorithms_default.includes(algorithm);
-  }
-
   saveSystem() {
     if (!this.requireManageAssets()) {
       return;
-    }
-    if (this.currentSystem.report_authenticity_mode_default !== 'otro') {
-      this.currentSystem.report_authenticity_detail_default = '';
-    }
-    if (!this.hasSystemNativeHash('otro')) {
-      this.currentSystem.report_native_hash_algorithm_other_default = '';
     }
     const obs = this.currentSystem.id ?
       this.assetService.updateSystem(this.currentSystem.id, this.currentSystem) :
@@ -787,16 +744,14 @@ export class AssetsComponent implements OnInit, OnDestroy {
     }
 
     getConditionLabel(code: string): string {
-      const map: any = { 'NEW': 'Nuevo', 'GOOD': 'Bueno', 'FAIR': 'Regular', 'POOR': 'Malo', 'BROKEN': 'Roto' };
+      const map: any = { 'GOOD': 'Bueno', 'FAIR': 'Regular', 'BROKEN': 'Roto' };
       return map[code] || code;
     }
 
     getConditionClass(code: string): string {
       const map: any = {
-        'NEW': 'bg-emerald-100 text-emerald-700',
         'GOOD': 'bg-emerald-100 text-emerald-700',
         'FAIR': 'bg-yellow-100 text-yellow-700',
-        'POOR': 'bg-orange-100 text-orange-700',
         'BROKEN': 'bg-rose-100 text-rose-700'
       };
       return map[code] || 'bg-slate-100 text-slate-700';

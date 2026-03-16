@@ -19,11 +19,8 @@ export interface SystemAsset {
     unit?: Unit | null;
     unit_id?: number | null;
     unit_code?: string;
-    report_authenticity_mode_default?: 'vms_propio' | 'hash_preventivo' | 'sin_autenticacion' | 'otro' | '';
-    report_authenticity_detail_default?: string;
-    report_native_hash_algorithms_default?: ('sha1' | 'sha3' | 'sha256' | 'sha512' | 'otro')[];
-    report_native_hash_algorithm_other_default?: string;
-    report_hash_program_default?: string;
+    retention_days?: number;
+    vms_version?: string;
     servers?: any[];
     camera_count?: number;
 }

@@ -87,14 +87,6 @@ export class PersonnelComponent implements OnInit {
     return this.RANK_LABELS[rank] ?? rank;
   }
 
-  getRoleLabel(role: string): string {
-    return this.ROLE_LABELS[role] ?? role;
-  }
-
-  getRankLabel(rank: string): string {
-    return this.RANK_LABELS[rank] ?? rank;
-  }
-
   loadUnits() {
     this.assetService.getUnits().subscribe({
       next: (data) => {

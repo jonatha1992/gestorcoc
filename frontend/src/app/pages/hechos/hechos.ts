@@ -65,18 +65,6 @@ export class HechosComponent implements OnInit {
     return false;
   }
 
-  get canManageHechos(): boolean {
-    return this.authService.hasPermission(PermissionCodes.MANAGE_HECHOS);
-  }
-
-  private requireManageHechos(): boolean {
-    if (this.canManageHechos) {
-      return true;
-    }
-    this.toastService.error('No tiene permiso para modificar hechos.');
-    return false;
-  }
-
   ngOnInit() {
     this.loadHechos();
     // No cargamos cámaras al inicio, se cargan al abrir el formulario

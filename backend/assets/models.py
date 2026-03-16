@@ -19,47 +19,13 @@ class System(TimeStampedModel):
         ('NVR', 'NVR (Grabador)'),
         ('CCTV', 'Sistema CCTV Completo'),
     ]
-    REPORT_AUTHENTICITY_MODE_CHOICES = [
-        ('vms_propio', 'Autenticacion provista por el propio sistema'),
-        ('hash_preventivo', 'Hash preventivo externo'),
-        ('sin_autenticacion', 'Sin autenticacion'),
-        ('otro', 'Otro metodo'),
-    ]
 
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='systems', null=True, blank=True)
     name = models.CharField(max_length=100, unique=True, db_index=True, help_text="e.g., SITE-01-NVR")
     system_type = models.CharField(max_length=10, choices=SYSTEM_TYPE_CHOICES, default='CCTV')
     is_active = models.BooleanField(default=True)
-    report_authenticity_mode_default = models.CharField(
-        max_length=20,
-        choices=REPORT_AUTHENTICITY_MODE_CHOICES,
-        blank=True,
-        default='',
-        help_text="Metodo sugerido para la autenticidad del material en informes.",
-    )
-    report_authenticity_detail_default = models.CharField(
-        max_length=500,
-        blank=True,
-        default='',
-        help_text="Detalle sugerido cuando la autenticidad del material es 'otro'.",
-    )
-    report_native_hash_algorithms_default = models.JSONField(
-        default=list,
-        blank=True,
-        help_text="Algoritmos hash nativos sugeridos para el informe.",
-    )
-    report_native_hash_algorithm_other_default = models.CharField(
-        max_length=200,
-        blank=True,
-        default='',
-        help_text="Texto libre para algoritmos nativos no contemplados en la lista.",
-    )
-    report_hash_program_default = models.CharField(
-        max_length=200,
-        blank=True,
-        default='',
-        help_text="Programa de hash sugerido cuando aplica verificacion externa.",
-    )
+    retention_days = models.PositiveIntegerField(default=30, help_text="Cantidad de tiempo de resguardo (dias)")
+    vms_version = models.CharField(max_length=50, blank=True, default='', help_text="Version del software VMS")
 
     def __str__(self):
         return f"{self.name} ({self.get_system_type_display()}) - {self.unit.code if self.unit else 'No Unit'}"
@@ -96,10 +62,8 @@ class Camera(TimeStampedModel):
 
 class CameramanGear(TimeStampedModel):
     CONDITION_CHOICES = [
-        ('NEW', 'Nuevo'),
         ('GOOD', 'Bueno'),
         ('FAIR', 'Regular'),
-        ('POOR', 'Malo'),
         ('BROKEN', 'Roto'),
     ]
 
