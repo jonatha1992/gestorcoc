@@ -9,6 +9,7 @@ import { HechosComponent } from './pages/hechos/hechos';
 import { InformesComponent } from './pages/informes/informes';
 import { SettingsComponent } from './pages/settings/settings';
 import { LoginComponent } from './pages/login/login';
+import { UsuariosComponent } from './pages/usuarios/usuarios';
 import { authGuard, loginRedirectGuard, permissionGuard } from './guards/auth.guard';
 import { PermissionCodes } from './auth/auth.models';
 
@@ -61,6 +62,12 @@ export const routes: Routes = [
         component: InformesComponent,
         canActivate: [authGuard, permissionGuard],
         data: { permissions: [PermissionCodes.USE_REPORTS] }
+    },
+    {
+        path: 'usuarios',
+        component: UsuariosComponent,
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.MANAGE_USERS] }
     },
     { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },
     { path: '**', redirectTo: '' }

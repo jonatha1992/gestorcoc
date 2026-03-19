@@ -1,20 +1,17 @@
 <ng-template #headerFilters></ng-template>
 
-<div class="h-full w-full flex flex-col bg-slate-100 overflow-y-auto">
+<div class="h-full w-full flex flex-col bg-slate-100 overflow-hidden">
   <!-- Top Filters Bar -->
-  <div class="bg-white border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center gap-4 shrink-0 shadow-sm z-50 sticky top-0">
+  <div class="bg-white border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center gap-4 shrink-0 shadow-sm z-50">
     <div class="flex items-center gap-2">
       <div class="relative group flex items-center">
         <div class="absolute left-3 text-slate-400 pointer-events-none">
           <app-ui-icon name="archive" className="w-4 h-4"></app-ui-icon>
         </div>
-        <select
-          [ngModel]="selectedModule()"
-          (ngModelChange)="selectModule($event)"
-          class="appearance-none bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold py-1.5 pl-9 pr-10 rounded-xl hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer shadow-sm"
-        >
+        <select [ngModel]="selectedModule()" (ngModelChange)="selectModule($event)"
+          class="appearance-none bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold py-1.5 pl-9 pr-10 rounded-xl hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer shadow-sm">
           @for (module of modules(); track module) {
-            <option [value]="module">{{ module }}</option>
+          <option [value]="module">{{ module }}</option>
           }
         </select>
         <div class="absolute right-3 pointer-events-none text-slate-400">
@@ -25,75 +22,87 @@
 
     <!-- Date Filters -->
     @if (filterFields().length) {
-      <div class="flex items-center gap-4 border-l border-slate-200 pl-4">
-        @for (field of filterFields(); track field.key) {
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ field.label }}</span>
-            <input [type]="field.type"
-              [ngModel]="getFilterValue(field.key)"
-              (ngModelChange)="setFilterValue(field.key, $event)"
-              [attr.max]="field.type === 'date' ? todayDate : null"
-              class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1 text-xs font-semibold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" />
-          </div>
-        }
+    <div class="flex items-center gap-4 border-l border-slate-200 pl-4">
+      @for (field of filterFields(); track field.key) {
+      <div class="flex items-center gap-2">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ field.label }}</span>
+        <input [type]="field.type" [ngModel]="getFilterValue(field.key)"
+          (ngModelChange)="setFilterValue(field.key, $event)" [attr.max]="field.type === 'date' ? todayDate : null"
+          class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1 text-xs font-semibold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" />
       </div>
+      }
+    </div>
     }
     <!-- Last Updated & Actions -->
     <div class="flex items-center gap-3 ml-auto">
       @if (lastUpdated()) {
-        <span class="text-[10px] text-slate-400 font-medium hidden sm:inline whitespace-nowrap">
-          Actualizado: {{ formatLastUpdated() }}
-        </span>
+      <span class="text-[10px] text-slate-400 font-medium hidden sm:inline whitespace-nowrap">
+        Actualizado: {{ formatLastUpdated() }}
+      </span>
       }
-      <button (click)="clearFilters()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-slate-600 bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200">
+      <button (click)="clearFilters()"
+        class="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-slate-600 bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200">
         <app-ui-icon name="filter" className="w-4 h-4"></app-ui-icon>
         Limpiar
       </button>
-      <button (click)="refresh()" [disabled]="loading()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-white bg-blue-600 border border-transparent rounded-md shadow hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-wait">
+      <button (click)="refresh()" [disabled]="loading()"
+        class="flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-white bg-blue-600 border border-transparent rounded-md shadow hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-wait">
         @if (loading()) {
-          <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"></circle><path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path></svg>
+        <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"></circle>
+          <path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
+        </svg>
         } @else {
-          <app-ui-icon name="refresh" className="w-4 h-4"></app-ui-icon>
+        <app-ui-icon name="refresh" className="w-4 h-4"></app-ui-icon>
         }
         {{ loading() ? 'Cargando...' : 'Actualizar' }}
       </button>
     </div>
   </div>
 
-  <main class="flex-1 p-3 lg:p-4 !pt-2 overflow-y-auto">
+  <main class="flex-1 p-2 lg:p-3 !pt-2 overflow-hidden flex flex-col min-h-0">
     <!-- Quick Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-3 mb-2.5 lg:mb-3">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-2.5 mb-2 lg:mb-2.5 shrink-0">
       @for (card of cards(); track card.id) {
-        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-lg shadow-slate-300/20 flex flex-col justify-center min-h-[105px] hover:shadow-xl transition-all duration-300 border-b-4" [ngClass]="toneClasses(card.tone).border">
-          <div class="flex items-center gap-4">
-            <div class="flex items-center justify-center w-12 h-12 rounded-full ring-4 ring-slate-50 shrink-0" [ngClass]="toneClasses(card.tone).icon">
-              <app-ui-icon [name]="card.icon" [className]="'h-5 w-5'"></app-ui-icon>
-            </div>
-            <div class="min-w-0">
-              <p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest truncate">{{ card.label }}</p>
-              <p class="text-3xl font-black text-slate-800 tracking-tight mt-0.5">{{ card.value }}</p>
-            </div>
+      <div
+        class="bg-white rounded-xl border border-slate-200 p-5 shadow-lg shadow-slate-300/20 flex flex-col justify-center min-h-[105px] hover:shadow-xl transition-all duration-300 border-b-4"
+        [ngClass]="toneClasses(card.tone).border">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center justify-center w-12 h-12 rounded-full ring-4 ring-slate-50 shrink-0"
+            [ngClass]="toneClasses(card.tone).icon">
+            <app-ui-icon [name]="card.icon" [className]="'h-5 w-5'"></app-ui-icon>
+          </div>
+          <div class="min-w-0">
+            <p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest truncate">{{ card.label }}</p>
+            <p class="text-3xl font-black text-slate-800 tracking-tight mt-0.5">{{ card.value }}</p>
           </div>
         </div>
+      </div>
       }
     </div>
 
     <!-- Main Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-2.5 lg:gap-3 items-start">
-      
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-2.5 lg:gap-3 flex-1 min-h-0">
+
       <!-- MAPA BA (col-span-1 row-span-2) -->
-      <div class="bg-slate-800 rounded-2xl border border-slate-300 shadow-md col-span-1 lg:row-span-2 overflow-hidden flex flex-col h-full lg:min-h-[750px] min-h-[400px]">
+      <div
+        class="bg-slate-800 rounded-2xl border border-slate-300 shadow-md col-span-1 lg:row-span-2 overflow-hidden flex flex-col h-full min-h-0">
         <div class="flex items-center justify-between px-5 py-4 bg-white border-b border-slate-200 shrink-0">
-          <h3 class="text-[11px] font-extrabold text-slate-800 uppercase tracking-widest flex items-center gap-2">MAPA BA <span class="w-1 h-1 rounded-full bg-slate-300"></span> <span class="text-slate-500 font-semibold">{{ mapCoverageLabel() }}</span></h3>
+          <h3 class="text-[11px] font-extrabold text-slate-800 uppercase tracking-widest flex items-center gap-2">MAPA
+            BA <span class="w-1 h-1 rounded-full bg-slate-300"></span> <span class="text-slate-500 font-semibold">{{
+              mapCoverageLabel() }}</span></h3>
         </div>
         <div class="flex-1 relative w-full h-full bg-slate-800">
           <div #leafletMap class="h-full w-full relative z-0"></div>
-          
-          <div class="absolute bottom-4 right-4 z-[400] flex flex-col rounded-lg overflow-hidden border border-slate-700 shadow-lg">
-            <button class="bg-slate-900/90 text-white p-2 hover:bg-slate-800 transition flex items-center justify-center border-b border-slate-700/50 backdrop-blur">
+
+          <div
+            class="absolute bottom-4 right-4 z-[400] flex flex-col rounded-lg overflow-hidden border border-slate-700 shadow-lg">
+            <button
+              class="bg-slate-900/90 text-white p-2 hover:bg-slate-800 transition flex items-center justify-center border-b border-slate-700/50 backdrop-blur">
               <app-ui-icon name="plus" className="w-4 h-4"></app-ui-icon>
             </button>
-            <button class="bg-slate-900/90 text-white p-2 hover:bg-slate-800 transition flex items-center justify-center backdrop-blur">
+            <button
+              class="bg-slate-900/90 text-white p-2 hover:bg-slate-800 transition flex items-center justify-center backdrop-blur">
               <app-ui-icon name="minus" className="w-4 h-4"></app-ui-icon>
             </button>
           </div>
@@ -101,142 +110,120 @@
       </div>
 
       <!-- DISTRIBUCION POR PRIORIDAD -->
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm col-span-1 flex flex-col h-[365px] p-5 group hover:shadow-md transition-all">
+      <div
+        class="bg-white rounded-2xl border border-slate-200 shadow-sm col-span-1 flex flex-col h-full min-h-0 p-5 group hover:shadow-md transition-all">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">{{ activeModuleConfig().secondaryTitle }}</h3>
-          <button (click)="toggleExpand('priority')" class="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors">
+          <h3 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">{{
+            activeModuleConfig().secondaryTitle }}</h3>
+          <button (click)="toggleExpand('priority')"
+            class="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors">
             <app-ui-icon name="expand" className="w-4 h-4"></app-ui-icon>
           </button>
         </div>
         <div class="flex-1 w-full relative">
-           <apx-chart
-              [series]="priorityChart().series"
-              [chart]="priorityChart().chart"
-              [colors]="priorityChart().colors"
-              [plotOptions]="priorityChart().plotOptions"
-              [dataLabels]="priorityChart().dataLabels"
-              [xaxis]="priorityChart().xaxis"
-              [yaxis]="priorityChart().yaxis"
-              [grid]="priorityChart().grid"
-              [tooltip]="priorityChart().tooltip"
-              class="absolute inset-0 w-full h-full pb-6">
-            </apx-chart>
+          <apx-chart [series]="priorityChart().series" [chart]="priorityChart().chart" [colors]="priorityChart().colors"
+            [plotOptions]="priorityChart().plotOptions" [dataLabels]="priorityChart().dataLabels"
+            [xaxis]="priorityChart().xaxis" [yaxis]="priorityChart().yaxis" [grid]="priorityChart().grid"
+            [tooltip]="priorityChart().tooltip" class="absolute inset-0 w-full h-full pb-6">
+          </apx-chart>
         </div>
       </div>
 
       <!-- TENDENCIA SEMANAL -->
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm col-span-1 lg:col-span-2 flex flex-col h-[365px] p-5 relative group hover:shadow-md transition-all">
+      <div
+        class="bg-white rounded-2xl border border-slate-200 shadow-sm col-span-1 lg:col-span-2 flex flex-col h-full min-h-0 p-5 relative group hover:shadow-md transition-all">
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">TENDENCIA</h3>
           <div class="flex items-center gap-3">
-            <div class="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 shadow-sm scale-90">
+            <div
+              class="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 shadow-sm scale-90">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Activo
             </div>
-            <button (click)="toggleExpand('trend')" class="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors">
+            <button (click)="toggleExpand('trend')"
+              class="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors">
               <app-ui-icon name="expand" className="w-4 h-4"></app-ui-icon>
             </button>
           </div>
         </div>
         <div class="flex-1 w-full relative mt-2">
-           <apx-chart
-              [series]="trendChart().series"
-              [chart]="trendChart().chart"
-              [colors]="trendChart().colors"
-              [stroke]="trendChart().stroke"
-              [dataLabels]="trendChart().dataLabels"
-              [markers]="trendChart().markers"
-              [grid]="trendChart().grid"
-               [fill]="trendChart().fill"
-               [noData]="trendChart().noData"
-              [xaxis]="trendChart().xaxis"
-              [yaxis]="trendChart().yaxis"
-              [legend]="trendChart().legend"
-              [tooltip]="trendChart().tooltip"
-              class="absolute inset-0 w-full h-full pb-4">
-            </apx-chart>
+          <apx-chart [series]="trendChart().series" [chart]="trendChart().chart" [colors]="trendChart().colors"
+            [stroke]="trendChart().stroke" [dataLabels]="trendChart().dataLabels" [markers]="trendChart().markers"
+            [grid]="trendChart().grid" [fill]="trendChart().fill" [noData]="trendChart().noData"
+            [xaxis]="trendChart().xaxis" [yaxis]="trendChart().yaxis" [legend]="trendChart().legend"
+            [tooltip]="trendChart().tooltip" class="absolute inset-0 w-full h-full pb-4">
+          </apx-chart>
         </div>
       </div>
 
       <!-- DISTRIBUCION POR CATEGORIA -->
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm col-span-1 flex flex-col h-[365px] p-5 group hover:shadow-md transition-all">
+      <div
+        class="bg-white rounded-2xl border border-slate-200 shadow-sm col-span-1 flex flex-col h-full min-h-0 p-5 group hover:shadow-md transition-all">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">{{ activeModuleConfig().primaryTitle | uppercase }}</h3>
-          <button (click)="toggleExpand('category')" class="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors">
+          <h3 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">{{
+            activeModuleConfig().primaryTitle | uppercase }}</h3>
+          <button (click)="toggleExpand('category')"
+            class="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors">
             <app-ui-icon name="expand" className="w-4 h-4"></app-ui-icon>
           </button>
         </div>
         <div class="flex-1 w-full relative">
-           <apx-chart
-              [series]="primaryPieChart().series"
-              [chart]="primaryPieChart().chart"
-              [colors]="primaryPieChart().colors"
-              [labels]="primaryPieChart().labels"
-              [legend]="primaryPieChart().legend"
-              [stroke]="primaryPieChart().stroke"
-              [plotOptions]="primaryPieChart().plotOptions"
-              [dataLabels]="primaryPieChart().dataLabels"
-              [tooltip]="primaryPieChart().tooltip"
-              class="absolute inset-0 w-full h-full flex flex-col justify-center">
-            </apx-chart>
+          <apx-chart [series]="primaryPieChart().series" [chart]="primaryPieChart().chart"
+            [colors]="primaryPieChart().colors" [labels]="primaryPieChart().labels" [legend]="primaryPieChart().legend"
+            [stroke]="primaryPieChart().stroke" [plotOptions]="primaryPieChart().plotOptions"
+            [dataLabels]="primaryPieChart().dataLabels" [tooltip]="primaryPieChart().tooltip"
+            class="absolute inset-0 w-full h-full flex flex-col justify-center">
+          </apx-chart>
         </div>
         <div class="mt-4 grid grid-cols-2 gap-y-2">
-           @for (row of primaryRows().slice(0, 4); track row.trackKey; let idx = $index) {
-             <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-               <span class="w-2 h-2 rounded-full shrink-0" [style.backgroundColor]="primaryPieChart().colors[idx]"></span>
-               <span class="truncate">{{ row.displayLabel }}</span>
-             </div>
-           }
+          @for (row of primaryRows().slice(0, 4); track row.trackKey; let idx = $index) {
+          <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+            <span class="w-2 h-2 rounded-full shrink-0" [style.backgroundColor]="primaryPieChart().colors[idx]"></span>
+            <span class="truncate">{{ row.displayLabel }}</span>
+          </div>
+          }
         </div>
       </div>
 
       <!-- NOVEDADES POR ESTADO -->
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm col-span-1 flex flex-col h-[365px] p-5 group hover:shadow-md transition-all">
+      <div
+        class="bg-white rounded-2xl border border-slate-200 shadow-sm col-span-1 flex flex-col h-full min-h-0 p-5 group hover:shadow-md transition-all">
         <div class="flex items-center justify-between mb-2">
-          <h3 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">{{ activeModuleConfig().secondaryTitle | uppercase }}</h3>
-          <button (click)="toggleExpand('status')" class="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors">
+          <h3 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">{{
+            activeModuleConfig().secondaryTitle | uppercase }}</h3>
+          <button (click)="toggleExpand('status')"
+            class="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors">
             <app-ui-icon name="expand" className="w-4 h-4"></app-ui-icon>
           </button>
         </div>
         <div class="flex-1 w-full relative">
-           <apx-chart
-              [series]="statusChart().series"
-              [chart]="statusChart().chart"
-              [colors]="statusChart().colors"
-              [plotOptions]="statusChart().plotOptions"
-              [dataLabels]="statusChart().dataLabels"
-              [stroke]="statusChart().stroke"
-              [xaxis]="statusChart().xaxis"
-              [yaxis]="statusChart().yaxis"
-              [grid]="statusChart().grid"
-              [legend]="statusChart().legend"
-              [tooltip]="statusChart().tooltip"
-              class="absolute inset-0 w-full h-full pb-4">
-            </apx-chart>
+          <apx-chart [series]="statusChart().series" [chart]="statusChart().chart" [colors]="statusChart().colors"
+            [plotOptions]="statusChart().plotOptions" [dataLabels]="statusChart().dataLabels"
+            [stroke]="statusChart().stroke" [xaxis]="statusChart().xaxis" [yaxis]="statusChart().yaxis"
+            [grid]="statusChart().grid" [legend]="statusChart().legend" [tooltip]="statusChart().tooltip"
+            class="absolute inset-0 w-full h-full pb-4">
+          </apx-chart>
         </div>
       </div>
 
       <!-- TOP 5 UNIDADES CON INCIDENCIAS -->
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm col-span-1 flex flex-col h-[365px] p-5 group hover:shadow-md transition-all">
+      <div
+        class="bg-white rounded-2xl border border-slate-200 shadow-sm col-span-1 flex flex-col h-full min-h-0 p-5 group hover:shadow-md transition-all">
         <div class="flex items-center justify-between mb-2">
-          <h3 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">TOP 5 UNIDADES · {{ activeModuleConfig().label | uppercase }}</h3>
-          <button (click)="toggleExpand('radar')" class="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors">
+          <h3 class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">TOP 5 UNIDADES · {{
+            activeModuleConfig().label | uppercase }}</h3>
+          <button (click)="toggleExpand('radar')"
+            class="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors">
             <app-ui-icon name="expand" className="w-4 h-4"></app-ui-icon>
           </button>
         </div>
         <div class="flex-1 w-full relative">
-           <apx-chart
-              [series]="topUnitsRadarChart().series"
-              [chart]="topUnitsRadarChart().chart"
-              [colors]="topUnitsRadarChart().colors"
-              [labels]="topUnitsRadarChart().labels"
-              [stroke]="topUnitsRadarChart().stroke"
-              [fill]="topUnitsRadarChart().fill"
-              [markers]="topUnitsRadarChart().markers"
-              [yaxis]="topUnitsRadarChart().yaxis"
-              [legend]="topUnitsRadarChart().legend"
-              [tooltip]="topUnitsRadarChart().tooltip"
-              class="absolute inset-0 w-full h-full flex flex-col justify-center pb-4">
-            </apx-chart>
+          <apx-chart [series]="topUnitsRadarChart().series" [chart]="topUnitsRadarChart().chart"
+            [colors]="topUnitsRadarChart().colors" [labels]="topUnitsRadarChart().labels"
+            [stroke]="topUnitsRadarChart().stroke" [fill]="topUnitsRadarChart().fill"
+            [markers]="topUnitsRadarChart().markers" [yaxis]="topUnitsRadarChart().yaxis"
+            [legend]="topUnitsRadarChart().legend" [tooltip]="topUnitsRadarChart().tooltip"
+            class="absolute inset-0 w-full h-full flex flex-col justify-center pb-4">
+          </apx-chart>
         </div>
       </div>
 
@@ -245,118 +232,90 @@
 
   <!-- Expanded Chart Modal -->
   @if (expandedChart()) {
-    <div class="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-8">
-      <!-- Backdrop -->
-      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" (click)="toggleExpand(null)"></div>
-      
-      <!-- Modal Content -->
-      <div class="bg-white w-full max-w-5xl h-full max-h-[85vh] rounded-3xl shadow-2xl z-[1001] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
-        <div class="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-slate-50/50">
-          <div>
-            <h2 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Vista Detallada</h2>
-            <p class="text-xl font-black text-slate-800 tracking-tight mt-0.5">
-              {{ expandedChart() === 'priority' ? 'Distribución por Prioridad' : 
-                 expandedChart() === 'trend' ? 'Tendencia Semanal de Registros' :
-                 expandedChart() === 'category' ? 'Distribución por Categoría' :
-                 expandedChart() === 'status' ? 'Novedades por Estado' :
-                 'Top 5 Unidades con Incidencias' }}
-            </p>
-          </div>
-          <button (click)="toggleExpand(null)" class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-200/50 text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm">
-            <app-ui-icon name="x" className="w-5 h-5"></app-ui-icon>
-          </button>
-        </div>
-        
-        <div class="flex-1 min-h-0 relative flex flex-col p-8">
-          <div class="flex-1 w-full h-full relative">
-            @if (expandedChart() === 'priority') {
-              <apx-chart 
-                [series]="priorityChart().series" 
-                [chart]="{ ...priorityChart().chart, height: '100%', width: '100%', toolbar: { show: false }, animations: { enabled: true } }" 
-                [colors]="priorityChart().colors" 
-                [plotOptions]="priorityChart().plotOptions" 
-                [dataLabels]="{ enabled: true }" 
-                [xaxis]="priorityChart().xaxis" 
-                [yaxis]="priorityChart().yaxis" 
-                [grid]="priorityChart().grid" 
-                [tooltip]="priorityChart().tooltip"
-                [autoUpdateSeries]="true"
-                class="block w-full h-full">
-              </apx-chart>
-            } @else if (expandedChart() === 'trend') {
-              <apx-chart 
-                [series]="trendChart().series" 
-                [chart]="{ ...trendChart().chart, height: '100%', width: '100%', toolbar: { show: false }, animations: { enabled: true } }" 
-                [colors]="trendChart().colors" 
-                [stroke]="trendChart().stroke" 
-                [dataLabels]="{ enabled: true }" 
-                [markers]="{ size: 6 }" 
-                [grid]="trendChart().grid" 
-                [xaxis]="trendChart().xaxis" 
-                [yaxis]="{ show: true }" 
-                [legend]="{ ...trendChart().legend, fontSize: '14px' }" 
-                [tooltip]="trendChart().tooltip"
-                [autoUpdateSeries]="true"
-                class="block w-full h-full">
-              </apx-chart>
-            } @else if (expandedChart() === 'category') {
-              <apx-chart 
-                [series]="primaryPieChart().series" 
-                [chart]="{ ...primaryPieChart().chart, height: '100%', width: '100%', animations: { enabled: true } }" 
-                [colors]="primaryPieChart().colors" 
-                [labels]="primaryPieChart().labels" 
-                [legend]="{ show: true, position: 'right' }" 
-                [stroke]="primaryPieChart().stroke" 
-                [plotOptions]="primaryPieChart().plotOptions" 
-                [dataLabels]="{ enabled: true }" 
-                [tooltip]="primaryPieChart().tooltip"
-                [autoUpdateSeries]="true"
-                class="block w-full h-full">
-              </apx-chart>
-            } @else if (expandedChart() === 'status') {
-              <apx-chart 
-                [series]="statusChart().series" 
-                [chart]="{ ...statusChart().chart, height: '100%', width: '100%', toolbar: { show: false }, animations: { enabled: true } }" 
-                [colors]="statusChart().colors" 
-                [plotOptions]="statusChart().plotOptions" 
-                [dataLabels]="{ enabled: true }" 
-                [stroke]="statusChart().stroke" 
-                [xaxis]="statusChart().xaxis" 
-                [yaxis]="{ show: true }" 
-                [grid]="statusChart().grid" 
-                [legend]="{ ...statusChart().legend, fontSize: '14px' }" 
-                [tooltip]="statusChart().tooltip"
-               [noData]="statusChart().noData"
-                [autoUpdateSeries]="true"
-                class="block w-full h-full">
-              </apx-chart>
-            } @else {
-              <apx-chart 
-                [series]="topUnitsRadarChart().series" 
-                [chart]="{ ...topUnitsRadarChart().chart, height: '100%', width: '100%', toolbar: { show: false }, animations: { enabled: true } }" 
-                [colors]="topUnitsRadarChart().colors" 
-                [labels]="topUnitsRadarChart().labels" 
-                [stroke]="topUnitsRadarChart().stroke" 
-                [fill]="topUnitsRadarChart().fill" 
-                [markers]="topUnitsRadarChart().markers" 
-                [yaxis]="topUnitsRadarChart().yaxis" 
-                [legend]="{ ...topUnitsRadarChart().legend, fontSize: '14px' }" 
-                [tooltip]="topUnitsRadarChart().tooltip"
-                [autoUpdateSeries]="true"
-                class="block w-full h-full">
-              </apx-chart>
-            }
-          </div>
-        </div>
+  <div class="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-8">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" (click)="toggleExpand(null)">
+    </div>
 
-        <div class="px-8 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-slate-400">
-          <span>Última actualización: {{ formatLastUpdated() }}</span>
-          <div class="flex gap-4">
-             <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Datos en tiempo real</span>
-             <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Conectado</span>
-          </div>
+    <!-- Modal Content -->
+    <div
+      class="bg-white w-full max-w-5xl h-full max-h-[85vh] rounded-3xl shadow-2xl z-[1001] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
+      <div class="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-slate-50/50">
+        <div>
+          <h2 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Vista Detallada</h2>
+          <p class="text-xl font-black text-slate-800 tracking-tight mt-0.5">
+            {{ expandedChart() === 'priority' ? 'Distribución por Prioridad' :
+            expandedChart() === 'trend' ? 'Tendencia Semanal de Registros' :
+            expandedChart() === 'category' ? 'Distribución por Categoría' :
+            expandedChart() === 'status' ? 'Novedades por Estado' :
+            'Top 5 Unidades con Incidencias' }}
+          </p>
+        </div>
+        <button (click)="toggleExpand(null)"
+          class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-200/50 text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm">
+          <app-ui-icon name="x" className="w-5 h-5"></app-ui-icon>
+        </button>
+      </div>
+
+      <div class="flex-1 min-h-0 relative flex flex-col p-8">
+        <div class="flex-1 w-full h-full relative">
+          @if (expandedChart() === 'priority') {
+          <apx-chart [series]="priorityChart().series"
+            [chart]="{ ...priorityChart().chart, height: '100%', width: '100%', toolbar: { show: false }, animations: { enabled: true } }"
+            [colors]="priorityChart().colors" [plotOptions]="priorityChart().plotOptions"
+            [dataLabels]="{ enabled: true }" [xaxis]="priorityChart().xaxis" [yaxis]="priorityChart().yaxis"
+            [grid]="priorityChart().grid" [tooltip]="priorityChart().tooltip" [autoUpdateSeries]="true"
+            class="block w-full h-full">
+          </apx-chart>
+          } @else if (expandedChart() === 'trend') {
+          <apx-chart [series]="trendChart().series"
+            [chart]="{ ...trendChart().chart, height: '100%', width: '100%', toolbar: { show: false }, animations: { enabled: true } }"
+            [colors]="trendChart().colors" [stroke]="trendChart().stroke" [dataLabels]="{ enabled: true }"
+            [markers]="{ size: 6 }" [grid]="trendChart().grid" [xaxis]="trendChart().xaxis" [yaxis]="{ show: true }"
+            [legend]="{ ...trendChart().legend, fontSize: '14px' }" [tooltip]="trendChart().tooltip"
+            [autoUpdateSeries]="true" class="block w-full h-full">
+          </apx-chart>
+          } @else if (expandedChart() === 'category') {
+          <apx-chart [series]="primaryPieChart().series"
+            [chart]="{ ...primaryPieChart().chart, height: '100%', width: '100%', animations: { enabled: true } }"
+            [colors]="primaryPieChart().colors" [labels]="primaryPieChart().labels"
+            [legend]="{ show: true, position: 'right' }" [stroke]="primaryPieChart().stroke"
+            [plotOptions]="primaryPieChart().plotOptions" [dataLabels]="{ enabled: true }"
+            [tooltip]="primaryPieChart().tooltip" [autoUpdateSeries]="true" class="block w-full h-full">
+          </apx-chart>
+          } @else if (expandedChart() === 'status') {
+          <apx-chart [series]="statusChart().series"
+            [chart]="{ ...statusChart().chart, height: '100%', width: '100%', toolbar: { show: false }, animations: { enabled: true } }"
+            [colors]="statusChart().colors" [plotOptions]="statusChart().plotOptions" [dataLabels]="{ enabled: true }"
+            [stroke]="statusChart().stroke" [xaxis]="statusChart().xaxis" [yaxis]="{ show: true }"
+            [grid]="statusChart().grid" [legend]="{ ...statusChart().legend, fontSize: '14px' }"
+            [tooltip]="statusChart().tooltip" [noData]="statusChart().noData" [autoUpdateSeries]="true"
+            class="block w-full h-full">
+          </apx-chart>
+          } @else {
+          <apx-chart [series]="topUnitsRadarChart().series"
+            [chart]="{ ...topUnitsRadarChart().chart, height: '100%', width: '100%', toolbar: { show: false }, animations: { enabled: true } }"
+            [colors]="topUnitsRadarChart().colors" [labels]="topUnitsRadarChart().labels"
+            [stroke]="topUnitsRadarChart().stroke" [fill]="topUnitsRadarChart().fill"
+            [markers]="topUnitsRadarChart().markers" [yaxis]="topUnitsRadarChart().yaxis"
+            [legend]="{ ...topUnitsRadarChart().legend, fontSize: '14px' }" [tooltip]="topUnitsRadarChart().tooltip"
+            [autoUpdateSeries]="true" class="block w-full h-full">
+          </apx-chart>
+          }
+        </div>
+      </div>
+
+      <div
+        class="px-8 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-slate-400">
+        <span>Última actualización: {{ formatLastUpdated() }}</span>
+        <div class="flex gap-4">
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Datos en tiempo
+            real</span>
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            Conectado</span>
         </div>
       </div>
     </div>
+  </div>
   }
 </div>
