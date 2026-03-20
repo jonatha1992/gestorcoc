@@ -18,17 +18,6 @@ def _bytes_to_kb_label(size_bytes):
     return f"{kb:.1f}".rstrip('0').rstrip('.')
 
 
-def _camera_photo_max_size_bytes():
-    return int(getattr(settings, 'CAMERA_PHOTO_MAX_SIZE_BYTES', 250 * 1024))
-
-
-def _bytes_to_kb_label(size_bytes):
-    kb = size_bytes / 1024
-    if float(kb).is_integer():
-        return str(int(kb))
-    return f"{kb:.1f}".rstrip('0').rstrip('.')
-
-
 class UnitSerializer(serializers.ModelSerializer):
     class Meta:
         model = Unit

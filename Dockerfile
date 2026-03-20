@@ -13,7 +13,10 @@ RUN npm ci
 
 # Copiar el codigo fuente y compilar
 COPY frontend/ ./
-RUN npm run build
+# Clean Angular and TypeScript caches to avoid stale build artifacts
+RUN rm -rf .angular/cache 2>/dev/null || true
+RUN rm -rf node_modules/.cache 2>/dev/null || true
+RUN npm run build -- --no-incremental
 
 # Verificar que el build produjo los archivos esperados (fail-fast)
 RUN test -f /app/frontend/dist/gestor-coc/browser/index.html \

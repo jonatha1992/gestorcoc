@@ -326,18 +326,6 @@ export class AssetsComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  get canManageAssets(): boolean {
-    return this.authService.hasPermission(PermissionCodes.MANAGE_ASSETS);
-  }
-
-  private requireManageAssets(): boolean {
-    if (this.canManageAssets) {
-      return true;
-    }
-    this.toastService.error('No tiene permiso para modificar equipamiento.');
-    return false;
-  }
-
   openSystemModal() {
     if (!this.requireManageAssets()) {
       return;
