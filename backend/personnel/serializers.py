@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from assets.models import System, Unit
 
-from .models import ExternalPerson, Person
+from .models import ExternalPerson, Person, UserAccountProfile
 
 
 class PersonSerializer(serializers.ModelSerializer):
@@ -69,3 +69,49 @@ class ExternalPersonSerializer(serializers.ModelSerializer):
         if len(normalized) < 7 or len(normalized) > 10:
             raise serializers.ValidationError("El DNI debe contener solo numeros (entre 7 y 10 digitos).")
         return normalized
+
+
+class UserManagementSerializer(serializers.ModelSerializer):
+    """Serializer de solo lectura para la vista de gestión de cuentas de usuario."""
+    username = serializers.CharField(source="user.username", read_only=True)
+    user_id = serializers.IntegerField(source="user.id", read_only=True)
+    user_is_active = serializers.BooleanField(source="user.is_active", read_only=True)
+    last_login = serializers.DateTimeField(source="user.last_login", read_only=True)
+    role_display = serializers.CharField(source="get_role_display", read_only=True)
+    unit = serializers.SlugRelatedField(
+        queryset=Unit.objects.all(), slug_field="code", required=False, allow_null=True
+    )
+    unit_name = serializers.SerializerMethodField()
+    must_change_password = serializers.SerializerMethodField()
+    has_account = serializers.SerializerMethodField()
+
+    def get_unit_name(self, obj):
+        return obj.unit.name if obj.unit else None
+
+    def get_must_change_password(self, obj):
+        profile = getattr(obj.user, "account_profile", None) if obj.user else None
+        return bool(profile.must_change_password) if profile else False
+
+    def get_has_account(self, obj):
+        return obj.user_id is not None
+
+    class Meta:
+        model = Person
+        fields = [
+            "id",
+            "username",
+            "user_id",
+            "first_name",
+            "last_name",
+            "badge_number",
+            "role",
+            "role_display",
+            "rank",
+            "unit",
+            "unit_name",
+            "is_active",
+            "user_is_active",
+            "must_change_password",
+            "last_login",
+            "has_account",
+        ]

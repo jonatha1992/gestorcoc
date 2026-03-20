@@ -44,6 +44,7 @@ class PermissionCode:
     VERIFY_CREV = "verify_crev_record"
     MANAGE_CREV_FLOW = "manage_crev_flow"
     VIEW_SETTINGS = "view_settings"
+    MANAGE_USERS = "manage_users"
 
 
 CUSTOM_PERMISSION_LABELS = {
@@ -63,6 +64,7 @@ CUSTOM_PERMISSION_LABELS = {
     PermissionCode.VERIFY_CREV: "Can verify CREV records",
     PermissionCode.MANAGE_CREV_FLOW: "Can manage CREV flow",
     PermissionCode.VIEW_SETTINGS: "Can view settings",
+    PermissionCode.MANAGE_USERS: "Can manage user accounts",
 }
 
 

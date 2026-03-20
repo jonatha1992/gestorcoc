@@ -35,6 +35,7 @@ export const PermissionCodes = {
   VERIFY_CREV: 'verify_crev_record',
   MANAGE_CREV_FLOW: 'manage_crev_flow',
   VIEW_SETTINGS: 'view_settings',
+  MANAGE_USERS: 'manage_users',
 } as const;
 
 export type PermissionCode = (typeof PermissionCodes)[keyof typeof PermissionCodes];

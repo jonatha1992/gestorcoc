@@ -49,7 +49,9 @@
       "Bash(pip install faker --quiet)",
       "Bash(/c/Repositorio/gestorcoc/backend/.venv/Scripts/python.exe /c/Repositorio/gestorcoc/backend/manage.py seed_data --mode fill_missing)",
       "Bash(/c/Repositorio/gestorcoc/backend/.venv/Scripts/pip.exe install faker --quiet)",
-      "Bash(ping -n 2 switchyard.proxy.rlwy.net)"
+      "Bash(ping -n 2 switchyard.proxy.rlwy.net)",
+      "mcp__filesystem__read_multiple_files",
+      "mcp__filesystem__read_text_file"
     ]
   }
 }

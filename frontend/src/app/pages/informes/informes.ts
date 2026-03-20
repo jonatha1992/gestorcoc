@@ -1072,31 +1072,10 @@ export class InformesComponent implements OnInit, OnDestroy {
     this.form.source_system_id = null;
   }
 
-  private applySourceSystemDefaults(system: SystemAsset): void {
-    const authenticityMode = (system.report_authenticity_mode_default || '') as
-      | VideoReportVmsAuthenticityMode
-      | '';
-    if (authenticityMode) {
-      this.onVmsAuthenticityModeChange(authenticityMode);
-    }
-    this.form.vms_authenticity_detail = system.report_authenticity_detail_default || '';
+  private applySourceSystemDefaults(_system: SystemAsset): void {
     this.form.vms_native_hash_algorithms = [];
     this.form.vms_native_hash_algorithm_other = '';
-
-    if (
-      authenticityMode === 'hash_preventivo' &&
-      (system.report_hash_program_default || '').trim()
-    ) {
-      this.form.hash_program = system.report_hash_program_default || '';
-    } else if (authenticityMode === 'hash_preventivo') {
-      this.form.hash_program = 'HashMyFiles';
-    }
-
     this.normalizeIntegrityState();
-
-    this.markDirty('vms_authenticity_mode');
-    this.markDirty('vms_authenticity_detail');
-    this.markDirty('hash_program');
   }
 
   /**
