@@ -149,7 +149,9 @@ class UserManagementViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
         assign_role_group(user, person.role)
         person.user = user
         person.save()
-        UserAccountProfile.objects.create(user=user, must_change_password=True)
+        profile, _ = UserAccountProfile.objects.get_or_create(user=user)
+        profile.must_change_password = True
+        profile.save(update_fields=["must_change_password"])
 
         serializer = self.get_serializer(person)
         return Response(serializer.data, status=drf_status.HTTP_201_CREATED)

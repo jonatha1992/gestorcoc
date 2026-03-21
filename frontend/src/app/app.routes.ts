@@ -69,6 +69,13 @@ export const routes: Routes = [
         canActivate: [authGuard, permissionGuard],
         data: { permissions: [PermissionCodes.MANAGE_USERS] }
     },
+    {
+        path: 'sistema',
+        loadComponent: () => import('./pages/sistema/sistema.component').then(c => c.SistemaComponent),
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.MANAGE_USERS] }
+    },
     { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },
     { path: '**', redirectTo: '' }
 ];
+

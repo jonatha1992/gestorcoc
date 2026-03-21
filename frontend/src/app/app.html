@@ -152,6 +152,20 @@
           <div class="h-px bg-slate-800 w-full"></div>
         </div>
 
+        @if (canAccess('manage_users')) {
+          <a routerLink="/sistema" routerLinkActive="bg-primary-600 text-white shadow-md shadow-primary-600/20"
+            class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-colors group-hover:text-primary-400"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+              <path d="M10 9l2 2 4-4"/>
+            </svg>
+            <span *ngIf="!isSidebarCollapsed" class="ml-2.5 text-sm font-medium">Sistema</span>
+          </a>
+        }
+
         <a routerLink="/settings" routerLinkActive="bg-primary-600 text-white shadow-md shadow-primary-600/20"
           class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-colors group-hover:text-primary-400"

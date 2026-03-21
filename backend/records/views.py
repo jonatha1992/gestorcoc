@@ -93,7 +93,32 @@ class FilmRecordViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
     # Ordenamiento
     ordering_fields = ['entry_date', 'created_at', 'delivery_status', 'id']
     ordering = ['-entry_date', '-created_at']
-    
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+
+        # Si no está autenticado, no retorna nada
+        if not user.is_authenticated:
+            return queryset.none()
+
+        # Los administradores ven todo
+        if user.is_superuser or getattr(user, 'role', '') == 'ADMIN':
+            return queryset
+
+        # Los C.R.E.V. probablemente necesiten ver todo para verificar
+        person = getattr(user, 'person', None)
+        if person:
+            # Si el rol permite ver todo (como CREV_SUPERVISOR, ADMIN, etc), ajustarlo si es necesario
+            # Por ahora, filtramos estrictamente por la unidad del usuario (COC)
+            if person.role in ['ADMIN', 'CREV_SUPERVISOR', 'CREV_OPERATOR']:
+                return queryset
+            
+            if person.unit:
+                return queryset.filter(generator_unit=person.unit)
+        
+        return queryset.none()  # Si no tiene persona/unidad, no ve nada
+
     @action(detail=True, methods=['post'])
     def verify_by_crev(self, request, pk=None):
         """

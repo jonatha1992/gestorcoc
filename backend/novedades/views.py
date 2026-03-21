@@ -49,6 +49,29 @@ class NovedadViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        user = self.request.user
+
+        if not user.is_authenticated:
+            return queryset.none()
+
+        # Filtrado por unidad
+        if not user.is_superuser and getattr(user, 'role', '') != 'ADMIN':
+            person = getattr(user, 'person', None)
+            if person:
+                if person.role not in ['ADMIN', 'CREV_SUPERVISOR', 'CREV_OPERATOR']:
+                    if person.unit:
+                        # Filtrar novedades donde el sistema/server/camara o equipo pertenezca a la unidad
+                        queryset = queryset.filter(
+                            Q(camera__server__system__unit=person.unit) |
+                            Q(server__system__unit=person.unit) |
+                            Q(system__unit=person.unit) |
+                            Q(cameraman_gear__unit=person.unit)  # Suponiendo que el equipo tiene unidad
+                        ).distinct()
+                    else:
+                        queryset = queryset.none()
+            else:
+                queryset = queryset.none()
+
         asset_type = (self.request.query_params.get('asset_type') or '').strip().upper()
 
         if asset_type == 'CAMERA':

@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal, ChangeDetectorRef, NgZone } from '@angular/core';
+import { finalize } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -47,6 +48,7 @@ export class UsuariosComponent implements OnInit {
   units = signal<Unit[]>([]);
   showForm = signal(false);
   showPasswordModal = signal(false);
+  isSubmittingPassword = signal(false);
   isEditing = false;
   searchText = '';
   filterRole = '';
@@ -243,21 +245,25 @@ export class UsuariosComponent implements OnInit {
       this.toastService.show('Las contraseñas no coinciden', 'error');
       return;
     }
-    this.userMgmtService.resetPassword(this.selectedUserId!, this.newPassword).subscribe({
-      next: () => {
-        this.ngZone.run(() => {
-          this.toastService.show('Contraseña restablecida. El usuario deberá cambiarla al iniciar sesión.', 'success');
-          this.closePasswordModal();
-          this.cdr.detectChanges();
-        });
-      },
-      error: () => {
-        this.ngZone.run(() => {
-          this.toastService.show('Error al restablecer contraseña', 'error');
-          this.cdr.detectChanges();
-        });
-      }
-    });
+    this.isSubmittingPassword.set(true);
+    this.userMgmtService
+      .resetPassword(this.selectedUserId!, this.newPassword)
+      .pipe(finalize(() => this.isSubmittingPassword.set(false)))
+      .subscribe({
+        next: () => {
+          this.ngZone.run(() => {
+            this.toastService.show('Contraseña restablecida. El usuario deberá cambiarla al iniciar sesión.', 'success');
+            this.closePasswordModal();
+            this.cdr.detectChanges();
+          });
+        },
+        error: () => {
+          this.ngZone.run(() => {
+            this.toastService.show('Error al restablecer contraseña', 'error');
+            this.cdr.detectChanges();
+          });
+        },
+      });
   }
 
   getRoleLabel(role: string): string {

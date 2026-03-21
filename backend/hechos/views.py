@@ -33,6 +33,28 @@ class HechoViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
     ordering_fields = ['timestamp', 'category', 'is_solved']
     ordering = ['-timestamp']
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+
+        if not user.is_authenticated:
+            return queryset.none()
+
+        # Filtrado por unidad
+        if not user.is_superuser and getattr(user, 'role', '') != 'ADMIN':
+            person = getattr(user, 'person', None)
+            if person:
+                if person.role not in ['ADMIN', 'CREV_SUPERVISOR', 'CREV_OPERATOR']:
+                    if person.unit:
+                        # Filtrar Hechos donde la cámara pertenezca a la unidad
+                        queryset = queryset.filter(camera__server__system__unit=person.unit)
+                    else:
+                        queryset = queryset.none()
+            else:
+                queryset = queryset.none()
+
+        return queryset
+
     def perform_create(self, serializer):
         person = getattr(self.request.user, "person", None)
         if person is not None and not serializer.validated_data.get("reported_by"):

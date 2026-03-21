@@ -1,0 +1,250 @@
+<div class="h-full flex flex-col bg-slate-50/50">
+    <!-- Header Controls -->
+    <div class="flex-none p-4 lg:p-6 pb-4 border-b border-slate-200 bg-white">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-slate-800">Registros de Auditoría</h1>
+                <p class="text-xs text-slate-500 mt-1">Monitoreo de actividad del sistema, accesos y modificaciones</p>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="mt-4 flex flex-wrap gap-3">
+            <div class="relative max-w-sm flex-1">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
+                    (keyup.enter)="applyFilters()"
+                    placeholder="Buscar por usuario, ruta o mensaje..."
+                    class="block w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm">
+            </div>
+
+            <select [ngModel]="filterAction()" (ngModelChange)="filterAction.set($event)" (change)="applyFilters()"
+                class="block pl-3 pr-10 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm bg-white">
+                <option value="">Todas las acciones</option>
+                <option value="login">Login</option>
+                <option value="logout">Logout</option>
+                <option value="create">Creación (POST)</option>
+                <option value="update">Modificación (PUT/PATCH)</option>
+                <option value="delete">Eliminación (DELETE)</option>
+                <option value="read">Lectura (GET)</option>
+            </select>
+
+            <select [ngModel]="filterModel()" (ngModelChange)="filterModel.set($event)" (change)="applyFilters()"
+                class="block pl-3 pr-10 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm bg-white">
+                <option value="">Cualquier módulo</option>
+                <option value="user">Usuarios</option>
+                <option value="filmrecord">Registros Fílmicos</option>
+                <option value="report">Informes</option>
+                <option value="camera">Cámaras</option>
+                <option value="hecho">Hechos</option>
+                <option value="novedad">Novedades</option>
+            </select>
+
+            <button (click)="applyFilters()"
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-slate-800 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
+                Buscar
+            </button>
+
+            @if (searchQuery() || filterAction() || filterModel()) {
+            <button (click)="clearFilters()"
+                class="inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-lg shadow-sm text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                Limpiar
+            </button>
+            }
+        </div>
+    </div>
+
+    <!-- Main Content y Modal -->
+    <div class="flex-1 flex overflow-hidden relative">
+        <!-- Tabla de Logs -->
+        <div class="flex-1 overflow-auto custom-scrollbar p-4 lg:p-6" [class.pr-96]="selectedLog() != null">
+            @if (isLoading()) {
+            <div class="flex justify-center items-center py-12">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+            } @else if (logs().length === 0) {
+            <div class="text-center py-12 bg-white rounded-2xl border border-slate-200 border-dashed">
+                <svg class="mx-auto h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-slate-900">No hay registros</h3>
+                <p class="mt-1 text-xs text-slate-500">No se encontraron registros de auditoría con los filtros actuales.</p>
+            </div>
+            } @else {
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Fecha / Hora</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Usuario</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Acción</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Módulo / Objeto</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Detalle</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Estado</th>
+                                <th scope="col" class="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-slate-200">
+                            @for (log of logs(); track log.id) {
+                            <tr class="hover:bg-slate-50 transition-colors cursor-pointer" (click)="openDetail(log)">
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <div class="text-xs text-slate-900 font-medium">{{ log.created_at | date:'dd/MM/yyyy' }}</div>
+                                    <div class="text-[10px] text-slate-500">{{ log.created_at | date:'HH:mm:ss' }}</div>
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
+                                            <span class="text-xs font-bold text-slate-600">{{ log.username ? log.username.substring(0,2).toUpperCase() : '?' }}</span>
+                                        </div>
+                                        <div class="ml-3">
+                                            <div class="text-sm font-medium text-slate-900">{{ log.username || 'Sistema/Anónimo' }}</div>
+                                            <div class="text-[10px] text-slate-500 uppercase tracking-wider">{{ log.role || 'NA' }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase border"
+                                          [ngClass]="getActionClass(log.action)">
+                                        {{ log.action }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <div class="text-sm text-slate-900 font-medium">{{ log.target_model || '-' }}</div>
+                                    <div class="text-xs text-slate-500 truncate max-w-[150px]" [title]="log.target_repr">{{ log.target_repr || log.path }}</div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="text-xs text-slate-600 truncate max-w-xs" [title]="log.message">{{ log.message }}</div>
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border"
+                                          [ngClass]="getStatusClass(log.status_code)">
+                                        {{ log.status_code }} {{ log.method }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                                    <button class="text-primary-600 hover:text-primary-900">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                @if (totalPages() > 1) {
+                <div class="px-4 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between sm:px-6">
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-slate-700">
+                                Mostrando página <span class="font-medium">{{ currentPage() }}</span> de <span class="font-medium">{{ totalPages() }}</span>
+                                (<span class="font-medium">{{ totalCount() }}</span> registros en total)
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                <button [disabled]="currentPage() === 1" (click)="changePage(currentPage() - 1)"
+                                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <span class="sr-only">Anterior</span>
+                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                
+                                <button [disabled]="currentPage() === totalPages()" (click)="changePage(currentPage() + 1)"
+                                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <span class="sr-only">Siguiente</span>
+                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+                }
+            </div>
+            }
+        </div>
+
+        <!-- Panel Lateral de Detalle -->
+        @if (selectedLog()) {
+        <div class="absolute right-0 top-0 bottom-0 w-96 bg-white border-l border-slate-200 shadow-2xl flex flex-col z-20 animate-slide-in-right">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 backdrop-blur-sm">
+                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Detalle de Registro
+                </h3>
+                <button (click)="closeDetail()" class="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-200 rounded-lg transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
+                <!-- Info Principal -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase border"
+                          [ngClass]="getActionClass(selectedLog()!.action)">
+                            {{ selectedLog()!.action }}
+                        </span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border"
+                          [ngClass]="getStatusClass(selectedLog()!.status_code)">
+                            Status {{ selectedLog()!.status_code }}
+                        </span>
+                    </div>
+                    <h4 class="text-base font-bold text-slate-800">{{ selectedLog()!.message }}</h4>
+                    <p class="text-xs text-slate-500 mt-1">{{ selectedLog()!.created_at | date:'dd/MM/yyyy HH:mm:ss' }}</p>
+                </div>
+
+                <div class="h-px bg-slate-100 w-full"></div>
+
+                <!-- Detalles Contexto -->
+                <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <div>
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Usuario</span>
+                        <span class="block text-sm font-medium text-slate-800">{{ selectedLog()!.username || 'Sistema' }} <span class="text-xs font-normal text-slate-500">({{ selectedLog()!.role || 'Sin rol' }})</span></span>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Objeto Afectado</span>
+                        <span class="block text-sm font-medium text-slate-800">{{ selectedLog()!.target_model || 'N/A' }}</span>
+                        <span class="block text-xs text-slate-600 mt-0.5">{{ selectedLog()!.target_repr }}</span>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Ruta / API</span>
+                        <span class="block text-xs font-mono bg-white border border-slate-200 p-1.5 rounded mt-1 text-slate-600 break-all">{{ selectedLog()!.method }} {{ selectedLog()!.path }}</span>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">IP Origen</span>
+                        <span class="block text-xs text-slate-700 mt-0.5">{{ selectedLog()!.ip_address || 'Desconocida' }}</span>
+                    </div>
+                </div>
+
+                <!-- Cambios y Metadata -->
+                <div>
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase mb-2">Cambios / Payload</span>
+                    <pre class="bg-slate-900 text-slate-300 p-3 rounded-lg text-[10px] font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed">{{ formatChanges(selectedLog()!.changes || selectedLog()!.metadata) }}</pre>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t border-slate-100 bg-slate-50/70 shrink-0">
+                <button (click)="closeDetail()" class="w-full px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
+                    Cerrar Detalle
+                </button>
+            </div>
+        </div>
+        }
+    </div>
+</div>

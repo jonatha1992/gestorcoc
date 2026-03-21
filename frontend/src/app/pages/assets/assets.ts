@@ -360,9 +360,18 @@ export class AssetsComponent implements OnInit, OnDestroy {
     if (!this.requireManageAssets()) {
       return;
     }
+    // Payload limpio: solo campos writeables del modelo System
+    const payload: any = {
+      name: this.currentSystem.name,
+      unit_id: this.currentSystem.unit_id,
+      system_type: this.currentSystem.system_type || 'CCTV',
+      is_active: this.currentSystem.is_active,
+      retention_days: this.currentSystem.retention_days || 30,
+      vms_version: this.currentSystem.vms_version || '',
+    };
     const obs = this.currentSystem.id ?
-      this.assetService.updateSystem(this.currentSystem.id, this.currentSystem) :
-      this.assetService.createSystem(this.currentSystem);
+      this.assetService.updateSystem(this.currentSystem.id, payload) :
+      this.assetService.createSystem(payload);
     obs.subscribe({
       next: () => {
         this.ngZone.run(() => {
@@ -372,9 +381,11 @@ export class AssetsComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         });
       },
-      error: () => {
+      error: (err: any) => {
         this.ngZone.run(() => {
-          this.toastService.error('Error al guardar sistema');
+          const detail = this.extractApiError(err);
+          this.toastService.error(detail || 'Error al guardar sistema');
+          console.error('[saveSystem] Error:', err);
           this.cdr.detectChanges();
         });
       }
@@ -432,9 +443,16 @@ export class AssetsComponent implements OnInit, OnDestroy {
     if (!this.requireManageAssets()) {
       return;
     }
+    // Payload limpio: solo campos writeables del modelo Server
+    const payload: any = {
+      name: this.currentServer.name,
+      ip_address: this.currentServer.ip_address,
+      is_active: this.currentServer.is_active ?? true,
+      system: this.currentServer.system,
+    };
     const obs = this.currentServer.id ?
-      this.assetService.updateServer(this.currentServer.id, this.currentServer) :
-      this.assetService.createServer(this.currentServer);
+      this.assetService.updateServer(this.currentServer.id, payload) :
+      this.assetService.createServer(payload);
     obs.subscribe({
       next: () => {
         this.ngZone.run(() => {
@@ -444,9 +462,11 @@ export class AssetsComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         });
       },
-      error: () => {
+      error: (err: any) => {
         this.ngZone.run(() => {
-          this.toastService.error('Error al guardar servidor');
+          const detail = this.extractApiError(err);
+          this.toastService.error(detail || 'Error al guardar servidor');
+          console.error('[saveServer] Error:', err);
           this.cdr.detectChanges();
         });
       }
@@ -541,9 +561,20 @@ export class AssetsComponent implements OnInit, OnDestroy {
       this.toastService.error('Espere a que termine la compresion de la foto.');
       return;
     }
+    // Construimos payload limpio: solo campos writeables del modelo Camera.
+    // Los campos server_name, system_name y system son SerializerMethodField (read-only)
+    // y causan un 400 si se envían en el cuerpo del request.
+    const payload: any = {
+      name: this.currentCamera.name,
+      ip_address: this.currentCamera.ip_address || null,
+      status: this.currentCamera.status,
+      resolution: this.currentCamera.resolution,
+      photo_data: this.currentCamera.photo_data || '',
+      server: this.currentCamera.server,
+    };
     const obs = this.currentCamera.id ?
-      this.assetService.updateCamera(this.currentCamera.id, this.currentCamera) :
-      this.assetService.createCamera(this.currentCamera);
+      this.assetService.updateCamera(this.currentCamera.id, payload) :
+      this.assetService.createCamera(payload);
     obs.subscribe({
       next: () => {
         this.ngZone.run(() => {
@@ -553,9 +584,11 @@ export class AssetsComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         });
       },
-      error: () => {
+      error: (err: any) => {
         this.ngZone.run(() => {
-          this.toastService.error('Error al guardar camara');
+          const detail = this.extractApiError(err);
+          this.toastService.error(detail || 'Error al guardar camara');
+          console.error('[saveCamera] Error:', err);
           this.cdr.detectChanges();
         });
       }
@@ -757,7 +790,26 @@ export class AssetsComponent implements OnInit, OnDestroy {
       return map[code] || 'bg-slate-100 text-slate-700';
     }
 
-    private async compressCameraPhoto(file: File): Promise<string> {
+    /** Extrae el mensaje de error legible de una respuesta HTTP de error. */
+  private extractApiError(err: any): string {
+    try {
+      const data = err?.error;
+      if (typeof data === 'string') return data;
+      if (data && typeof data === 'object') {
+        // DRF devuelve errores de campo como { campo: ["mensaje"] } o { detail: "..." }
+        const firstKey = Object.keys(data)[0];
+        const val = data[firstKey];
+        if (Array.isArray(val)) return `${firstKey}: ${val.join(', ')}`;
+        if (typeof val === 'string') return `${firstKey}: ${val}`;
+        return JSON.stringify(data);
+      }
+    } catch {
+      // ignorar
+    }
+    return '';
+  }
+
+  private async compressCameraPhoto(file: File): Promise<string> {
       const source = await this.readFileAsDataUrl(file);
       const image = await this.loadImage(source);
       let width = image.width;

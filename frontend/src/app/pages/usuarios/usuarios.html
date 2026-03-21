@@ -413,9 +413,9 @@
             class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-2xl transition-all">
             Cancelar
           </button>
-          <button type="button" (click)="submitPasswordReset()"
-            class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-2xl transition-all shadow-md shadow-amber-100">
-            Restablecer
+          <button type="button" (click)="submitPasswordReset()" [disabled]="isSubmittingPassword()"
+            class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-2xl transition-all shadow-md shadow-amber-100 disabled:opacity-50 disabled:cursor-not-allowed">
+            {{ isSubmittingPassword() ? 'Restableciendo...' : 'Restablecer' }}
           </button>
         </div>
       </div>
