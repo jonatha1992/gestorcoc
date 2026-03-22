@@ -4,11 +4,12 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from personnel.access import PermissionCode
 from personnel.permissions import ActionPermissionMixin, HasNamedPermission
+from core.mixins import UnitFilterMixin
 from .models import Hecho
 from .serializers import HechoSerializer
 
 
-class HechoViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
+class HechoViewSet(UnitFilterMixin, ActionPermissionMixin, viewsets.ModelViewSet):
     queryset = Hecho.objects.select_related('camera').order_by('-timestamp')
     serializer_class = HechoSerializer
     permission_classes = [IsAuthenticated, HasNamedPermission]
@@ -35,25 +36,7 @@ class HechoViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        user = self.request.user
-
-        if not user.is_authenticated:
-            return queryset.none()
-
-        # Filtrado por unidad
-        if not user.is_superuser and getattr(user, 'role', '') != 'ADMIN':
-            person = getattr(user, 'person', None)
-            if person:
-                if person.role not in ['ADMIN', 'CREV_SUPERVISOR', 'CREV_OPERATOR']:
-                    if person.unit:
-                        # Filtrar Hechos donde la cámara pertenezca a la unidad
-                        queryset = queryset.filter(camera__server__system__unit=person.unit)
-                    else:
-                        queryset = queryset.none()
-            else:
-                queryset = queryset.none()
-
-        return queryset
+        return self.filter_by_unit(queryset, 'camera__server__system__unit')
 
     def perform_create(self, serializer):
         person = getattr(self.request.user, "person", None)

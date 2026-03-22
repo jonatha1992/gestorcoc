@@ -104,13 +104,13 @@
               name="new_password"
               [type]="isPasswordVisible('new_password') ? 'text' : 'password'"
               autocomplete="new-password"
-              class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-100"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 pr-10 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-100"
               placeholder="Nueva contrasena"
             >
             <button
               type="button"
               (click)="togglePasswordVisibility('new_password')"
-              class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 transition hover:text-slate-700"
+              class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 transition hover:text-slate-700"
               [attr.aria-label]="isPasswordVisible('new_password') ? 'Ocultar contrasena' : 'Mostrar contrasena'"
             >
               @if (isPasswordVisible('new_password')) {
@@ -138,13 +138,13 @@
               name="new_password_confirm"
               [type]="isPasswordVisible('new_password_confirm') ? 'text' : 'password'"
               autocomplete="new-password"
-              class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-100"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 pr-10 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-100"
               placeholder="Repita la nueva contrasena"
             >
             <button
               type="button"
               (click)="togglePasswordVisibility('new_password_confirm')"
-              class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 transition hover:text-slate-700"
+              class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 transition hover:text-slate-700"
               [attr.aria-label]="isPasswordVisible('new_password_confirm') ? 'Ocultar contrasena' : 'Mostrar contrasena'"
             >
               @if (isPasswordVisible('new_password_confirm')) {
@@ -168,7 +168,7 @@
       <button
         type="submit"
         [disabled]="isSubmitting()"
-        class="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold uppercase tracking-[0.25em] text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
+        class="inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold uppercase tracking-[0.25em] text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {{ isSubmitting() ? 'Actualizando...' : 'Actualizar contrasena' }}
       </button>

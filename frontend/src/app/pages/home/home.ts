@@ -470,7 +470,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       series: [{ name: 'Total', data: rows.map((row) => row.value) }],
       chart: {
         type: 'bar' as const,
-        height: 180,
+        height: '100%',
+        width: '100%',
         toolbar: { show: false },
         fontFamily: 'system-ui, sans-serif',
       },
@@ -507,7 +508,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       series: [{ name: config.secondaryTitle, data: rows.map((row) => row.value) }],
       chart: {
         type: 'bar' as const,
-        height: 250,
+        height: '100%',
+        width: '100%',
         toolbar: { show: false },
         fontFamily: 'system-ui, sans-serif',
       },
@@ -563,7 +565,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       ],
       chart: {
         type: 'radar' as const,
-        height: 250,
+        height: '100%',
+        width: '100%',
         toolbar: { show: false },
         fontFamily: 'system-ui, sans-serif',
       },
@@ -639,7 +642,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       ],
       chart: {
         type: 'area' as const,
-        height: 250,
+        height: '100%',
+        width: '100%',
         toolbar: { show: false },
         zoom: { enabled: false },
         fontFamily: 'system-ui, sans-serif',
@@ -959,7 +963,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       series: rows.map((row) => row.value),
       chart: {
         type: 'donut' as const,
-        height: 250,
+        height: '100%',
+        width: '100%',
         toolbar: { show: false },
         fontFamily: 'system-ui, sans-serif',
       },

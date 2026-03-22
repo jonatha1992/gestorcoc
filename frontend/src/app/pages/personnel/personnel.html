@@ -250,8 +250,8 @@
   @if (showForm()) {
   <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
     <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
-        <h3 class="text-xl font-bold text-slate-900">{{ isEditing ? 'Editar Personal' : 'Nueva Alta de Personal' }}</h3>
+      <div class="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50">
+        <h3 class="text-lg font-bold text-slate-900">{{ isEditing ? 'Editar Personal' : 'Nueva Alta de Personal' }}</h3>
         <button (click)="closeForm()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -259,31 +259,31 @@
         </button>
       </div>
 
-      <form (ngSubmit)="savePerson()" #personForm="ngForm" class="p-8 space-y-5">
+      <form (ngSubmit)="savePerson()" #personForm="ngForm" class="p-6 space-y-4">
         <div class="grid grid-cols-2 gap-4">
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre</label>
             <input type="text" name="first_name" [(ngModel)]="currentPerson.first_name" required
-              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
+              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
           </div>
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Apellido</label>
             <input type="text" name="last_name" [(ngModel)]="currentPerson.last_name" required
-              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
+              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
           </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Legajo</label>
             <input type="text" name="badge_number" [(ngModel)]="currentPerson.badge_number"
               (input)="onBadgeNumberInput()" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
-              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-bold font-mono">
+              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-bold font-mono">
           </div>
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Jerarquia</label>
             <select name="rank" [(ngModel)]="currentPerson.rank" required
-              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
+              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
               @for (rank of RANK_OPTIONS; track rank.value) {
               <option [value]="rank.value">{{ rank.label }}</option>
               }
@@ -292,15 +292,15 @@
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Grupo de guardia</label>
             <input type="text" name="guard_group" [(ngModel)]="currentPerson.guard_group" placeholder="Ej: A, B, C"
-              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
+              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
           </div>
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Estado</label>
             <select name="is_active" [(ngModel)]="currentPerson.is_active"
-              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
+              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
               <option [ngValue]="true">Activo</option>
               <option [ngValue]="false">Inactivo</option>
             </select>
@@ -308,19 +308,19 @@
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-          <div>
+          <div class="space-y-1">
             <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Unidad</label>
             <select name="unit" [(ngModel)]="currentPerson.unit"
-              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
+              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
               @for (u of units(); track u.code) {
               <option [value]="u.code">{{ u.name }}</option>
               }
             </select>
           </div>
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Rol</label>
             <select name="role" [(ngModel)]="currentPerson.role"
-              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
+              class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-medium">
               @for (role of ROLE_OPTIONS; track role.value) {
               <option [value]="role.value">{{ role.label | uppercase }}</option>
               }
@@ -328,11 +328,11 @@
           </div>
         </div>
 
-        <div class="space-y-2">
+        <div class="space-y-1">
           <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Sistemas asignados</label>
           <div class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto p-2 border border-slate-100 rounded-xl bg-slate-50">
             @for (sys of systems(); track sys.id) {
-            <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-white border border-transparent hover:border-slate-200 transition-all cursor-pointer">
+            <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white border border-transparent hover:border-slate-200 transition-all cursor-pointer">
               <input type="checkbox" [checked]="isSystemSelected(sys.id)" (change)="toggleSystem(sys.id)"
                 class="rounded text-indigo-600 focus:ring-indigo-500">
               <span class="text-sm font-medium text-slate-700">{{ sys.name }}</span>
@@ -341,13 +341,13 @@
           </div>
         </div>
 
-        <div class="pt-4 flex gap-3">
+        <div class="pt-3 flex gap-2">
           <button type="button" (click)="closeForm()"
-            class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-4 rounded-2xl transition-all">
+            class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl transition-all text-sm">
             Cancelar
           </button>
           <button type="submit" [disabled]="!personForm.form.valid" [class.hidden]="!canManagePersonnel"
-            class="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-indigo-100">
+            class="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-xl transition-all shadow-md shadow-indigo-100 text-sm">
             {{ isEditing ? 'Actualizar' : 'Guardar' }}
           </button>
         </div>

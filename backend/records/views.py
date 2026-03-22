@@ -14,6 +14,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from core.audit import set_audit_context
+from core.mixins import UnitFilterMixin
 from personnel.access import PermissionCode
 from personnel.permissions import ActionPermissionMixin, HasNamedPermission
 from .models import FilmRecord, Catalog, VideoAnalysisReport
@@ -26,7 +27,7 @@ from .serializers import (
 )
 from .services import IntegrityService
 
-class FilmRecordViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
+class FilmRecordViewSet(UnitFilterMixin, ActionPermissionMixin, viewsets.ModelViewSet):
     """
     ViewSet para gestión completa de Registros Fílmicos.
     Incluye búsqueda, filtrado y acción de verificación CREV.
@@ -96,28 +97,7 @@ class FilmRecordViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        user = self.request.user
-
-        # Si no está autenticado, no retorna nada
-        if not user.is_authenticated:
-            return queryset.none()
-
-        # Los administradores ven todo
-        if user.is_superuser or getattr(user, 'role', '') == 'ADMIN':
-            return queryset
-
-        # Los C.R.E.V. probablemente necesiten ver todo para verificar
-        person = getattr(user, 'person', None)
-        if person:
-            # Si el rol permite ver todo (como CREV_SUPERVISOR, ADMIN, etc), ajustarlo si es necesario
-            # Por ahora, filtramos estrictamente por la unidad del usuario (COC)
-            if person.role in ['ADMIN', 'CREV_SUPERVISOR', 'CREV_OPERATOR']:
-                return queryset
-            
-            if person.unit:
-                return queryset.filter(generator_unit=person.unit)
-        
-        return queryset.none()  # Si no tiene persona/unidad, no ve nada
+        return self.filter_by_unit(queryset, 'generator_unit')
 
     @action(detail=True, methods=['post'])
     def verify_by_crev(self, request, pk=None):
@@ -439,7 +419,7 @@ class AIUsageSummaryView(views.APIView):
         )
         return Response(list(rows))
 
-class DashboardStatsView(views.APIView):
+class DashboardStatsView(UnitFilterMixin, views.APIView):
     permission_classes = [IsAuthenticated, HasNamedPermission]
     required_permissions = [PermissionCode.VIEW_DASHBOARD]
 
@@ -450,21 +430,37 @@ class DashboardStatsView(views.APIView):
 
         cutoff = timezone.now() - timedelta(days=30)
 
+        rec_qs = self.filter_by_unit(FilmRecord.objects.all(), 'generator_unit')
+        hec_qs = self.filter_by_unit(Hecho.objects.all(), 'camera__server__system__unit')
+        
+        nov_qs = Novedad.objects.all()
+        if not self.is_global_viewer():
+            person = getattr(request.user, "person", None)
+            if person and person.unit:
+                nov_qs = nov_qs.filter(
+                    Q(camera__server__system__unit=person.unit) |
+                    Q(server__system__unit=person.unit) |
+                    Q(system__unit=person.unit) |
+                    Q(cameraman_gear__assigned_to__unit=person.unit)
+                ).distinct()
+            else:
+                nov_qs = nov_qs.none()
+
         data = {
             'monthly': {
-                'records': list(FilmRecord.objects.annotate(month=TruncMonth('entry_date')).values('month').annotate(count=Count('id')).order_by('month')[:12]),
-                'hechos': list(Hecho.objects.annotate(month=TruncMonth('timestamp')).values('month').annotate(count=Count('id')).order_by('month')[:12]),
-                'novedades': list(Novedad.objects.annotate(month=TruncMonth('created_at')).values('month').annotate(count=Count('id')).order_by('month')[:12]),
+                'records': list(rec_qs.annotate(month=TruncMonth('entry_date')).values('month').annotate(count=Count('id')).order_by('month')[:12]),
+                'hechos': list(hec_qs.annotate(month=TruncMonth('timestamp')).values('month').annotate(count=Count('id')).order_by('month')[:12]),
+                'novedades': list(nov_qs.annotate(month=TruncMonth('created_at')).values('month').annotate(count=Count('id')).order_by('month')[:12]),
             },
             'daily': {
-                'records': list(FilmRecord.objects.filter(entry_date__gte=cutoff.date()).annotate(day=TruncDate('entry_date')).values('day').annotate(count=Count('id')).order_by('day')),
-                'hechos': list(Hecho.objects.filter(timestamp__gte=cutoff).annotate(day=TruncDate('timestamp')).values('day').annotate(count=Count('id')).order_by('day')),
-                'novedades': list(Novedad.objects.filter(created_at__gte=cutoff).annotate(day=TruncDate('created_at')).values('day').annotate(count=Count('id')).order_by('day')),
+                'records': list(rec_qs.filter(entry_date__gte=cutoff.date()).annotate(day=TruncDate('entry_date')).values('day').annotate(count=Count('id')).order_by('day')),
+                'hechos': list(hec_qs.filter(timestamp__gte=cutoff).annotate(day=TruncDate('timestamp')).values('day').annotate(count=Count('id')).order_by('day')),
+                'novedades': list(nov_qs.filter(created_at__gte=cutoff).annotate(day=TruncDate('created_at')).values('day').annotate(count=Count('id')).order_by('day')),
             }
         }
         return Response(data)
 
-class DashboardQueryMixin:
+class DashboardQueryMixin(UnitFilterMixin):
     BA_CODES = {"AEP", "EZE", "FDO", "BHI", "MDQ"}
 
     def _to_bool(self, raw):
@@ -522,6 +518,22 @@ class DashboardQueryMixin:
         from novedades.models import Novedad
         qs = Novedad.objects.all()
         p = request.query_params
+
+        if hasattr(self, 'is_global_viewer') and not self.is_global_viewer():
+            person = getattr(request.user, "person", None)
+            if person and person.unit:
+                qs = qs.filter(
+                    Q(camera__server__system__unit=person.unit) |
+                    Q(server__system__unit=person.unit) |
+                    Q(system__unit=person.unit) |
+                    Q(cameraman_gear__assigned_to__unit=person.unit)
+                ).distinct()
+            else:
+                qs = qs.none()
+        else:
+            unit = p.get("unit_code")
+            if unit: qs = qs.filter(Q(camera__server__system__unit__code=unit) | Q(server__system__unit__code=unit) | Q(system__unit__code=unit))
+
         search = (p.get("search") or "").strip()
         if search:
             qs = qs.filter(Q(description__icontains=search) | Q(camera__name__icontains=search))
@@ -531,14 +543,19 @@ class DashboardQueryMixin:
         gte, lte = self._parse_dt(p.get("created_at__gte")), self._parse_dt(p.get("created_at__lte"), True)
         if gte: qs = qs.filter(created_at__gte=gte)
         if lte: qs = qs.filter(created_at__lte=lte)
-        unit = p.get("unit_code")
-        if unit: qs = qs.filter(Q(camera__server__system__unit__code=unit) | Q(server__system__unit__code=unit) | Q(system__unit__code=unit))
         return qs
 
     def _apply_hechos_filters(self, request):
         from hechos.models import Hecho
         qs = Hecho.objects.all()
         p = request.query_params
+
+        if hasattr(self, 'is_global_viewer') and not self.is_global_viewer():
+            qs = self.filter_by_unit(qs, 'camera__server__system__unit')
+        else:
+            unit = p.get("unit_code")
+            if unit: qs = qs.filter(camera__server__system__unit__code=unit)
+
         search = (p.get("search") or "").strip()
         if search: qs = qs.filter(Q(description__icontains=search) | Q(sector__icontains=search))
         for field in ["category"]:
@@ -547,14 +564,19 @@ class DashboardQueryMixin:
         gte, lte = self._parse_dt(p.get("timestamp__gte")), self._parse_dt(p.get("timestamp__lte"), True)
         if gte: qs = qs.filter(timestamp__gte=gte)
         if lte: qs = qs.filter(timestamp__lte=lte)
-        unit = p.get("unit_code")
-        if unit: qs = qs.filter(camera__server__system__unit__code=unit)
         return qs
 
     def _apply_records_filters(self, request):
         from records.models import FilmRecord
         qs = FilmRecord.objects.all()
         p = request.query_params
+
+        if hasattr(self, 'is_global_viewer') and not self.is_global_viewer():
+            qs = self.filter_by_unit(qs, 'generator_unit')
+        else:
+            unit = p.get("unit_code")
+            if unit: qs = qs.filter(generator_unit__code=unit)
+
         search = (p.get("search") or "").strip()
         if search: qs = qs.filter(Q(case_title__icontains=search) | Q(judicial_case_number__icontains=search))
         for field in ["delivery_status"]:
@@ -564,16 +586,18 @@ class DashboardQueryMixin:
         date_to = parse_date(p.get("entry_date__lte") or "")
         if date_from: qs = qs.filter(entry_date__gte=date_from)
         if date_to: qs = qs.filter(entry_date__lte=date_to)
-        unit = p.get("unit_code")
-        if unit: qs = qs.filter(generator_unit__code=unit)
         return qs
 
     def _apply_personnel_filters(self, request):
         from personnel.models import Person
         qs = Person.objects.all()
         p = request.query_params
-        unit = p.get("unit_code")
-        if unit: qs = qs.filter(unit__code=unit)
+
+        if hasattr(self, 'is_global_viewer') and not self.is_global_viewer():
+            qs = self.filter_by_unit(qs, 'unit')
+        else:
+            unit = p.get("unit_code")
+            if unit: qs = qs.filter(unit__code=unit)
         active = self._to_bool(p.get("is_active"))
         if active is not None: qs = qs.filter(is_active=active)
         gte, lte = self._parse_dt(p.get("created_at__gte")), self._parse_dt(p.get("created_at__lte"), True)
@@ -719,7 +743,15 @@ class DashboardMapView(DashboardQueryMixin, views.APIView):
         
         scope = (request.query_params.get("scope") or "").strip().lower()
         units_qs = Unit.objects.filter(map_enabled=True)
-        if scope == "ba": units_qs = units_qs.filter(code__in=self.BA_CODES)
+        
+        if not self.is_global_viewer():
+            person = getattr(request.user, "person", None)
+            if person and person.unit:
+                units_qs = units_qs.filter(id=person.unit.id)
+            else:
+                units_qs = units_qs.none()
+        else:
+            if scope == "ba": units_qs = units_qs.filter(code__in=self.BA_CODES)
 
         # Filtros base optimizados (reusamos la lógica de mixin pero evitamos N+1)
         nov_qs = self._apply_novedades_filters(request)
