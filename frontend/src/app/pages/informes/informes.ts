@@ -844,6 +844,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     this.syncFlightSectionVisibility();
     this.normalizeIntegrityState();
     this.loadSourceSystemsForCurrentUnit();
+    this.restoreFramesFromFormData(formData);
   }
 
   private resolvePreferredSintesis(data: Record<string, unknown>): string {
@@ -895,6 +896,42 @@ export class InformesComponent implements OnInit, OnDestroy {
       (person) => this.getPersonDisplayName(person).toLowerCase() === currentOperator,
     );
     this.selectedOperatorId = matchedOperator?.id ?? null;
+  }
+
+  private restoreFramesFromFormData(formData: Record<string, unknown>): void {
+    const framesData = formData['frames'];
+    if (!Array.isArray(framesData) || framesData.length === 0) {
+      this.frames = [];
+      return;
+    }
+
+    this.frames = framesData.map((frame: any, index: number) => ({
+      id_temp: frame.id_temp || `restored-${index}-${Date.now()}`,
+      file_name: frame.file_name || `imagen-${index + 1}.jpg`,
+      mime_type: frame.mime_type || 'image/jpeg',
+      content_base64: frame.content_base64 || '',
+      frame_time: this.normalizeFrameTimestamp(frame.frame_time || ''),
+      description: frame.description || '',
+      order: typeof frame.order === 'number' ? frame.order : index,
+      preview_url: frame.content_base64 || frame.preview_url || '',
+      size_bytes: frame.size_bytes || this.calculateBase64Size(frame.content_base64),
+    }));
+
+    if (this.frames.length > 0) {
+      this.toastService.show(`${this.frames.length} fotograma(s) restaurado(s) del informe guardado.`, 'info');
+    }
+  }
+
+  private calculateBase64Size(base64String: string | undefined): number {
+    if (!base64String) {
+      return 0;
+    }
+    const base64Data = base64String.split(',')[1] || base64String;
+    try {
+      return Math.round((base64Data.length * 3) / 4);
+    } catch {
+      return 0;
+    }
   }
 
   getPersonDisplayName(person: any): string {
@@ -2822,7 +2859,10 @@ export class InformesComponent implements OnInit, OnDestroy {
       numero_informe: payload.report_data.numero_informe || '',
       report_date: payload.report_data.report_date || undefined,
       status,
-      form_data: { ...payload.report_data },
+      form_data: {
+        ...payload.report_data,
+        frames: payload.frames,
+      },
     };
 
     const onSuccess = (saved: VideoAnalysisReportRecord): void => {
