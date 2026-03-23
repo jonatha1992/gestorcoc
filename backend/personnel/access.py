@@ -232,6 +232,9 @@ def build_auth_user_payload(user) -> dict:
         role=role,
         permission_codes=get_permission_codes(user),
         linked_person_id=person.id if person is not None else None,
-        must_change_password=bool(profile.must_change_password) if profile is not None else False,
+        # Los superusers (ej. admin) son la excepción: nunca se les fuerza el cambio de contraseña
+        must_change_password=False if getattr(user, "is_superuser", False) else (
+            bool(profile.must_change_password) if profile is not None else False
+        ),
     )
     return payload.__dict__

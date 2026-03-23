@@ -875,6 +875,20 @@ export class NovedadesComponent implements OnInit {
     });
   }
 
+  prepareEmail(novedad: NovedadViewModel) {
+    // Abre el cliente de correo predeterminado con los datos de la novedad
+    const subject = encodeURIComponent(`Novedad: ${novedad.assetLabel} - ${this.getSeverityLabel(novedad.severity)}`);
+    const body = encodeURIComponent(
+      `Activo: ${novedad.assetLabel}\n` +
+      `Tipo: ${this.getNovedadTypeLabel(novedad)}\n` +
+      `Severidad: ${this.getSeverityLabel(novedad.severity)}\n` +
+      `Estado: ${novedad.status}\n` +
+      `Descripción: ${novedad.description}\n` +
+      `Fecha: ${new Date(novedad.created_at).toLocaleString('es-AR')}`
+    );
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  }
+
   getNovedadTypeLabel(novedad: any): string {
     if (novedad.assetType === 'CAMERA' || novedad.camera_name || novedad.camera) return 'CÁMARA';
     if (novedad.assetType === 'SERVER' || novedad.server_name || novedad.server) return 'SERVIDOR';

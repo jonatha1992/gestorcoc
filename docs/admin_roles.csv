@@ -1,0 +1,8 @@
+Rol,Permiso,Descripcion,PuedeCrearUsuarios,VeTodasUnidades,AccesoDashboard,AccesoLogsIA
+SUPERUSER,Todos los permisos,Administrador completo del sistema,Si,Si,Si,Si
+ADMIN,MANAGE_USERS + VIEW_DASHBOARD,Administrador de usuarios y dashboard,Si,Si,Si,Si
+COORDINADOR_CREV,MANAGE_CREV_FLOW,Coordinador CREV - flujo completo,No,Si,Si,Si
+CREV,VERIFY_CREV + VIEW_DASHBOARD,Fiscalizador CREV - verifica registros,No,Si,Si,Si
+JEFE,VIEW_PERSONNEL + MANAGE_PERSONNEL,Jefe de unidad - gestiona personal,No,No,Si,No
+OPERADOR,VIEW_ASSETS + VIEW_RECORDS,Operador CCTV - ve su unidad,No,No,Si,No
+COC,VIEW_DASHBOARD,Personal COC - ve dashboard,No,No,Si,No

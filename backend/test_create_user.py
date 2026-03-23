@@ -1,35 +1,46 @@
 import os
 import django
-import sys
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
-from django.test import Client
+from django.test import TestCase
 from django.contrib.auth import get_user_model
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
 
-try:
-    admin = User.objects.get(username="SeisanCoc")
-except User.DoesNotExist:
-    # Si no existe creamos uno dummy que sea superuser
-    admin = User.objects.create_superuser("admin_test_1", "admin@aa.com", "pass123")
 
-client = Client()
-client.force_login(admin)
+class CreateUserTest(TestCase):
+    """Test case for user creation via API."""
 
-response = client.post("/api/users/", {
-    "username": "testuser77",
-    "password": "password123",
-    "first_name": "Test",
-    "last_name": "User",
-    "badge_number": "123",
-    "role": "OPERADOR"
-}, content_type="application/json")
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = User.objects.create_superuser(
+            username="admin_test",
+            email="admin@test.com",
+            password="pass123"
+        )
+        # Generate JWT token for authentication
+        refresh = RefreshToken.for_user(self.admin)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
 
-print("Status Code:", response.status_code)
-if response.status_code == 500:
-    print(response.content.decode("utf-8"))
-else:
-    print("Success:", response.json())
+    def test_create_user(self):
+        """Test creating a new user via the API."""
+        response = self.client.post("/api/users/", {
+            "username": "testuser77",
+            "password": "password123",
+            "first_name": "Test",
+            "last_name": "User",
+            "badge_number": "123",
+            "role": "OPERADOR"
+        }, format='json')
+
+        print(f"\nStatus Code: {response.status_code}")
+        if response.status_code == 500:
+            print(response.content.decode("utf-8"))
+        else:
+            print(f"Success: {response.json()}")
+
+        self.assertEqual(response.status_code, 201)

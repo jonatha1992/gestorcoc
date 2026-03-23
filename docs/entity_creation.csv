@@ -1,0 +1,14 @@
+Entidad,CamposRequeridos,CamposOpcionales,Validaciones,Endpoint,PermisosRequeridos
+Person,"first_name, last_name, badge_number, role","rank, unit, guard_group, assigned_systems, is_active","badge_number: 6 dígitos únicos, role: OPERADOR/JEFE/CREV/COORDINADOR_CREV/ADMIN",POST /api/users/,MANAGE_USERS
+Person (solo persona),"first_name, last_name, badge_number, role, unit","rank, guard_group, assigned_systems, is_active","badge_number: 6 dígitos únicos",POST /api/people/,MANAGE_PERSONNEL
+ExternalPerson,"first_name, last_name, dni, email, function","is_active","dni: 7-10 dígitos únicos, email: válido",POST /api/external-people/,MANAGE_PERSONNEL
+User (con persona),"username, password, person_id o badge_number","user_is_active, must_change_password","username: único, password: min 6 caracteres",POST /api/users/,MANAGE_USERS
+Unit,"name, code","airport, province, latitude, longitude, map_enabled, parent","code: único (max 10 chars)",POST /api/units/,MANAGE_ASSETS
+System,"name, system_type, unit","is_active, retention_days, vms_version","name: único, system_type: NVR/CCTV",POST /api/systems/,MANAGE_ASSETS
+Server,"name, system, ip_address","is_active","ip_address: único, system: debe existir",POST /api/servers/,MANAGE_ASSETS
+Camera,"name, server","ip_address, status, resolution, photo_data","status: ONLINE/OFFLINE/MAINTENANCE",POST /api/cameras/,MANAGE_ASSETS
+CameramanGear,"name, condition","serial_number, assigned_to, assigned_to_name, is_active","condition: GOOD/FAIR/BROKEN",POST /api/cameraman-gear/,MANAGE_ASSETS
+Novedad,"description, camera/system/server/cameraman_gear","severity, status, incident_type, reported_by","status: OPEN/IN_PROGRESS/CLOSED",POST /api/novedades/,MANAGE_NOVEDADES
+Hecho,"description, timestamp, category","camera, sector, is_solved, coc_intervention, generated_cause","category: POLICIAL/OPERATIVO/INFORMATIVO/RELEVAMIENTO",POST /api/hechos/,MANAGE_HECHOS
+FilmRecord,"dvd_number, report_number, operator, generator_unit, entry_date","issue_number, request_type, request_kind, delivery_status","request_type: OFICIO/MEMORANDO/NOTA/etc",POST /api/film-records/,MANAGE_RECORDS
+Catalog,"name, records","N/A","records: lista de IDs de FilmRecord",POST /api/catalogs/,MANAGE_CREV_FLOW

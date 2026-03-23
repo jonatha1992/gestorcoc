@@ -1,0 +1,44 @@
+Modulo,Endpoint,Metodo,Descripcion,Permisos,ParamsEntrada,ParamsSalida
+Gestión Usuarios,/api/users/,GET,Listar usuarios con cuenta,MANAGE_USERS,"search, role, unit__code, ordering",Lista paginada de usuarios
+Gestión Usuarios,/api/users/{id}/,GET,Detalle de usuario,MANAGE_USERS,N/A,Datos completos del usuario
+Gestión Usuarios,/api/users/,POST,Crear usuario con cuenta,MANAGE_USERS,"username, password, person_id/badge_number, role",Usuario creado con ID
+Gestión Usuarios,/api/users/{id}/,PUT,Actualizar usuario completo,MANAGE_USERS,"username, password, role, user_is_active",Usuario actualizado
+Gestión Usuarios,/api/users/{id}/,PATCH,Actualización parcial,MANAGE_USERS,"role, user_is_active, must_change_password",Usuario actualizado
+Gestión Usuarios,/api/users/{id}/,DELETE,Eliminar usuario,MANAGE_USERS,N/A,204 No Content
+Gestión Usuarios,/api/users/{id}/toggle_active/,POST,Activar/desactivar usuario,MANAGE_USERS,N/A,Estado actualizado
+Gestión Usuarios,/api/users/{id}/reset_password/,POST,Resetear contraseña,MANAGE_USERS,"new_password",Contraseña reseteada
+Personal,/api/people/,GET,Listar personal,VIEW_PERSONNEL,"search, role, unit, is_active, ordering",Lista paginada
+Personal,/api/people/{id}/,GET,Detalle de persona,VIEW_PERSONNEL,N/A,Datos completos
+Personal,/api/people/,POST,Crear persona,MANAGE_PERSONNEL,"first_name, last_name, badge_number, role, unit",Persona creada
+Personal,/api/people/{id}/,PUT,Actualizar persona,MANAGE_PERSONNEL,Datos de persona,Persona actualizada
+Personal,/api/people/{id}/,DELETE,Eliminar persona,MANAGE_PERSONNEL,N/A,204 No Content
+Personal Externo,/api/external-people/,GET,Listar personal externo,VIEW_PERSONNEL,"search, is_active, dni",Lista paginada
+Personal Externo,/api/external-people/,POST,Crear personal externo,MANAGE_PERSONNEL,"first_name, last_name, dni, email, function",Persona externa creada
+Unidades,/api/units/,GET,Listar unidades,VIEW_ASSETS,"search, parent",Lista paginada
+Unidades,/api/units/,POST,Crear unidad,MANAGE_ASSETS,"name, code, airport, parent",Unidad creada
+Sistemas,/api/systems/,GET,Listar sistemas,VIEW_ASSETS,"search, unit, system_type",Lista paginada
+Sistemas,/api/systems/,POST,Crear sistema,MANAGE_ASSETS,"name, system_type, unit",Sistema creado
+Servidores,/api/servers/,GET,Listar servidores,VIEW_ASSETS,"search, system",Lista paginada
+Servidores,/api/servers/,POST,Crear servidor,MANAGE_ASSETS,"name, system, ip_address",Servidor creado
+Cámaras,/api/cameras/,GET,Listar cámaras,VIEW_ASSETS,"search, server, status",Lista paginada
+Cámaras,/api/cameras/,POST,Crear cámara,MANAGE_ASSETS,"name, server, ip_address, status",Cámara creada
+Equipos,/api/cameraman-gear/,GET,Listar equipos,VIEW_ASSETS,"search, condition, assigned_to",Lista paginada
+Equipos,/api/cameraman-gear/,POST,Crear equipo,MANAGE_ASSETS,"name, condition, serial_number",Equipo creado
+Novedades,/api/novedades/,GET,Listar novedades,VIEW_NOVEDADES,"search, status, severity, asset_type",Lista paginada
+Novedades,/api/novedades/,POST,Crear novedad,MANAGE_NOVEDADES,"description, camera/system/server/gear, severity",Novedad creada
+Hechos,/api/hechos/,GET,Listar hechos,VIEW_HECHOS,"search, category, is_solved",Lista paginada
+Hechos,/api/hechos/,POST,Crear hecho,MANAGE_HECHOS,"description, timestamp, category, camera",Hecho creado
+Registros,/api/film-records/,GET,Listar registros,VIEW_RECORDS,"search, delivery_status, operator",Lista paginada
+Registros,/api/film-records/,POST,Crear registro,MANAGE_RECORDS,"dvd_number, operator, generator_unit",Registro creado
+Registros,/api/film-records/{id}/verify_by_crev/,POST,Verificar por CREV,VERIFY_CREV,"observations",Registro verificado
+Catálogos,/api/catalogs/,GET,Listar catálogos,VIEW_RECORDS,N/A,Lista paginada
+Catálogos,/api/catalogs/,POST,Crear catálogo,MANAGE_CREV_FLOW,"name, records[]",Catálogo creado
+Dashboard,/api/dashboard-stats/,GET,Estadísticas dashboard,VIEW_DASHBOARD,N/A,Stats mensuales y diarias
+Dashboard,/api/dashboard/novedades/,GET,Dashboard novedades,VIEW_NOVEDADES,"filters",Datos dashboard
+Dashboard,/api/dashboard/hechos/,GET,Dashboard hechos,VIEW_HECHOS,"filters",Datos dashboard
+Dashboard,/api/dashboard/records/,GET,Dashboard registros,VIEW_RECORDS,"filters",Datos dashboard
+Dashboard,/api/dashboard/personnel/,GET,Dashboard personal,VIEW_PERSONNEL,"filters",Datos dashboard
+Dashboard,/api/dashboard/map/,GET,Dashboard mapa,VIEW_DASHBOARD,N/A,Datos geográficos
+IA,/api/ai-usage-daily/,GET,Resumen uso de IA,MANAGE_CREV_FLOW,N/A,Logs de últimos 60 días
+IA,/api/improve-text/,POST,Mejorar texto con IA,USE_REPORTS,"material_filmico, desarrollo, conclusion",Texto mejorado
+IA,/api/video-analysis-report/,POST,Generar informe video,USE_REPORTS,"report_data, frames[]",Informe generado
