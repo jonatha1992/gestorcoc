@@ -28,14 +28,14 @@
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-2">
             <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fecha desde</label>
-                <input type="date" [(ngModel)]="filterDateFrom" (ngModelChange)="onFilterChange()"
+                <input type="date" lang="es-AR" [(ngModel)]="filterDateFrom" (ngModelChange)="onFilterChange()"
                     [attr.max]="maxDate"
                     class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
                     title="Desde">
             </div>
             <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fecha hasta</label>
-                <input type="date" [(ngModel)]="filterDateTo" (ngModelChange)="onFilterChange()"
+                <input type="date" lang="es-AR" [(ngModel)]="filterDateTo" (ngModelChange)="onFilterChange()"
                     [attr.max]="maxDate"
                     class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
                     title="Hasta">
@@ -321,7 +321,7 @@
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Fecha del Requerimiento</label>
-                            <input type="date" name="entry_date" [(ngModel)]="newRecord.entry_date"
+                            <input type="date" lang="es-AR" name="entry_date" [(ngModel)]="newRecord.entry_date"
                                 [attr.max]="maxDate"
                                 class="field-control-compact">
                         </div>
@@ -382,7 +382,7 @@
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Fecha del Hecho</label>
-                            <input type="date" name="incident_date" [(ngModel)]="newRecord.incident_date"
+                            <input type="date" lang="es-AR" name="incident_date" [(ngModel)]="newRecord.incident_date"
                                 [attr.max]="maxDate"
                                 class="field-control-compact">
                         </div>
@@ -459,7 +459,7 @@
                                 </div>
                                 <div class="space-y-1.5">
                                     <label class="field-label-compact">Fecha Nac.</label>
-                                    <input type="date" [name]="'involved_birth_date_' + $index"
+                                    <input type="date" lang="es-AR" [name]="'involved_birth_date_' + $index"
                                         [attr.max]="maxDate"
                                         [(ngModel)]="person.birth_date" class="field-control-compact">
                                 </div>
@@ -617,7 +617,7 @@
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Fecha de Entrega</label>
-                            <input type="date" name="delivery_date" [(ngModel)]="newRecord.delivery_date"
+                            <input type="date" lang="es-AR" name="delivery_date" [(ngModel)]="newRecord.delivery_date"
                                 [attr.max]="maxDate"
                                 class="field-control-compact">
                         </div>

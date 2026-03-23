@@ -27,14 +27,14 @@
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-2">
             <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fecha desde</label>
-                <input type="date" [(ngModel)]="filterDateFrom" (ngModelChange)="onFilterChange()"
+                <input type="date" lang="es-AR" [(ngModel)]="filterDateFrom" (ngModelChange)="onFilterChange()"
                     [attr.max]="maxDate"
                     class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
                     title="Desde">
             </div>
             <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fecha hasta</label>
-                <input type="date" [(ngModel)]="filterDateTo" (ngModelChange)="onFilterChange()"
+                <input type="date" lang="es-AR" [(ngModel)]="filterDateTo" (ngModelChange)="onFilterChange()"
                     [attr.max]="maxDate"
                     class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
                     title="Hasta">
@@ -261,7 +261,7 @@
                     </div>
                     <div class="space-y-1">
                         <label class="text-[10px] font-bold text-slate-500 uppercase">Fecha y Hora Inicio</label>
-                        <input type="datetime-local" [(ngModel)]="currentHecho.timestamp" name="timestamp" required
+                        <input type="datetime-local" lang="es-AR" [(ngModel)]="currentHecho.timestamp" name="timestamp" required
                             [attr.max]="maxDateTime"
                             class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-3 py-2 text-sm text-slate-700 font-medium outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
                     </div>
@@ -334,7 +334,7 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-1">
                             <label class="text-[10px] font-bold text-slate-500 uppercase">Hora Finalización</label>
-                            <input type="datetime-local" [(ngModel)]="currentHecho.end_time" name="end_time"
+                            <input type="datetime-local" lang="es-AR" [(ngModel)]="currentHecho.end_time" name="end_time"
                                 [attr.max]="maxDateTime"
                                 class="w-full bg-white border border-slate-300 shadow-sm hover:border-slate-400 rounded-xl px-3 py-2 text-sm text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
                         </div>

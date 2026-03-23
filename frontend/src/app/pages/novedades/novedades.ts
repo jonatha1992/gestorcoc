@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NovedadService } from '../../services/novedad.service';
 import { AssetService } from '../../services/asset.service';
+import { PersonnelService } from '../../services/personnel.service';
 import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
 import { PermissionCodes } from '../../auth/auth.models';
@@ -49,6 +50,7 @@ interface NovedadViewModel {
 export class NovedadesComponent implements OnInit {
   private novedadService = inject(NovedadService);
   private assetService = inject(AssetService);
+  private personnelService = inject(PersonnelService);
   private toastService = inject(ToastService);
   readonly authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
@@ -239,8 +241,83 @@ export class NovedadesComponent implements OnInit {
     this.generateActaAfterSave = false;
     this.loadActaFromStorage();
     this.loadAssets();
+    this.autofillActaFromAuthenticatedUser();
     this.cdr.detectChanges();
     this.initSignaturePad();
+  }
+
+  private autofillActaFromAuthenticatedUser(): void {
+    const user = this.authService.user();
+    if (!user) {
+      this.toastService.error('No hay un usuario autenticado.');
+      return;
+    }
+
+    if (!user.linked_person_id) {
+      this.toastService.warning(
+        'Su usuario no tiene datos de personal vinculados. Contacte al administrador.'
+      );
+      return;
+    }
+
+    this.personnelService.getPeople().subscribe({
+      next: (people) => {
+        const results = Array.isArray((people as any)?.results) ? (people as any).results : people;
+        const person = Array.isArray(results)
+          ? results.find((p: any) => p.id === user.linked_person_id)
+          : null;
+
+        if (!person) {
+          this.toastService.warning(
+            'No se encontraron sus datos de personal. Contacte al administrador.'
+          );
+          return;
+        }
+
+        const fullName = `${person.first_name} ${person.last_name}`;
+        const rank = this.mapPersonRankToGrade(person.rank);
+
+        if (!this.actaForm.grado) {
+          this.actaForm.grado = rank;
+        }
+
+        if (!this.actaForm.nombre) {
+          this.actaForm.nombre = fullName;
+        }
+
+        if (!this.actaForm.aeropuerto && person.unit_name) {
+          this.actaForm.aeropuerto = person.unit_name;
+        }
+
+        this.toastService.show('Datos de responsable completados automáticamente.', 'info');
+      },
+      error: () => {
+        console.warn('No se pudo cargar personal para autocompletar acta.');
+        this.toastService.warning(
+          'No se pudo cargar su perfil de personal. Intente nuevamente.'
+        );
+      },
+    });
+  }
+
+  private mapPersonRankToGrade(rank: string | null | undefined): string {
+    if (!rank) {
+      return '';
+    }
+
+    const rankMap: Record<string, string> = {
+      OFICIAL_AYUDANTE: 'OF. AYUDANTE',
+      OFICIAL_PRINCIPAL: 'OF. PRINCIPAL',
+      OFICIAL_MAYOR: 'OF. MAYOR',
+      OFICIAL_JEFE: 'OF. JEFE',
+      SUBINSPECTOR: 'SUBINSPECTOR',
+      INSPECTOR: 'INSPECTOR',
+      COMISIONADO_MAYOR: 'COM. MAYOR',
+      COMISIONADO_GENERAL: 'COM. GENERAL',
+      CIVIL: 'CIVIL',
+    };
+
+    return rankMap[rank] || '';
   }
 
   editNovedad(novedad: any) {

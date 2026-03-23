@@ -79,24 +79,14 @@
           </div>
           <input
             [ngModel]="form.operador"
-            (ngModelChange)="onOperatorInputChange($event)"
             name="operador"
             type="text"
-            list="operator-options"
+            readonly
             placeholder="Apellido, Nombre"
-            [attr.data-invalid]="isFieldInvalid('operador') ? 'true' : null"
-            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-slate-100 text-slate-600 shadow-sm cursor-not-allowed"
           />
-          <datalist id="operator-options">
-            <option *ngFor="let p of personnelOptions" [value]="getPersonDisplayName(p)"></option>
-          </datalist>
           <p class="text-[11px] text-slate-400 mt-1">
-            {{
-              personnelOptions.length > 0
-                ? 'Escribi o selecciona un operador cargado en la base.'
-                : 'Si el
-                        personal no carga, completa este dato manualmente.'
-            }}
+            Operador autenticado — no editable
           </p>
         </div>
         <div class="lg:col-span-2">
@@ -105,38 +95,31 @@
               >JERARQUIA *</label
             >
           </div>
-          <select
-            [(ngModel)]="form.grado"
-            (ngModelChange)="onOperatorGradeChange($event)"
+          <input
+            [ngModel]="form.grado"
             name="grado"
-            [attr.data-invalid]="isFieldInvalid('grado') ? 'true' : null"
-            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-          >
-            <option [ngValue]="''">Seleccione jerarquia...</option>
-            <option *ngFor="let gradoOption of gradeOptions" [ngValue]="gradoOption">
-              {{ gradoOption }}
-            </option>
-          </select>
+            type="text"
+            readonly
+            placeholder="Jerarquía"
+            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-slate-100 text-slate-600 shadow-sm cursor-not-allowed"
+          />
         </div>
-        <div class="lg:col-span-2">
+        <div class="lg:col-span-1">
           <div class="flex items-center gap-1 mb-1.5">
             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"
               >LEGAJO *</label
             >
           </div>
           <input
-            [(ngModel)]="form.lup"
-            (ngModelChange)="onOperatorLupChange($event)"
+            [ngModel]="form.lup"
             name="lup"
-            type="number"
+            type="text"
+            readonly
             placeholder="506896"
-            min="100000"
-            max="999999"
-            [attr.data-invalid]="isFieldInvalid('lup') ? 'true' : null"
-            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-800 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-slate-100 text-slate-600 shadow-sm cursor-not-allowed"
           />
         </div>
-        <div class="lg:col-span-1">
+        <div class="lg:col-span-2 xl:col-span-2">
           <div class="flex items-center gap-1 mb-1.5">
             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"
               >FECHA DEL INFORME *</label
@@ -147,12 +130,13 @@
             (ngModelChange)="markDirty('report_date')"
             name="report_date"
             type="date"
+            lang="es-AR"
             [attr.max]="maxDate"
             [attr.data-invalid]="isFieldInvalid('report_date') ? 'true' : null"
-            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-900 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
           />
         </div>
-        <div class="lg:col-span-2">
+        <div class="lg:col-span-3 xl:col-span-3">
           <div class="flex items-center gap-1 mb-1.5">
             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"
               >NUMERO DE INFORME *</label
@@ -165,10 +149,10 @@
             type="text"
             placeholder="0001EZE/2026"
             [attr.data-invalid]="isFieldInvalid('numero_informe') ? 'true' : null"
-            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-900 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
           />
         </div>
-        <div class="md:col-span-2 lg:col-span-3">
+        <div class="md:col-span-2 lg:col-span-2 xl:col-span-2">
           <div class="flex items-center gap-1 mb-1.5">
             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"
               >UNIDAD *</label
@@ -179,7 +163,7 @@
             (ngModelChange)="onUnidadChange($event)"
             name="unidad"
             [attr.data-invalid]="isFieldInvalid('unidad') ? 'true' : null"
-            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white text-slate-900 shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
           >
             <option [ngValue]="''">Seleccione unidad...</option>
             <option *ngFor="let unidadOption of unidadOptions" [ngValue]="unidadOption">
@@ -616,9 +600,9 @@
         <p class="hidden">Indicá el método de autenticidad del material exportado.</p>
 
         <div *ngIf="!integritySectionCollapsed" class="space-y-4">
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Lugar de Origen -->
-            <div class="lg:col-span-5">
+            <div>
               <div class="flex items-center gap-1 mb-1">
                 <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
                   >Lugar de Origen de la Información *</label
@@ -668,7 +652,7 @@
             </div>
 
             <!-- Sistema / Dispositivo de origen -->
-            <div class="lg:col-span-7">
+            <div>
               <div class="flex items-center gap-1 mb-1">
                 <label class="block text-xs font-bold text-slate-500 uppercase mb-0"
                   >Dispositivo/Sistema de origen *</label
@@ -695,15 +679,13 @@
                     <option *ngFor="let system of sourceSystemOptions" [ngValue]="system.id">
                       {{ system.name }}{{ system.unit?.name ? ' - ' + system.unit?.name : '' }}
                     </option>
-                    <option [ngValue]="'otro'">Otro sistema / dispositivo</option>
+                    <option *ngIf="canAddCustomSystem || selectedSourceSystemOption === 'otro'" [ngValue]="'otro'">Otro sistema / dispositivo</option>
                   </select>
                   <p class="text-[11px] text-slate-400 mt-1">
                     {{
                       isLoadingSourceSystems
-                        ? 'Cargando sistemas activos desde la base...'
-                        : 'Se
-                                    muestran los sistemas activos cargados en la base, priorizando la unidad
-                                    seleccionada.'
+                        ? 'Cargando sistemas activos...'
+                        : (form.aeropuerto ? 'Sistemas asociados al lugar de origen (' + form.aeropuerto + ').' : 'Sistemas asociados a la unidad formadora.')
                     }}
                   </p>
                 </div>
@@ -725,7 +707,7 @@
             </div>
 
             <!-- 1. Autenticidad del material (va primero) -->
-            <div class="md:col-span-6">
+            <div>
               <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
                 >Método de verificación de integridad *</label
               >
@@ -742,7 +724,7 @@
                 </option>
               </select>
             </div>
-            <div *ngIf="form.vms_authenticity_mode === 'otro'" class="md:col-span-6">
+            <div *ngIf="form.vms_authenticity_mode === 'otro'">
               <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
                 >Detalle de Autenticidad *</label
               >
@@ -760,7 +742,7 @@
             <!-- 2. Hashes Nativos del VMS (sólo si es propio VMS) -->
             <div
               *ngIf="form.vms_authenticity_mode === 'vms_propio'"
-              class="md:col-span-12 mt-2 border-t border-emerald-200 pt-3"
+              class="md:col-span-2 mt-2 border-t border-emerald-200 pt-3"
             >
               <p
                 class="rounded-xl border border-emerald-100 bg-white/80 px-3 py-2 text-xs text-slate-600"
@@ -780,8 +762,8 @@
                 Completa estos datos solo cuando el sistema de origen no aporta autenticacion
                 propia.
               </p>
-              <div class="grid grid-cols-1 md:grid-cols-12 gap-4 pl-1">
-                <div class="md:col-span-5">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
                   <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
                     >Programa de Hash *</label
                   >
@@ -795,7 +777,7 @@
                     class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                   />
                 </div>
-                <div class="md:col-span-7">
+                <div class="lg:col-span-6">
                   <label class="block text-xs font-bold text-slate-500 uppercase mb-2"
                     >Algoritmos utilizados *</label
                   >
@@ -815,7 +797,7 @@
                     </label>
                   </div>
                 </div>
-                <div *ngIf="hasHashAlgorithm('otro')" class="md:col-span-12">
+                <div *ngIf="hasHashAlgorithm('otro')" class="md:col-span-2">
                   <label class="block text-xs font-bold text-slate-500 uppercase mb-1"
                     >Especificar algoritmo *</label
                   >
@@ -879,6 +861,7 @@
               (ngModelChange)="onTimeChange()"
               name="hora_inicio"
               type="datetime-local"
+              lang="es-AR"
               [attr.max]="maxDateTime"
               class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
             />
@@ -892,6 +875,7 @@
               (ngModelChange)="onTimeChange()"
               name="hora_fin"
               type="datetime-local"
+              lang="es-AR"
               [attr.max]="maxDateTime"
               class="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-xl bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
             />
@@ -1046,6 +1030,7 @@
                 (ngModelChange)="onFrameTimeChange(frame)"
                 [name]="'frame_time_' + frame.id_temp"
                 type="datetime-local"
+                lang="es-AR"
                 step="60"
                 [attr.max]="maxDateTime"
                 class="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-xl bg-slate-50"

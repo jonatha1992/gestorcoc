@@ -32,6 +32,7 @@ import { ToastService } from '../../services/toast.service';
 import { LoadingService } from '../../services/loading.service';
 import { PersonnelService } from '../../services/personnel.service';
 import { AssetService, SystemAsset } from '../../services/asset.service';
+import { AuthService } from '../../services/auth.service';
 import {
   getNowDateTimeLocalInputValue,
   getTodayDateInputValue,
@@ -80,6 +81,7 @@ export class InformesComponent implements OnInit, OnDestroy {
   private loadingService = inject(LoadingService);
   private personnelService = inject(PersonnelService);
   private assetService = inject(AssetService);
+  private authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private route = inject(ActivatedRoute);
 
@@ -198,6 +200,10 @@ export class InformesComponent implements OnInit, OnDestroy {
     return this.isGeneratingFullReport;
   }
 
+  get canAddCustomSystem(): boolean {
+    return this.authService.hasPermission('manage_assets');
+  }
+
   ngOnInit() {
     if (!this.form.report_date) {
       this.form.report_date = getTodayDateInputValue();
@@ -205,6 +211,7 @@ export class InformesComponent implements OnInit, OnDestroy {
     this.loadUnits();
     this.loadPersonnel();
     this.handleQueryParams();
+    this.autofillOperatorFromAuthenticatedUser();
   }
 
   private resolveLocalDraftStorageKey(informeId: string | null, recordId: string | null): string {
@@ -724,6 +731,13 @@ export class InformesComponent implements OnInit, OnDestroy {
         ? [currentUnit, ...apiUnitOptions]
         : apiUnitOptions;
 
+    // Auto-seleccionar si el usuario solo tiene 1 unidad permitida (Ej. un Operador normal) y no editaba una previa
+    if (this.unidadOptions.length === 1 && !this.form.unidad) {
+      this.form.unidad = this.unidadOptions[0];
+      this.scheduleUnitContextRefresh();
+      // Opcional: limpiar dirty flag aquí, o simplemente dejarlo correr.
+    }
+
     this.syncAirportFromUnitSelection();
     this.applySuggestedReportNumber(false);
     this.loadSourceSystemsForCurrentUnit();
@@ -745,6 +759,93 @@ export class InformesComponent implements OnInit, OnDestroy {
         );
       },
     });
+  }
+
+  private autofillOperatorFromAuthenticatedUser(): void {
+    const user = this.authService.user();
+    if (!user) {
+      this.toastService.error('No hay un usuario autenticado.');
+      return;
+    }
+
+    if (!user.linked_person_id) {
+      this.toastService.warning(
+        'Su usuario no tiene datos de personal vinculados. Contacte al administrador.'
+      );
+      return;
+    }
+
+    this.personnelService.getPeople().subscribe({
+      next: (people) => {
+        const results = Array.isArray((people as any)?.results) ? (people as any).results : people;
+        const person = Array.isArray(results)
+          ? results.find((p: any) => p.id === user.linked_person_id)
+          : null;
+
+        if (!person) {
+          this.toastService.warning(
+            'No se encontraron sus datos de personal. Contacte al administrador.'
+          );
+          return;
+        }
+
+        const displayName = `${person.last_name}, ${person.first_name}`;
+        const lup = person.badge_number || '';
+        const rank = this.mapPersonRankToGrade(person.rank);
+
+        if (!this.form.operador) {
+          this.form.operador = displayName;
+          this.selectedOperatorId = person.id;
+          this.markDirty('operador');
+        }
+
+        if (!this.form.lup) {
+          this.form.lup = lup;
+          this.markDirty('lup');
+        }
+
+        if (!this.form.grado) {
+          this.form.grado = rank;
+          this.ensureGradeOptionVisible(rank);
+          this.markDirty('grado');
+        }
+
+        if (!this.form.unidad && person.unit_name) {
+          this.form.unidad = person.unit_name;
+          this.markDirty('unidad');
+          // Sincronizar aeropuerto y sistemas de origen al autocompletar unidad desde el operador
+          this.scheduleUnitContextRefresh();
+        }
+
+        this.toastService.show('Datos de operador completados automáticamente.', 'info');
+      },
+      error: () => {
+        console.warn('No se pudo cargar personal para autocompletar operador.');
+        this.toastService.warning(
+          'No se pudo cargar su perfil de personal. Intente nuevamente.'
+        );
+      },
+    });
+  }
+
+  private mapPersonRankToGrade(rank: string | null | undefined): string {
+    if (!rank) {
+      return 'CIVIL';
+    }
+
+    const rankMap: Record<string, string> = {
+      OFICIAL_AYUDANTE: 'OF. AYUDATE',
+      OFICIAL_PRINCIPAL: 'OF. PRINCIPAL',
+      OFICIAL_MAYOR: 'OF. MAYOR',
+      OFICIAL_JEFE: 'OF. JEFE',
+      SUBINSPECTOR: 'SUBINSPECTOR',
+      INSPECTOR: 'INSPECTOR',
+      COMISIONADO_MAYOR: 'COM. MAYOR',
+      COMISIONADO_GENERAL: 'COM. GENERAL',
+      CIVIL: 'CIVIL',
+    };
+
+    return rankMap[rank] || 'CIVIL';
   }
 
   onOperatorChange(personId: number | null) {
@@ -1066,13 +1167,22 @@ export class InformesComponent implements OnInit, OnDestroy {
   }
 
   private sortSystemsForDisplay(systems: SystemAsset[]): SystemAsset[] {
+    const currentAirport = (this.form.aeropuerto || '').trim().toLowerCase();
     const currentUnitId = this.unitIdByName[(this.form.unidad || '').trim()];
-    return [...systems].sort((a, b) => {
-      const aMatch = currentUnitId != null && a.unit?.id === currentUnitId ? 0 : 1;
-      const bMatch = currentUnitId != null && b.unit?.id === currentUnitId ? 0 : 1;
-      if (aMatch !== bMatch) {
-        return aMatch - bMatch;
+
+    const filteredSystems = systems.filter(s => {
+      // Priorizar filtrado por el aeropuerto seleccionado
+      if (currentAirport) {
+        return (s.unit?.airport || '').trim().toLowerCase() === currentAirport;
       }
+      // Si el aeropuerto está vacío, intentar filtrar por unidad como respaldo
+      if (currentUnitId != null) {
+        return s.unit?.id === currentUnitId;
+      }
+      return false;
+    });
+
+    return filteredSystems.sort((a, b) => {
       return (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' });
     });
   }
@@ -1182,6 +1292,11 @@ export class InformesComponent implements OnInit, OnDestroy {
 
     this.airportManualOverride = !!selectedAirport && selectedAirport !== databaseAirport;
     this.markDirty('aeropuerto');
+
+    // Al cambiar o escribir un aeropuerto distinto, recargamos (refiltramos) los sistemas listados 
+    window.setTimeout(() => {
+      this.loadSourceSystemsForCurrentUnit();
+    }, 0);
   }
 
   toggleHashAlgorithm(algorithm: VideoReportHashAlgorithm): void {
@@ -1971,6 +2086,15 @@ export class InformesComponent implements OnInit, OnDestroy {
     const invalid = new Set<keyof VideoReportFormData>(missing);
     const requiresOperatorHash = this.requiresOperatorHashData();
     const frameValidationLabels = this.validateFrameAnnotations();
+
+    // Verificar si el operador está autocompletado correctamente
+    const user = this.authService.user();
+    if (user && !user.linked_person_id) {
+      // Usuario sin perfil de personal vinculado
+      invalid.add('operador');
+      invalid.add('grado');
+      invalid.add('lup');
+    }
 
     let hasFormatError = false;
     let hasVmsDetailError = false;
