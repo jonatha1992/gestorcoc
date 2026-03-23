@@ -1168,19 +1168,27 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   private sortSystemsForDisplay(systems: SystemAsset[]): SystemAsset[] {
     const currentAirport = (this.form.aeropuerto || '').trim().toLowerCase();
-    const currentUnitId = this.unitIdByName[(this.form.unidad || '').trim()];
 
-    const filteredSystems = systems.filter(s => {
-      // Priorizar filtrado por el aeropuerto seleccionado
-      if (currentAirport) {
-        return (s.unit?.airport || '').trim().toLowerCase() === currentAirport;
-      }
-      // Si el aeropuerto está vacío, intentar filtrar por unidad como respaldo
-      if (currentUnitId != null) {
-        return s.unit?.id === currentUnitId;
-      }
-      return false;
-    });
+    // Si el aeropuerto está seleccionado → filtrar exactamente por aeropuerto (vale para Operadores y CREV)
+    if (currentAirport) {
+      return systems
+        .filter(s => (s.unit?.airport || '').trim().toLowerCase() === currentAirport)
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }));
+    }
+
+    // Si el aeropuerto está vacío y el usuario tiene MÚLTIPLES unidades disponibles (CREV),
+    // mostramos todos los sistemas que el backend ya filtró según sus permisos
+    if (this.unidadOptions.length > 1) {
+      return [...systems].sort((a, b) =>
+        (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' })
+      );
+    }
+
+    // Operador con una sola unidad y sin aeropuerto aún (fallback por unidad)
+    const currentUnitId = this.unitIdByName[(this.form.unidad || '').trim()];
+    const filteredSystems = currentUnitId != null
+      ? systems.filter(s => s.unit?.id === currentUnitId)
+      : [];
 
     return filteredSystems.sort((a, b) => {
       return (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' });

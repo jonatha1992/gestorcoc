@@ -71,54 +71,8 @@
     <div class="space-y-4 pt-4">
       <h3 class="text-base font-bold text-slate-800 border-b border-slate-200 pb-2">Datos base</h3>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-        <div class="lg:col-span-2">
-          <div class="flex items-center gap-1 mb-1.5">
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"
-              >OPERADOR *</label
-            >
-          </div>
-          <input
-            [ngModel]="form.operador"
-            name="operador"
-            type="text"
-            readonly
-            placeholder="Apellido, Nombre"
-            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-slate-100 text-slate-600 shadow-sm cursor-not-allowed"
-          />
-          <p class="text-[11px] text-slate-400 mt-1">
-            Operador autenticado — no editable
-          </p>
-        </div>
-        <div class="lg:col-span-2">
-          <div class="flex items-center gap-1 mb-1.5">
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"
-              >JERARQUIA *</label
-            >
-          </div>
-          <input
-            [ngModel]="form.grado"
-            name="grado"
-            type="text"
-            readonly
-            placeholder="Jerarquía"
-            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-slate-100 text-slate-600 shadow-sm cursor-not-allowed"
-          />
-        </div>
-        <div class="lg:col-span-1">
-          <div class="flex items-center gap-1 mb-1.5">
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"
-              >LEGAJO *</label
-            >
-          </div>
-          <input
-            [ngModel]="form.lup"
-            name="lup"
-            type="text"
-            readonly
-            placeholder="506896"
-            class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-slate-100 text-slate-600 shadow-sm cursor-not-allowed"
-          />
-        </div>
+        <!-- Campos de Operador ocultos: Se autocompletan internamente -->
+
         <div class="lg:col-span-2 xl:col-span-2">
           <div class="flex items-center gap-1 mb-1.5">
             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-0"

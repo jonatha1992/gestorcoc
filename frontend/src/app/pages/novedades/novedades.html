@@ -212,32 +212,9 @@
                             class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-sm"
                             placeholder="Ej: 135COCEZE/2025">
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label
-                                class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Grado</label>
-                            <input type="text" [(ngModel)]="actaForm.grado" name="acta_grado" readonly
-                                class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-100 text-slate-600 shadow-sm cursor-not-allowed text-sm"
-                                placeholder="Ej: Of. My">
-                        </div>
-                        <div>
-                            <label
-                                class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Apellido y
-                                Nombre</label>
-                            <input type="text" [(ngModel)]="actaForm.nombre" name="acta_nombre" readonly
-                                class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-100 text-slate-600 shadow-sm cursor-not-allowed text-sm"
-                                placeholder="Ej: Gomez Virginia">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label
-                                class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Aeropuerto
-                                / Unidad</label>
-                            <input type="text" [(ngModel)]="actaForm.aeropuerto" name="acta_aeropuerto" readonly
-                                class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-100 text-slate-600 shadow-sm cursor-not-allowed text-sm"
-                                placeholder="Ej: Ezeiza">
-                        </div>
+                    <!-- Datos de operador ocultos: Se autocompletan internamente -->
+
+                    <div class="grid grid-cols-1 gap-3">
                         <div>
                             <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Hora
                                 del Acta</label>
@@ -303,30 +280,9 @@
                         class="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
                         placeholder="Ej: 135COCEZE/2025">
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label
-                            class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Grado</label>
-                        <input type="text" [(ngModel)]="actaForm.grado" readonly
-                            class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-100 text-slate-600 shadow-sm cursor-not-allowed text-sm"
-                            placeholder="Of. My">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Apellido y
-                            Nombre</label>
-                        <input type="text" [(ngModel)]="actaForm.nombre" readonly
-                            class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-100 text-slate-600 shadow-sm cursor-not-allowed text-sm"
-                            placeholder="GUANCA Virginia">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label
-                            class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Aeropuerto</label>
-                        <input type="text" [(ngModel)]="actaForm.aeropuerto" readonly
-                            class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-100 text-slate-600 shadow-sm cursor-not-allowed text-sm"
-                            placeholder="Ezeiza">
-                    </div>
+                <!-- Datos de operador ocultos: Se autocompletan internamente -->
+
+                <div class="grid grid-cols-1 gap-3">
                     <div>
                         <label
                             class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Hora</label>
