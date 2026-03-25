@@ -35,6 +35,7 @@ class NovedadViewSet(UnitFilterMixin, ActionPermissionMixin, viewsets.ModelViewS
         'server': ['exact'],
         'system': ['exact'],
         'cameraman_gear': ['exact'],
+        'coc_ticket_number': ['icontains'],
     }
     search_fields = [
         'description',

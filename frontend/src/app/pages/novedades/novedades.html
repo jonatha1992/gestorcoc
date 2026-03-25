@@ -1,481 +1,62 @@
 <div class="space-y-6">
-    <!-- Header -->
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-3">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div class="relative w-full lg:w-80">
-                <svg xmlns="http://www.w3.org/2000/svg"
-                    class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none"
-                    viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <input type="text" [(ngModel)]="searchText" (ngModelChange)="onSearchChange()"
-                    class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
-                    placeholder="Buscar novedad...">
-            </div>
-            <div class="flex items-center justify-end">
-                <button (click)="openForm()" [class.hidden]="!canManageNovedades"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Nueva Novedad
-                </button>
-            </div>
-        </div>
+  <!-- Filtros -->
+  <app-novedad-filters
+    [filters]="filters"
+    [canCreate]="canManageNovedades"
+    (filtersChange)="onFiltersChange($event)"
+    (createClick)="openForm()">
+  </app-novedad-filters>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-2">
-            <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fecha desde</label>
-                <input type="date" lang="es-AR" [(ngModel)]="filterDateFrom" (ngModelChange)="onFilterChange()" [attr.max]="maxDate"
-                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
-                    title="Fecha desde">
-            </div>
-            <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fecha hasta</label>
-                <input type="date" lang="es-AR" [(ngModel)]="filterDateTo" (ngModelChange)="onFilterChange()" [attr.max]="maxDate"
-                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
-                    title="Fecha hasta">
-            </div>
-            <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tipo activo</label>
-                <select [(ngModel)]="filterAssetType" (ngModelChange)="onFilterChange()"
-                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
-                    <option value="">Todos</option>
-                    <option value="CAMERA">Cámara</option>
-                    <option value="SERVER">Servidor</option>
-                    <option value="SYSTEM">Sistema</option>
-                    <option value="GEAR">Equipamiento</option>
-                </select>
-            </div>
-            <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Severidad</label>
-                <select [(ngModel)]="filterSeverity" (ngModelChange)="onFilterChange()"
-                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
-                    <option value="">Todas</option>
-                    <option value="LOW">Baja</option>
-                    <option value="MEDIUM">Media</option>
-                    <option value="HIGH">Alta</option>
-                    <option value="CRITICAL">Crítica</option>
-                </select>
-            </div>
-            <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tipo
-                    incidente</label>
-                <input type="text" [(ngModel)]="filterIncidentType" (ngModelChange)="onFilterChange()"
-                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
-                    placeholder="Ej: FALLA_TECNICA">
-            </div>
-            <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Reportado por</label>
-                <input type="text" [(ngModel)]="filterReportedBy" (ngModelChange)="onFilterChange()"
-                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
-                    placeholder="Nombre responsable">
-            </div>
-            <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Estado</label>
-                <select [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()"
-                    class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600">
-                    <option value="">Todos</option>
-                    <option value="OPEN">Abierta</option>
-                    <option value="IN_PROGRESS">En Progreso</option>
-                    <option value="CLOSED">Cerrada</option>
-                </select>
-            </div>
-            <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Acciones</label>
-                <button type="button" (click)="clearFilters()"
-                    class="w-full text-xs font-semibold text-slate-600 hover:text-indigo-600 border border-slate-200 rounded-lg px-3 py-2 hover:bg-slate-100 transition-colors">
-                    Limpiar filtros
-                </button>
-            </div>
-        </div>
-    </div>
+  <!-- Modal Formulario -->
+  @if (showForm) {
+  <app-novedad-form
+    [formData]="formData"
+    [actaFormData]="actaFormData"
+    [targetType]="targetType"
+    [selectedAssets]="selectedAssets"
+    [systems]="systems"
+    [servers]="servers"
+    [cameras]="cameras"
+    [gear]="gear"
+    [isEditing]="isEditing"
+    [canCreate]="canManageNovedades"
+    [canEdit]="canManageNovedades"
+    (formDataChange)="formData = $event"
+    (actaFormChange)="actaFormData = $event"
+    (targetTypeChange)="targetType = $event"
+    (selectedAssetsChange)="selectedAssets = $event"
+    (saveClick)="saveNovedad($event)"
+    (closeClick)="closeForm()">
+  </app-novedad-form>
+  }
 
-    <!-- Modal Form -->
-    @if (showForm) {
-    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div
-            class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[92vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h3 class="text-lg font-bold text-slate-800">{{ isEditing ? 'Editar Novedad' : 'Registrar Nueva Novedad'
-                    }}</h3>
-                <button (click)="closeForm()"
-                    class="text-slate-400 hover:text-slate-600 font-bold text-xl transition-colors">&times;</button>
-            </div>
-            <form (submit)="saveNovedad($event)" class="p-6 space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Tipo de
-                            Activo</label>
-                        <select name="target_type" [(ngModel)]="targetType" (change)="onTargetTypeChange()"
-                            class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors font-medium text-sm">
-                            <option value="SYSTEM">Sistema / Sitio</option>
-                            <option value="SERVER">Servidor</option>
-                            <option value="CAMERA">Cámara</option>
-                            <option value="GEAR">Equipamiento (Prensa)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Activos
-                            Afectados</label>
-                        @if (selectedAssets.length > 0) {
-                        <div class="flex flex-wrap gap-2 mb-2">
-                            @for (asset of selectedAssets; track asset.id) {
-                            <span
-                                class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold">
-                                {{ asset.name }}
-                                <button type="button" (click)="removeAsset(asset.id)"
-                                    class="hover:bg-indigo-200 rounded-full p-0.5 transition-colors">
-                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </span>
-                            }
-                        </div>
-                        }
-                        <div class="relative">
-                            <input type="text" name="asset_search" [(ngModel)]="assetSearchText"
-                                (input)="filterAssets(); showDropdown = true" (focus)="showDropdown = true"
-                                (blur)="onSearchBlur()"
-                                class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors font-medium text-sm"
-                                placeholder="Buscar y agregar activos..." autocomplete="off">
-                            @if (showDropdown && filteredAssets.length > 0) {
-                            <div
-                                class="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
-                                @for (asset of filteredAssets; track asset.id) {
-                                <button type="button" (click)="addAsset(asset)" [disabled]="isAssetSelected(asset.id)"
-                                    class="w-full px-3 py-2 text-left hover:bg-slate-50 transition-colors text-sm border-b border-slate-100 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between">
-                                    <div>
-                                        <div class="font-semibold text-slate-700">{{ asset.name }}</div>
-                                        @if (targetType === 'SERVER' && asset.system_name) {
-                                        <div class="text-[10px] text-slate-400">{{ asset.system_name }}</div>
-                                        }
-                                        @if (targetType === 'GEAR' && asset.serial_number) {
-                                        <div class="text-[10px] text-slate-400">{{ asset.serial_number }}</div>
-                                        }
-                                    </div>
-                                    @if (isAssetSelected(asset.id)) {
-                                    <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24"
-                                        stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    }
-                                </button>
-                                }
-                            </div>
-                            }
-                        </div>
-                    </div>
-                </div>
+  <!-- Modal Acta desde Fila -->
+  @if (showRowActaModal && rowActaNovedad) {
+  <app-row-acta-modal
+    [visible]="true"
+    [novedad]="rowActaNovedad"
+    [formData]="actaFormData"
+    (formDataChange)="actaFormData = $event"
+    (closeClick)="closeRowActaModal()"
+    (generateClick)="generateActa([rowActaNovedad]); closeRowActaModal()">
+  </app-row-acta-modal>
+  }
 
-                <div>
-                    <label
-                        class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Descripción</label>
-                    <textarea name="description" [(ngModel)]="newNovedad.description" rows="3"
-                        class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-sm"
-                        placeholder="Detalle la novedad..." required></textarea>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label
-                            class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Severidad</label>
-                        <select name="severity" [(ngModel)]="newNovedad.severity"
-                            class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-sm">
-                            <option value="LOW">Baja</option>
-                            <option value="MEDIUM">Media</option>
-                            <option value="HIGH">Alta</option>
-                            <option value="CRITICAL">Crítica</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Tipo de
-                            Incidente</label>
-                        <input type="text" name="incident_type" [(ngModel)]="newNovedad.incident_type"
-                            class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white shadow-sm hover:border-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-sm"
-                            placeholder="e.g. FALLA_TECNICA">
-                    </div>
-                </div>
-
-                <!-- Sección Acta -->
-                <div class="border-t border-slate-200 pt-5 space-y-3">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Datos del Acta</p>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Número de
-                            Acta</label>
-                        <input type="text" [(ngModel)]="actaForm.numero" name="acta_numero"
-                            class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-sm"
-                            placeholder="Ej: 135COCEZE/2025">
-                    </div>
-                    <!-- Datos de operador ocultos: Se autocompletan internamente -->
-
-                    <div class="grid grid-cols-1 gap-3">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Hora
-                                del Acta</label>
-                            <input type="time" [(ngModel)]="actaForm.hora" name="acta_hora"
-                                class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-sm">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Firma
-                            Digital (opcional)</label>
-                        <div class="border border-slate-300 rounded-xl overflow-hidden bg-white">
-                            <canvas #sigPad width="520" height="100"
-                                class="block w-full cursor-crosshair touch-none"></canvas>
-                        </div>
-                        <button type="button" (click)="clearSignature()"
-                            class="mt-1 text-xs text-slate-500 hover:text-slate-700 underline">Limpiar firma</button>
-                    </div>
-                </div>
-
-                <div class="pt-3 flex gap-2">
-                    <button type="button" (click)="closeForm()"
-                        class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 px-4 rounded-xl transition-all text-sm">Cancelar</button>
-                    @if (isEditing) {
-                    <button type="submit" (click)="setGenerateActaAfterSave(false)" [class.hidden]="!canManageNovedades"
-                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-md shadow-indigo-100 transition-all text-sm">
-                        Actualizar
-                    </button>
-                    } @else {
-                    <button type="submit" (click)="setGenerateActaAfterSave(false)" [class.hidden]="!canManageNovedades"
-                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-md shadow-indigo-100 transition-all text-sm">
-                        Guardar
-                    </button>
-                    <button type="submit" (click)="setGenerateActaAfterSave(true)" [class.hidden]="!canManageNovedades"
-                        class="flex-1 bg-slate-700 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all text-sm">
-                        Guardar y Generar Acta
-                    </button>
-                    }
-                </div>
-            </form>
-        </div>
-    </div>
-    }
-
-    <!-- Modal Acta desde Fila -->
-    @if (showRowActaModal && rowActaNovedad) {
-    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h3 class="text-lg font-bold text-slate-800">Generar Acta</h3>
-                <button (click)="closeRowActaModal()"
-                    class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
-            </div>
-            <div class="px-6 py-4 bg-indigo-50 border-b border-indigo-100">
-                <p class="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">Novedad</p>
-                <p class="font-semibold text-slate-800 text-sm">{{ rowActaNovedad.assetLabel }}</p>
-                <p class="text-xs text-slate-500 mt-0.5 line-clamp-2">{{ rowActaNovedad.description }}</p>
-            </div>
-            <div class="p-6 space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Número de
-                        Acta</label>
-                    <input type="text" [(ngModel)]="actaForm.numero"
-                        class="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
-                        placeholder="Ej: 135COCEZE/2025">
-                </div>
-                <!-- Datos de operador ocultos: Se autocompletan internamente -->
-
-                <div class="grid grid-cols-1 gap-3">
-                    <div>
-                        <label
-                            class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Hora</label>
-                        <input type="time" [(ngModel)]="actaForm.hora"
-                            class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-indigo-500 text-sm">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Firma Digital
-                        (opcional)</label>
-                    <div class="border border-slate-300 rounded-xl overflow-hidden bg-white">
-                        <canvas #sigPadRow width="368" height="110"
-                            class="block w-full cursor-crosshair touch-none"></canvas>
-                    </div>
-                    <button type="button" (click)="clearSignature()"
-                        class="mt-1 text-xs text-slate-500 hover:text-slate-700 underline">Limpiar firma</button>
-                </div>
-                <div class="flex gap-3 pt-2">
-                    <button type="button" (click)="closeRowActaModal()"
-                        class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl transition-all">Cancelar</button>
-                    <button type="button" (click)="generateActa([rowActaNovedad]); closeRowActaModal()"
-                        class="flex-1 bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-all">Generar
-                        Acta PDF</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    }
-
-    <!-- Table -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <!-- Column titles -->
-                    <tr class="bg-slate-50/50 border-b border-slate-100">
-                        <th class="px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-widest">Fecha</th>
-                        <th class="px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-widest">Activo Afectado
-                        </th>
-                        <th class="px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-widest">Gravedad</th>
-                        <th class="px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-widest">Descripción
-                        </th>
-                        <th class="px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-widest">Estado</th>
-                        <th class="px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">
-                            Acciones</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    @if (isLoadingTable) {
-                    <tr>
-                        <td colspan="6" class="px-6 py-10 text-center">
-                            <div class="inline-flex items-center gap-3 text-slate-500 text-sm">
-                                <span
-                                    class="w-4 h-4 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin"></span>
-                                Cargando novedades...
-                            </div>
-                        </td>
-                    </tr>
-                    } @else {
-                    @for (novedad of novedades; track novedad.id) {
-                    <tr class="hover:bg-slate-100/80 transition-colors">
-                        <td class="px-4 py-3 text-sm text-slate-500 font-medium whitespace-nowrap">
-                            {{ novedad.created_at | date:'dd/MM/yyyy HH:mm' }}
-                        </td>
-                        <td class="px-4 py-3">
-                            <div class="flex flex-col">
-                                <span class="font-bold text-slate-700">
-                                    {{ novedad.assetLabel }}
-                                </span>
-                                <span class="text-[10px] uppercase font-bold text-slate-400 mt-0.5 tracking-wider">
-                                    {{ getNovedadTypeLabel(novedad) }}
-                                </span>
-                            </div>
-                        </td>
-                        <td class="px-4 py-3">
-                            <span [ngClass]="{
-                                'bg-rose-100 text-rose-700': novedad.severity === 'CRITICAL' || novedad.severity === 'HIGH',
-                                'bg-amber-100 text-amber-700': novedad.severity === 'MEDIUM',
-                                'bg-indigo-100 text-indigo-700': novedad.severity === 'LOW'
-                            }" class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide">
-                                {{ getSeverityLabel(novedad.severity) }}
-                            </span>
-                        </td>
-                        <td class="px-4 py-3 text-slate-600">
-                            <p class="line-clamp-1 max-w-xs text-sm">{{ novedad.description }}</p>
-                            <p class="text-[10px] uppercase tracking-wider font-semibold text-slate-400 mt-1">{{
-                                novedad.incident_type }}</p>
-                        </td>
-                        <td class="px-4 py-3">
-                            <span [ngClass]="{
-                                'bg-blue-100 text-blue-700': novedad.status === 'OPEN',
-                                'bg-amber-100 text-amber-700': novedad.status === 'IN_PROGRESS',
-                                'bg-emerald-100 text-emerald-700': novedad.status === 'CLOSED'
-                            }" class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide">
-                                {{ novedad.status === 'OPEN' ? 'Abierta' : novedad.status === 'IN_PROGRESS' ? 'En
-                                Progreso' : 'Cerrada' }}
-                            </span>
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                            <div class="flex items-center justify-end gap-2">
-                                <button (click)="prepareEmail(novedad)"
-                                    class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                    title="Preparar Email">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                </button>
-                                <button (click)="openActaForRow(novedad)"
-                                    class="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                    title="Generar Acta">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                </button>
-                                <button (click)="editNovedad(novedad)" [class.hidden]="!canManageNovedades"
-                                    class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                    title="Editar">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                </button>
-                                <button (click)="deleteNovedad(novedad.id)" [class.hidden]="!canManageNovedades"
-                                    class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                                    title="Eliminar">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <path
-                                            d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    } @empty {
-                    <tr>
-                        <td colspan="6" class="px-6 py-12 text-center">
-                            <div class="flex flex-col items-center justify-center text-slate-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mb-3 text-slate-200"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                                </svg>
-                                <p class="italic">No se han registrado novedades.</p>
-                            </div>
-                        </td>
-                    </tr>
-                    }
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Pagination -->
-        @if (totalPages > 1) {
-        <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <span class="text-xs text-slate-500">
-                {{ (currentPage - 1) * pageSize + 1 }}–{{ currentPage * pageSize > totalCount ? totalCount : currentPage
-                * pageSize }} de {{ totalCount }} novedades
-            </span>
-            <div class="flex items-center gap-1">
-                <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1"
-                    class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
-                @for (page of pageNumbers; track $index) {
-                @if (page === -1) {
-                <span class="px-2 text-slate-400 text-xs">…</span>
-                } @else {
-                <button (click)="goToPage(page)"
-                    [class]="page === currentPage
-                            ? 'w-8 h-8 rounded-lg text-xs font-bold bg-indigo-600 text-white'
-                            : 'w-8 h-8 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors'">
-                    {{ page }}
-                </button>
-                }
-                }
-                <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages"
-                    class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-        }
-    </div>
+  <!-- Tabla -->
+  <app-novedad-table
+    [novedades]="novedades"
+    [isLoading]="isLoadingTable"
+    [currentPage]="currentPage"
+    [totalCount]="totalCount"
+    [pageSize]="pageSize"
+    [canEdit]="canManageNovedades"
+    [canDelete]="canManageNovedades"
+    (editClick)="editNovedad($event)"
+    (deleteClick)="deleteNovedad($event)"
+    (actaClick)="openActaForRow($event)"
+    (emailClick)="prepareEmail($event)"
+    (pageClick)="goToPage($event)"
+    (previousPage)="goToPage(currentPage - 1)"
+    (nextPage)="goToPage(currentPage + 1)">
+  </app-novedad-table>
 </div>
