@@ -4,12 +4,13 @@ import { AssetsComponent } from './pages/assets/assets';
 import { NovedadesComponent } from './pages/novedades/novedades';
 import { PersonnelComponent } from './pages/personnel/personnel';
 import { RecordsComponent } from './pages/records/records';
+import { RecordsInformesComponent } from './pages/records/informes/informes';
 import { HashComponent } from './pages/hash/hash';
 import { HechosComponent } from './pages/hechos/hechos';
-import { InformesComponent } from './pages/informes/informes';
 import { SettingsComponent } from './pages/settings/settings';
 import { LoginComponent } from './pages/login/login';
 import { UsuariosComponent } from './pages/usuarios/usuarios';
+import { RolesPermisosComponent } from './pages/usuarios/roles-permisos';
 import { authGuard, loginRedirectGuard, permissionGuard } from './guards/auth.guard';
 import { PermissionCodes } from './auth/auth.models';
 
@@ -46,6 +47,18 @@ export const routes: Routes = [
         data: { permissions: [PermissionCodes.VIEW_RECORDS] }
     },
     {
+        path: 'records/new/informe',
+        component: RecordsInformesComponent,
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.MANAGE_RECORDS] }
+    },
+    {
+        path: 'records/:id/informe',
+        component: RecordsInformesComponent,
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.MANAGE_RECORDS] }
+    },
+    {
         path: 'hechos',
         component: HechosComponent,
         canActivate: [authGuard, permissionGuard],
@@ -58,14 +71,14 @@ export const routes: Routes = [
         data: { permissions: [PermissionCodes.USE_INTEGRITY] }
     },
     {
-        path: 'informes',
-        component: InformesComponent,
-        canActivate: [authGuard, permissionGuard],
-        data: { permissions: [PermissionCodes.USE_REPORTS] }
-    },
-    {
         path: 'usuarios',
         component: UsuariosComponent,
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.MANAGE_USERS] }
+    },
+    {
+        path: 'usuarios/roles',
+        component: RolesPermisosComponent,
         canActivate: [authGuard, permissionGuard],
         data: { permissions: [PermissionCodes.MANAGE_USERS] }
     },

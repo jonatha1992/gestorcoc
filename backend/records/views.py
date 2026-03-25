@@ -48,7 +48,7 @@ class FilmRecordViewSet(UnitFilterMixin, ActionPermissionMixin, viewsets.ModelVi
         'destroy': [PermissionCode.MANAGE_RECORDS],
         'verify_by_crev': [PermissionCode.VERIFY_CREV],
         'verification_certificate': [PermissionCode.VIEW_RECORDS],
-        'save_report_draft': [PermissionCode.USE_REPORTS],
+        'save_report_draft': [PermissionCode.MANAGE_RECORDS],
     }
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     
@@ -241,11 +241,11 @@ class VideoAnalysisReportViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
     serializer_class = VideoAnalysisReportSerializer
     permission_classes = [IsAuthenticated, HasNamedPermission]
     action_permissions = {
-        'list': [PermissionCode.USE_REPORTS],
-        'retrieve': [PermissionCode.USE_REPORTS],
-        'create': [PermissionCode.USE_REPORTS],
-        'update': [PermissionCode.USE_REPORTS],
-        'partial_update': [PermissionCode.USE_REPORTS],
+        'list': [PermissionCode.MANAGE_RECORDS],
+        'retrieve': [PermissionCode.MANAGE_RECORDS],
+        'create': [PermissionCode.MANAGE_RECORDS],
+        'update': [PermissionCode.MANAGE_RECORDS],
+        'partial_update': [PermissionCode.MANAGE_RECORDS],
         'destroy': [PermissionCode.MANAGE_CREV_FLOW],
     }
     filter_backends = [DjangoFilterBackend]
@@ -351,7 +351,7 @@ class IntegritySummaryReportView(views.APIView):
 
 class VideoAnalysisReportView(views.APIView):
     permission_classes = [IsAuthenticated, HasNamedPermission]
-    required_permissions = [PermissionCode.USE_REPORTS]
+    required_permissions = [PermissionCode.MANAGE_RECORDS]
 
     def post(self, request, *args, **kwargs):
         try:
@@ -379,7 +379,7 @@ class VideoAnalysisReportView(views.APIView):
 
 class VideoAnalysisImproveTextView(views.APIView):
     permission_classes = [IsAuthenticated, HasNamedPermission]
-    required_permissions = [PermissionCode.USE_REPORTS]
+    required_permissions = [PermissionCode.MANAGE_RECORDS]
 
     def post(self, request, *args, **kwargs):
         try:

@@ -40,7 +40,6 @@ class PermissionCode:
     VIEW_RECORDS = "view_records"
     MANAGE_RECORDS = "manage_records"
     USE_INTEGRITY = "use_integrity_tools"
-    USE_REPORTS = "use_report_tools"
     VERIFY_CREV = "verify_crev_record"
     MANAGE_CREV_FLOW = "manage_crev_flow"
     VIEW_SETTINGS = "view_settings"
@@ -58,9 +57,8 @@ CUSTOM_PERMISSION_LABELS = {
     PermissionCode.VIEW_HECHOS: "Can view hechos",
     PermissionCode.MANAGE_HECHOS: "Can manage hechos",
     PermissionCode.VIEW_RECORDS: "Can view records",
-    PermissionCode.MANAGE_RECORDS: "Can manage records",
+    PermissionCode.MANAGE_RECORDS: "Can manage records (includes creating reports)",
     PermissionCode.USE_INTEGRITY: "Can use integrity tools",
-    PermissionCode.USE_REPORTS: "Can use report tools",
     PermissionCode.VERIFY_CREV: "Can verify CREV records",
     PermissionCode.MANAGE_CREV_FLOW: "Can manage CREV flow",
     PermissionCode.VIEW_SETTINGS: "Can view settings",
@@ -113,7 +111,6 @@ GROUP_PERMISSION_MAP = {
         PermissionCode.VIEW_RECORDS,
         PermissionCode.MANAGE_RECORDS,
         PermissionCode.USE_INTEGRITY,
-        PermissionCode.USE_REPORTS,
         PermissionCode.VERIFY_CREV,
         PermissionCode.VIEW_SETTINGS,
     ],
@@ -126,7 +123,6 @@ GROUP_PERMISSION_MAP = {
         PermissionCode.VIEW_RECORDS,
         PermissionCode.MANAGE_RECORDS,
         PermissionCode.USE_INTEGRITY,
-        PermissionCode.USE_REPORTS,
         PermissionCode.VERIFY_CREV,
         PermissionCode.MANAGE_CREV_FLOW,
         PermissionCode.VIEW_SETTINGS,

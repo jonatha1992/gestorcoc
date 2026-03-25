@@ -27,16 +27,16 @@ import {
   VideoReportInvolvedPerson,
   VideoReportPayload,
   VideoReportVmsAuthenticityMode,
-} from '../../services/informe.service';
-import { ToastService } from '../../services/toast.service';
-import { LoadingService } from '../../services/loading.service';
-import { PersonnelService } from '../../services/personnel.service';
-import { AssetService, SystemAsset } from '../../services/asset.service';
-import { AuthService } from '../../services/auth.service';
+} from '../../../services/informe.service';
+import { ToastService } from '../../../services/toast.service';
+import { LoadingService } from '../../../services/loading.service';
+import { PersonnelService } from '../../../services/personnel.service';
+import { AssetService, SystemAsset } from '../../../services/asset.service';
+import { AuthService } from '../../../services/auth.service';
 import {
   getNowDateTimeLocalInputValue,
   getTodayDateInputValue,
-} from '../../utils/date-inputs';
+} from '../../../utils/date-inputs';
 
 type HelpKey = keyof VideoReportFormData | 'operador_select' | 'frame_upload' | 'frame_description';
 
@@ -70,12 +70,12 @@ const FIXED_GRADE_OPTIONS = [
 ] as const;
 
 @Component({
-  selector: 'app-informes',
+  selector: 'app-records-informes',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './informes.html',
 })
-export class InformesComponent implements OnInit, OnDestroy {
+export class RecordsInformesComponent implements OnInit, OnDestroy {
   private informeService = inject(InformeService);
   private toastService = inject(ToastService);
   private loadingService = inject(LoadingService);
@@ -304,7 +304,19 @@ export class InformesComponent implements OnInit, OnDestroy {
       if (this.reportStatus() !== 'FINALIZADO') {
         this.reportStatus.set('BORRADOR');
       }
-      this.toastService.show('Se restauro un borrador local del informe.', 'info');
+      
+      // Verificar si había frames en el borrador original
+      // Los frames se guardan en form_data.frames cuando se guarda en DB
+      const hadFrames = draft.form && 
+                        ((draft.form as any).frames && (draft.form as any).frames.length > 0);
+      if (hadFrames && this.frames.length === 0) {
+        this.toastService.show(
+          'Se restauró el borrador local. Las imágenes no se guardan localmente por su tamaño. Debe volver a cargarlas.',
+          'warning',
+        );
+      } else {
+        this.toastService.show('Se restauró un borrador local del informe.', 'info');
+      }
     } catch {
       this.clearLocalDraftSnapshot();
     }
@@ -318,9 +330,18 @@ export class InformesComponent implements OnInit, OnDestroy {
   }
 
   private handleQueryParams(): void {
+    // Leer record_id de los route params (ej: /records/5/informe)
+    const routeParams = this.route.snapshot.params;
+    const recordIdFromRoute = routeParams['id'];
+    
+    // Leer informe_id e id de query params por compatibilidad
     const params = this.route.snapshot.queryParamMap;
-    const recordId = params.get('record_id');
     const informeId = params.get('informe_id');
+    const recordIdFromQuery = params.get('record_id');
+    
+    // Priorizar: route param > query param
+    const recordId = recordIdFromRoute || recordIdFromQuery;
+    
     this.localDraftStorageKey = this.resolveLocalDraftStorageKey(informeId, recordId);
 
     if (informeId) {
@@ -384,6 +405,11 @@ export class InformesComponent implements OnInit, OnDestroy {
       | import('@angular/common/http').HttpClient
       | undefined;
     if (!http) return;
+    
+    // Limpiar estado anterior
+    this.frames = [];
+    this.form = this.createEmptyForm();
+    
     (
       http.get(`${baseUrl}/api/film-records/${recordId}/`) as import('rxjs').Observable<any>
     ).subscribe({
@@ -408,6 +434,15 @@ export class InformesComponent implements OnInit, OnDestroy {
         }
         if (record.sistema) {
           this.form.sistema = record.sistema;
+        }
+        // Pre-cargar source_system_id si el registro tiene un sistema vinculado
+        if (record.system_id) {
+          this.form.source_system_id = record.system_id;
+          this.selectedSourceSystemOption = record.system_id;
+        } else if (record.sistema) {
+          // Si no hay system_id pero hay nombre de sistema, usar 'otro'
+          this.form.source_system_id = null;
+          this.selectedSourceSystemOption = 'otro';
         }
         if (record.criminal_problematic) {
           this.form.objeto_denunciado = record.criminal_problematic;
@@ -926,6 +961,10 @@ export class InformesComponent implements OnInit, OnDestroy {
     }
 
     const formData = rawData as Record<string, unknown>;
+    
+    // Limpiar frames anteriores antes de cargar nuevos datos
+    this.frames = [];
+    
     Object.assign(this.form, formData);
 
     const sourceSystemId = formData['source_system_id'];
@@ -1113,28 +1152,31 @@ export class InformesComponent implements OnInit, OnDestroy {
   }
 
   onSourceSystemSelectionChange(value: number | 'otro' | null): void {
-    this.selectedSourceSystemOption = value;
+    // Usar setTimeout para evitar ExpressionChangedAfterItHasBeenCheckedError
+    setTimeout(() => {
+      this.selectedSourceSystemOption = value;
 
-    if (value === 'otro' || value === null) {
-      this.form.source_system_id = null;
-      if (value === null) {
-        this.form.sistema = '';
+      if (value === 'otro' || value === null) {
+        this.form.source_system_id = null;
+        if (value === null) {
+          this.form.sistema = '';
+        }
+        this.markDirty('source_system_id');
+        this.markDirty('sistema');
+        return;
       }
+
+      const selectedSystem = this.sourceSystemOptions.find((system) => system.id === value);
+      if (!selectedSystem) {
+        return;
+      }
+
+      this.form.source_system_id = selectedSystem.id;
+      this.form.sistema = selectedSystem.name || '';
+      this.applySourceSystemDefaults(selectedSystem);
       this.markDirty('source_system_id');
       this.markDirty('sistema');
-      return;
-    }
-
-    const selectedSystem = this.sourceSystemOptions.find((system) => system.id === value);
-    if (!selectedSystem) {
-      return;
-    }
-
-    this.form.source_system_id = selectedSystem.id;
-    this.form.sistema = selectedSystem.name || '';
-    this.applySourceSystemDefaults(selectedSystem);
-    this.markDirty('source_system_id');
-    this.markDirty('sistema');
+    }, 0);
   }
 
   onSistemaManualChange(value: string): void {
@@ -1621,6 +1663,52 @@ export class InformesComponent implements OnInit, OnDestroy {
     conclusion: '',
     firma: '',
   };
+
+  private createEmptyForm(): VideoReportFormData {
+    return {
+      report_date: getTodayDateInputValue(),
+      destinatarios: '',
+      unidad: '',
+      tipo_informe: 'Informe de análisis de videos',
+      numero_informe: '',
+      grado: '',
+      operador: '',
+      lup: '',
+      sistema: '',
+      source_system_id: null,
+      cantidad_observada: '',
+      sectores_analizados: '',
+      franja_horaria_analizada: '',
+      tiempo_total_analisis: '',
+      sintesis: '',
+      vms_native_hash_algorithms: [],
+      vms_native_hash_algorithm_other: '',
+      hash_algorithms: [],
+      hash_algorithm_other: '',
+      hash_program: '',
+      motivo_sin_hash: '',
+      medida_seguridad_interna: '',
+      vms_authenticity_mode: '',
+      vms_authenticity_detail: '',
+      material_filmico: '',
+      prevencion_sumaria: '',
+      caratula: '',
+      fiscalia: '',
+      fiscal: '',
+      denunciante: '',
+      involved_people_summary: '',
+      involved_people: [],
+      vuelo: '',
+      empresa_aerea: '',
+      destino: '',
+      fecha_hecho: '',
+      objeto_denunciado: '',
+      aeropuerto: '',
+      desarrollo: '',
+      conclusion: '',
+      firma: '',
+    };
+  }
 
   private readonly fieldLabels: Record<keyof VideoReportFormData, string> = {
     report_date: 'Fecha del Informe',
@@ -2224,6 +2312,17 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   onFrameTimeChange(frame: VideoReportFrame): void {
     frame.frame_time = this.normalizeFrameTimestamp(frame.frame_time);
+    
+    // Validar que la fecha no sea futura
+    if (frame.frame_time) {
+      const frameDate = new Date(frame.frame_time);
+      const now = new Date();
+      if (frameDate > now) {
+        this.toastService.error('La fecha y hora del fotograma no puede ser futura.');
+        frame.frame_time = '';
+      }
+    }
+    
     this.markDirty();
   }
 
@@ -2301,7 +2400,13 @@ export class InformesComponent implements OnInit, OnDestroy {
           ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
 
           // Exportar como JPEG siempre (Word no soporta WEBP)
-          resolve(canvas.toDataURL('image/jpeg', 0.85));
+          const result = canvas.toDataURL('image/jpeg', 0.85);
+          
+          // Debug: Verificar tamaño del resultado
+          const sizeInKB = Math.round(result.length / 1024);
+          console.log(`Imagen procesada: ${file.name} -> ${sizeInKB} KB`);
+          
+          resolve(result);
         };
         img.onerror = () => reject(new Error(`No se pudo decodificar la imagen.`));
         img.src = String(e.target?.result);
@@ -2318,6 +2423,8 @@ export class InformesComponent implements OnInit, OnDestroy {
       return;
     }
 
+    console.log(`Archivos seleccionados: ${files.length}`);
+
     const remainingSlots = this.MAX_FRAMES - this.frames.length;
     if (remainingSlots <= 0) {
       this.toastService.error(`Solo se permiten ${this.MAX_FRAMES} fotogramas.`);
@@ -2327,6 +2434,8 @@ export class InformesComponent implements OnInit, OnDestroy {
 
     const candidates = Array.from(files).slice(0, remainingSlots);
     let currentTotal = this.totalFramesBytes();
+
+    console.log(`Procesando ${candidates.length} imagenes. Frames actuales: ${this.frames.length}`);
 
     this.isProcessingFrames = true;
     this.frameProcessingTotal = candidates.length;
@@ -2353,6 +2462,13 @@ export class InformesComponent implements OnInit, OnDestroy {
           }
 
           const dataUrl = await this.fileToDataUrl(file);
+
+          // Debug: Verificar que dataUrl es válido
+          if (!dataUrl || dataUrl.length < 100) {
+            this.toastService.error(`La imagen ${file.name} no se pudo procesar correctamente.`);
+            continue;
+          }
+
           const frame: VideoReportFrame = {
             id_temp: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
             file_name: file.name,
@@ -2364,9 +2480,17 @@ export class InformesComponent implements OnInit, OnDestroy {
             preview_url: dataUrl,
             size_bytes: file.size,
           };
+
+          // Debug: Agregar frame al array
           this.frames = [...this.frames, frame];
           currentTotal += file.size;
+
+          // Forzar detección de cambios después de agregar cada frame
+          this.cdr.detectChanges();
           this.markDirty();
+
+          // Debug: Verificar que el frame se agregó
+          console.log(`✓ Frame agregado: ${frame.file_name}, Total frames: ${this.frames.length}`);
         } catch (error) {
           this.toastService.error(String(error));
         } finally {
@@ -2377,9 +2501,12 @@ export class InformesComponent implements OnInit, OnDestroy {
           }
         }
       }
+      
+      // Debug final
+      console.log(`Proceso completado. Total frames: ${this.frames.length}`);
     } finally {
       this.reindexFrames();
-      input.value = '';
+      input.value = '';  // Limpiar input SOLO después de procesar todo
       this.isProcessingFrames = false;
       this.frameProcessingTotal = 0;
       this.frameProcessingCompleted = 0;
@@ -2420,6 +2547,10 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   orderedFrames(): VideoReportFrame[] {
     return [...this.frames].sort((a, b) => a.order - b.order);
+  }
+
+  trackByFrame(index: number, frame: VideoReportFrame): string {
+    return frame.id_temp || `frame-${index}`;
   }
 
   private reindexFrames(): void {
@@ -2982,6 +3113,45 @@ export class InformesComponent implements OnInit, OnDestroy {
 
   private saveCurrentReport(status: VideoAnalysisReportStatus): void {
     if (this.isReadOnly()) {
+      return;
+    }
+
+    // Validar campos requeridos antes de enviar
+    const validationErrors: string[] = [];
+    
+    // Validar sistema/dispositivo de origen
+    if (!this.form.sistema && !this.form.source_system_id) {
+      validationErrors.push('Debe seleccionar el sistema o dispositivo de origen.');
+    }
+    
+    // Validar método de verificación de integridad
+    if (!this.form.vms_authenticity_mode) {
+      validationErrors.push('Debe seleccionar el método de verificación de integridad.');
+    }
+    
+    // Validar detalle si es "otro"
+    if (this.form.vms_authenticity_mode === 'otro' && !this.form.vms_authenticity_detail) {
+      validationErrors.push('Debe detallar el método de autenticidad alternativo.');
+    }
+    
+    // Validar frames
+    if (this.frames.length === 0) {
+      validationErrors.push('Debe agregar al menos un fotograma.');
+    }
+    
+    // Validar fechas de frames no futuras
+    for (const frame of this.frames) {
+      if (frame.frame_time) {
+        const frameDate = new Date(frame.frame_time);
+        const now = new Date();
+        if (frameDate > now) {
+          validationErrors.push(`El fotograma ${frame.order + 1} tiene fecha y hora futura.`);
+        }
+      }
+    }
+    
+    if (validationErrors.length > 0) {
+      this.toastService.error(validationErrors.join(' '));
       return;
     }
 

@@ -96,6 +96,8 @@ class UserManagementViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
         "destroy":        [PermissionCode.MANAGE_USERS],
         "toggle_active":  [PermissionCode.MANAGE_USERS],
         "reset_password": [PermissionCode.MANAGE_USERS],
+        "force_password_change": [PermissionCode.MANAGE_USERS],
+        "clear_password_change": [PermissionCode.MANAGE_USERS],
     }
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = {
@@ -237,3 +239,41 @@ class UserManagementViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
         profile.must_change_password = True
         profile.save(update_fields=["must_change_password"])
         return Response({"message": "Contrasena restablecida. El usuario debera cambiarla al iniciar sesion."})
+
+    @action(detail=True, methods=["post"], url_path="force_password_change")
+    @transaction.atomic
+    def force_password_change(self, request, pk=None):
+        """
+        Fuerza al usuario a cambiar su contraseña en el próximo login.
+        Similar a 'Force password change at next logon' de Active Directory.
+        """
+        person = self.get_object()
+        if not person.user:
+            return Response({"error": "El usuario no tiene cuenta de sistema."}, status=drf_status.HTTP_400_BAD_REQUEST)
+        
+        profile, _ = UserAccountProfile.objects.get_or_create(user=person.user)
+        profile.must_change_password = True
+        profile.save(update_fields=["must_change_password"])
+        
+        return Response({
+            "message": f"Se ha forzado el cambio de contraseña para {person.user.username}. Deberá cambiarla en su próximo inicio de sesión."
+        })
+
+    @action(detail=True, methods=["post"], url_path="clear_password_change")
+    @transaction.atomic
+    def clear_password_change(self, request, pk=None):
+        """
+        Marca la contraseña como permanente (no requiere cambio).
+        Útil cuando el admin cambia la contraseña pero no quiere forzar el cambio.
+        """
+        person = self.get_object()
+        if not person.user:
+            return Response({"error": "El usuario no tiene cuenta de sistema."}, status=drf_status.HTTP_400_BAD_REQUEST)
+        
+        profile, _ = UserAccountProfile.objects.get_or_create(user=person.user)
+        profile.must_change_password = False
+        profile.save(update_fields=["must_change_password"])
+        
+        return Response({
+            "message": f"La contraseña de {person.user.username} ha sido marcada como permanente."
+        })

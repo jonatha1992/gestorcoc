@@ -124,10 +124,6 @@ export class RecordsComponent implements OnInit {
     return this.authService.hasPermission(PermissionCodes.MANAGE_RECORDS);
   }
 
-  get canUseReportTools(): boolean {
-    return this.authService.hasPermission(PermissionCodes.USE_REPORTS);
-  }
-
   get canVerifyCrev(): boolean {
     return this.authService.hasPermission(PermissionCodes.VERIFY_CREV);
   }
@@ -264,15 +260,15 @@ export class RecordsComponent implements OnInit {
   }
 
   openInforme(record: any) {
-    if (!this.canUseReportTools) {
+    if (!this.canManageRecords) {
       this.toastService.show('No tiene permiso para trabajar con informes.', 'warning');
       return;
     }
     const existing = this.informesMap()[record.id];
     if (existing) {
-      void this.router.navigate(['/informes'], { queryParams: { informe_id: existing.id } });
+      void this.router.navigate([`/records/${record.id}/informe`], { queryParams: { informe_id: existing.id } });
     } else {
-      void this.router.navigate(['/informes'], { queryParams: { record_id: record.id } });
+      void this.router.navigate([`/records/${record.id}/informe`]);
     }
   }
 
