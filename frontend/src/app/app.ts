@@ -4,14 +4,16 @@ import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs';
 import { SpinnerComponent } from './components/spinner.component';
 import { ToastComponent } from './components/toast.component';
+import { ConfirmModalComponent } from './components/confirm-modal.component';
 import { PermissionCode } from './auth/auth.models';
 import { LayoutService } from './services/layout.service';
 import { AuthService } from './services/auth.service';
+import { ConfirmModalService } from './services/confirm-modal.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, SpinnerComponent, ToastComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, SpinnerComponent, ToastComponent, ConfirmModalComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -23,6 +25,7 @@ export class App {
   private hasInitializedViewport = false;
   readonly layoutService = inject(LayoutService);
   readonly authService = inject(AuthService);
+  readonly confirmModalService = inject(ConfirmModalService);
 
   constructor(private router: Router) {
     this.syncSidebarWithViewport();
@@ -53,6 +56,14 @@ export class App {
 
   logout() {
     this.authService.logout();
+  }
+
+  handleConfirmModal(): void {
+    this.confirmModalService.handleConfirm();
+  }
+
+  handleCancelModal(): void {
+    this.confirmModalService.handleCancel();
   }
 
   private syncSidebarWithViewport() {

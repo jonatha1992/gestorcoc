@@ -207,10 +207,19 @@ def resolve_target(request: HttpRequest, response, context: dict[str, Any]) -> d
     if model is not None:
         app_label = model._meta.app_label
         model_name = model._meta.model_name
-        if target_id and (request.method or "").upper() != "DELETE":
-            instance = model._default_manager.filter(pk=target_id).first()
-            if instance is not None:
-                target_repr = force_str(instance)
+        # Para DELETE, intentamos obtener la instancia si no fue capturada antes
+        # (fallback por si el middleware no la capturó)
+        if target_id:
+            method = (request.method or "").upper()
+            if method != "DELETE":
+                instance = model._default_manager.filter(pk=target_id).first()
+                if instance is not None:
+                    target_repr = force_str(instance)
+            else:
+                # En DELETE, la instancia ya fue eliminada, pero deberíamos tener
+                # la información capturada en el contexto por el middleware
+                # Si no, dejamos target_repr vacío
+                pass
 
     return {
         "app": app_label[:100],
@@ -398,3 +407,33 @@ def get_client_ip(request: HttpRequest) -> str:
     if forwarded_for:
         return forwarded_for.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR", "")
+
+
+def capture_delete_target(request: HttpRequest, view_kwargs: dict[str, Any]) -> None:
+    """
+    Captura la información del objeto que se va a eliminar ANTES de que sea borrado.
+    Esto permite registrar el nombre completo (target_repr) en el log de auditoría.
+    """
+    pk = view_kwargs.get("pk")
+    if not pk:
+        return
+
+    model = infer_view_model(request)
+    if model is None:
+        return
+
+    try:
+        instance = model._default_manager.filter(pk=pk).first()
+        if instance is not None:
+            target_context = {
+                "target": {
+                    "app": model._meta.app_label,
+                    "model": model._meta.model_name,
+                    "id": str(pk),
+                    "repr": force_str(instance),
+                }
+            }
+            existing_context = getattr(request, "_audit_context", {}) or {}
+            request._audit_context = {**existing_context, **target_context}
+    except Exception:
+        pass

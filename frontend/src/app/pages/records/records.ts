@@ -16,6 +16,7 @@ import {
   getTodayDateInputValue,
   toDateTimeLocalInputValue,
 } from '../../utils/date-inputs';
+import { ConfirmModalService } from '../../services/confirm-modal.service';
 
 export interface FilmRecord {
   id: number;
@@ -79,6 +80,7 @@ export class RecordsComponent implements OnInit {
   private toastService = inject(ToastService);
   private informeService = inject(InformeService);
   private router = inject(Router);
+  private confirmModalService = inject(ConfirmModalService);
   readonly authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
@@ -526,7 +528,7 @@ export class RecordsComponent implements OnInit {
     return missing;
   }
 
-  deleteRecord(record: any) {
+  async deleteRecord(record: any) {
     if (!this.requireManageRecords()) {
       return;
     }
@@ -535,24 +537,24 @@ export class RecordsComponent implements OnInit {
     }
 
     const label = (record?.description || '').trim() || `#${record.id}`;
-    const confirmed = confirm(`¿Eliminar registro ${label}?`);
-    if (!confirmed) {
-      return;
-    }
-
-    this.recordsService.deleteRecord(record.id).subscribe({
-      next: () => {
-        this.ngZone.run(() => {
-          this.toastService.show('Registro eliminado', 'success');
-          this.loadData();
+    try {
+      await this.confirmModalService.confirmDelete(label, 'registro');
+      this.recordsService.deleteRecord(record.id).subscribe({
+        next: () => {
+          this.ngZone.run(() => {
+            this.toastService.show('Registro eliminado', 'success');
+            this.loadData();
+            this.cdr.detectChanges();
+          });
+        },
+        error: () => this.ngZone.run(() => {
+          this.toastService.show('Error al eliminar registro', 'error');
           this.cdr.detectChanges();
-        });
-      },
-      error: () => this.ngZone.run(() => {
-        this.toastService.show('Error al eliminar registro', 'error');
-        this.cdr.detectChanges();
-      })
-    });
+        })
+      });
+    } catch {
+      // Usuario canceló
+    }
   }
 
   addInvolvedPerson() {

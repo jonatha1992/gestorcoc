@@ -7,6 +7,7 @@ import { AuthService } from '../../services/auth.service';
 import { RolePermissionsService, RolePermission, PermissionInfo } from '../../services/role-permissions.service';
 import { ToastService } from '../../services/toast.service';
 import { PermissionCodes } from '../../auth/auth.models';
+import { ConfirmModalService } from '../../services/confirm-modal.service';
 
 @Component({
   selector: 'app-roles-permisos',
@@ -19,6 +20,7 @@ export class RolesPermisosComponent implements OnInit {
   private rolePermissionsService = inject(RolePermissionsService);
   private toastService = inject(ToastService);
   private router = inject(Router);
+  private confirmModalService = inject(ConfirmModalService);
   readonly authService = inject(AuthService);
 
   roles = signal<RolePermission[]>([]);
@@ -206,29 +208,30 @@ export class RolesPermisosComponent implements OnInit {
     });
   }
 
-  deleteRole() {
+  async deleteRole() {
     const role = this.selectedRole();
     if (!role) return;
 
-    if (!confirm(`¿Está seguro que desea eliminar el rol "${role.role}"?\n\nEsta acción no se puede deshacer.`)) {
-      return;
+    try {
+      await this.confirmModalService.confirmDelete(role.role, 'rol', 'Esta acción no se puede deshacer.');
+      this.isSubmitting.set(true);
+
+      this.rolePermissionsService.deleteRole(role.role).subscribe({
+        next: (res) => {
+          this.isSubmitting.set(false);
+          this.toastService.show(res.message, 'success');
+          this.selectedRole.set(null);
+          this.loadRoles();
+        },
+        error: (err) => {
+          this.isSubmitting.set(false);
+          const detail = err?.error?.detail || 'Error al eliminar el rol.';
+          this.toastService.show(detail, 'error');
+        }
+      });
+    } catch {
+      // Usuario canceló
     }
-
-    this.isSubmitting.set(true);
-
-    this.rolePermissionsService.deleteRole(role.role).subscribe({
-      next: (res) => {
-        this.isSubmitting.set(false);
-        this.toastService.show(res.message, 'success');
-        this.selectedRole.set(null);
-        this.loadRoles();
-      },
-      error: (err) => {
-        this.isSubmitting.set(false);
-        const detail = err?.error?.detail || 'Error al eliminar el rol.';
-        this.toastService.show(detail, 'error');
-      }
-    });
   }
 
   getAllPermissions(): string[] {

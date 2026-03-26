@@ -9,6 +9,7 @@ import { PermissionCodes } from '../../auth/auth.models';
 import { Subscription, forkJoin, take } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 import { buildCameraPhotoDownload } from './camera-photo.utils';
+import { ConfirmModalService } from '../../services/confirm-modal.service';
 
 @Component({
   selector: 'app-assets',
@@ -22,6 +23,7 @@ export class AssetsComponent implements OnInit, OnDestroy {
   private apiService = inject(ApiService);
   private toastService = inject(ToastService);
   readonly authService = inject(AuthService);
+  private confirmModalService = inject(ConfirmModalService);
   private ngZone = inject(NgZone);
   private cdr = inject(ChangeDetectorRef);
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -392,26 +394,30 @@ export class AssetsComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteSystem(sys: any) {
+  async deleteSystem(sys: any) {
     if (!this.requireManageAssets()) {
       return;
     }
-    if (!confirm(`Eliminar sistema ${sys.name}?`)) return;
-    this.assetService.deleteSystem(sys.id).subscribe({
-      next: () => {
-        this.ngZone.run(() => {
-          this.toastService.success('Sistema eliminado');
-          this.refreshData();
-          this.cdr.detectChanges();
-        });
-      },
-      error: () => {
-        this.ngZone.run(() => {
-          this.toastService.error('Error al eliminar sistema');
-          this.cdr.detectChanges();
-        });
-      }
-    });
+    try {
+      await this.confirmModalService.confirmDelete(sys.name, 'sistema');
+      this.assetService.deleteSystem(sys.id).subscribe({
+        next: () => {
+          this.ngZone.run(() => {
+            this.toastService.success('Sistema eliminado');
+            this.refreshData();
+            this.cdr.detectChanges();
+          });
+        },
+        error: () => {
+          this.ngZone.run(() => {
+            this.toastService.error('Error al eliminar sistema');
+            this.cdr.detectChanges();
+          });
+        }
+      });
+    } catch {
+      // Usuario canceló
+    }
   }
 
   // Server CRUD
@@ -473,26 +479,30 @@ export class AssetsComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteServer(srv: any) {
+  async deleteServer(srv: any) {
     if (!this.requireManageAssets()) {
       return;
     }
-    if (!confirm(`Eliminar servidor ${srv.name}?`)) return;
-    this.assetService.deleteServer(srv.id).subscribe({
-      next: () => {
-        this.ngZone.run(() => {
-          this.toastService.success('Servidor eliminado');
-          this.refreshData();
-          this.cdr.detectChanges();
-        });
-      },
-      error: () => {
-        this.ngZone.run(() => {
-          this.toastService.error('Error al eliminar servidor');
-          this.cdr.detectChanges();
-        });
-      }
-    });
+    try {
+      await this.confirmModalService.confirmDelete(srv.name, 'servidor');
+      this.assetService.deleteServer(srv.id).subscribe({
+        next: () => {
+          this.ngZone.run(() => {
+            this.toastService.success('Servidor eliminado');
+            this.refreshData();
+            this.cdr.detectChanges();
+          });
+        },
+        error: () => {
+          this.ngZone.run(() => {
+            this.toastService.error('Error al eliminar servidor');
+            this.cdr.detectChanges();
+          });
+        }
+      });
+    } catch {
+      // Usuario canceló
+    }
   }
 
   // Camera CRUD
@@ -663,26 +673,30 @@ export class AssetsComponent implements OnInit, OnDestroy {
       window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 0);
     }
 
-    deleteCamera(cam: any) {
+    async deleteCamera(cam: any) {
       if (!this.requireManageAssets()) {
         return;
       }
-      if (!confirm(`Eliminar camara ${cam.name}?`)) return;
-      this.assetService.deleteCamera(cam.id).subscribe({
-        next: () => {
-          this.ngZone.run(() => {
-            this.toastService.success('Camara eliminada');
-            this.refreshData();
-            this.cdr.detectChanges();
-          });
-        },
-        error: () => {
-          this.ngZone.run(() => {
-            this.toastService.error('Error al eliminar camara');
-            this.cdr.detectChanges();
-          });
-        }
-      });
+      try {
+        await this.confirmModalService.confirmDelete(cam.name, 'cámara');
+        this.assetService.deleteCamera(cam.id).subscribe({
+          next: () => {
+            this.ngZone.run(() => {
+              this.toastService.success('Cámara eliminada');
+              this.refreshData();
+              this.cdr.detectChanges();
+            });
+          },
+          error: () => {
+            this.ngZone.run(() => {
+              this.toastService.error('Error al eliminar cámara');
+              this.cdr.detectChanges();
+            });
+          }
+        });
+      } catch {
+        // Usuario canceló
+      }
     }
 
     // Gear CRUD Logic
@@ -753,27 +767,31 @@ export class AssetsComponent implements OnInit, OnDestroy {
       }
     }
 
-    deleteGear(item: any) {
+    async deleteGear(item: any) {
       if (!this.requireManageAssets()) {
         return;
       }
-      if (!confirm(`Eliminar ${item.name}?`)) return;
-      this.assetService.deleteCameramanGear(item.id).subscribe({
-        next: () => {
-          this.ngZone.run(() => {
-            this.toastService.success('Equipo eliminado');
-            this.refreshData();
-            this.cdr.detectChanges();
-          });
-        },
-        error: (err) => {
-          this.ngZone.run(() => {
-            console.error(err);
-            this.toastService.error('Error al eliminar equipo');
-            this.cdr.detectChanges();
-          });
-        }
-      });
+      try {
+        await this.confirmModalService.confirmDelete(item.name, 'equipo');
+        this.assetService.deleteCameramanGear(item.id).subscribe({
+          next: () => {
+            this.ngZone.run(() => {
+              this.toastService.success('Equipo eliminado');
+              this.refreshData();
+              this.cdr.detectChanges();
+            });
+          },
+          error: (err) => {
+            this.ngZone.run(() => {
+              console.error(err);
+              this.toastService.error('Error al eliminar equipo');
+              this.cdr.detectChanges();
+            });
+          }
+        });
+      } catch {
+        // Usuario canceló
+      }
     }
 
     getConditionLabel(code: string): string {

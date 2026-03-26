@@ -1,5 +1,11 @@
 <app-spinner></app-spinner>
 <app-toast></app-toast>
+<app-confirm-modal
+  [visible]="confirmModalService.visible()"
+  [options]="confirmModalService.config() || undefined"
+  (confirmed)="handleConfirmModal()"
+  (cancelled)="handleCancelModal()">
+</app-confirm-modal>
 
 @if (isAuthRoute) {
   <router-outlet></router-outlet>

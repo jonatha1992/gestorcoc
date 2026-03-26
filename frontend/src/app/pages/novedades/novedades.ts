@@ -17,6 +17,7 @@ import { NovedadForm } from './components/novedad-form.component';
 import { NovedadFormComponent } from './components/novedad-form.component';
 import { RowActaModalComponent } from './components/row-acta-modal.component';
 import { NovedadTableComponent } from './components/novedad-table.component';
+import { ConfirmModalService } from '../../services/confirm-modal.service';
 
 @Component({
   selector: 'app-novedades',
@@ -37,6 +38,7 @@ export class NovedadesComponent implements OnInit {
   private assetService = inject(AssetService);
   private personnelService = inject(PersonnelService);
   private toastService = inject(ToastService);
+  private confirmModalService = inject(ConfirmModalService);
   readonly authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
@@ -438,20 +440,23 @@ export class NovedadesComponent implements OnInit {
     this.toastService.success('Acta lista para imprimir/guardar como PDF');
   }
 
-  deleteNovedad(id: number) {
+  async deleteNovedad(id: number) {
     if (!this.requireManageNovedades()) return;
-    if (!confirm('¿Está seguro de eliminar esta novedad?')) return;
-
-    this.novedadService.deleteNovedad(id).subscribe({
-      next: () => {
-        this.toastService.success('Novedad eliminada correctamente');
-        this.loadData();
-      },
-      error: (err) => {
-        console.error('Error al eliminar novedad:', err);
-        this.toastService.error('Error al eliminar la novedad');
-      },
-    });
+    try {
+      await this.confirmModalService.confirmDelete('esta novedad', 'novedad');
+      this.novedadService.deleteNovedad(id).subscribe({
+        next: () => {
+          this.toastService.success('Novedad eliminada correctamente');
+          this.loadData();
+        },
+        error: (err) => {
+          console.error('Error al eliminar novedad:', err);
+          this.toastService.error('Error al eliminar la novedad');
+        },
+      });
+    } catch {
+      // Usuario canceló
+    }
   }
 
   prepareEmail(novedad: NovedadViewModel) {
