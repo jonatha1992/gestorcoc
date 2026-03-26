@@ -44,7 +44,6 @@ graph TD
 - `hechos/`: Bitácora operativa.
 
 ## 4. Documentación Relacionada
+- [Módulos del Sistema](./3-modulos.md) - Apps Django, rutas Angular, casos de uso y modelo de datos
 - [Roles y Permisos](./2-roles-and-permissions.md) - Matriz completa de roles y permisos del sistema
-- [Gestión de Contraseñas](./3-password-management.md) - Gestión tipo Active Directory
-- [Gestión de Roles](./4-roles-management.md) - Administración visual de roles y permisos
 - [Stack Tecnológico](./1-stack.md) - Detalles del stack técnico
