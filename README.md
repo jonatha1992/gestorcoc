@@ -45,7 +45,7 @@ El frontend de produccion se sirve desde Django en las mismas rutas del sitio. `
 
 - **Framework:** Django 5.2 + Django REST Framework
 - **Base de datos:** PostgreSQL para desarrollo local, tests y produccion
-- **Autenticacion:** JWT con `djangorestframework-simplejwt`
+- **Autenticación:** JWT con `djangorestframework-simplejwt`
 - **API docs:** drf-spectacular (Swagger + ReDoc)
 - **IA:** Gemini, OpenRouter, Groq, Ollama (configurable via `.env`)
 - **Deploy:** Railway (Gunicorn + WhiteNoise)
@@ -127,7 +127,7 @@ En Railway y en Docker el frontend no se sirve con `ng serve`: Angular se builda
 | `/hechos` | Bitacora | Registro de hechos operativos |
 | `/integrity` | Integridad | Verificacion de hash de archivos |
 | `/informes` | Informes | Generador de informes de analisis de video |
-| `/settings` | Configuracion | Perfil y cambio de contrasena |
+| `/settings` | Configuración | Perfil y cambio de contraseña |
 
 ## Documentacion de API
 

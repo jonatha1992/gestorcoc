@@ -21,7 +21,7 @@ test.describe('Autenticación', () => {
     await page.goto('/login');
     
     // Verificar que el botón de toggle existe
-    const toggleButton = page.locator('button[type="button"][aria-label*="contrasena"]');
+    const toggleButton = page.locator('button[type="button"][aria-label*="contraseña"]');
     await expect(toggleButton).toBeVisible();
   });
 

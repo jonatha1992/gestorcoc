@@ -39,7 +39,7 @@
     <div class="flex items-center justify-between gap-4">
       <div>
         <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-slate-400">Seguridad</p>
-        <h3 class="mt-2 text-2xl font-black tracking-tight text-slate-900">Cambio de contrasena</h3>
+        <h3 class="mt-2 text-2xl font-black tracking-tight text-slate-900">Cambio de contraseña</h3>
       </div>
       @if (authService.user()?.must_change_password) {
         <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-amber-700">
@@ -50,7 +50,7 @@
 
     @if (authService.user()?.must_change_password) {
       <div class="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-        Debe actualizar la contrasena temporal antes de continuar usando el sistema.
+        Debe actualizar la contraseña temporal antes de continuar usando el sistema.
       </div>
     }
 
@@ -62,7 +62,7 @@
 
     <form class="mt-6 space-y-5" (ngSubmit)="submitPasswordChange()">
       <div class="space-y-2">
-        <label class="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Contrasena actual</label>
+        <label class="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Contraseña actual</label>
         <div class="relative">
           <input
             [(ngModel)]="passwordForm.old_password"
@@ -70,13 +70,13 @@
             [type]="isPasswordVisible('old_password') ? 'text' : 'password'"
             autocomplete="current-password"
             class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-100"
-            placeholder="Ingrese la contrasena actual"
+            placeholder="Ingrese la contraseña actual"
           >
           <button
             type="button"
             (click)="togglePasswordVisibility('old_password')"
             class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 transition hover:text-slate-700"
-            [attr.aria-label]="isPasswordVisible('old_password') ? 'Ocultar contrasena' : 'Mostrar contrasena'"
+            [attr.aria-label]="isPasswordVisible('old_password') ? 'Ocultar contraseña' : 'Mostrar contraseña'"
           >
             @if (isPasswordVisible('old_password')) {
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -97,7 +97,7 @@
 
       <div class="grid gap-5 md:grid-cols-2">
         <div class="space-y-2">
-          <label class="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Nueva contrasena</label>
+          <label class="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Nueva contraseña</label>
           <div class="relative">
             <input
               [(ngModel)]="passwordForm.new_password"
@@ -105,13 +105,13 @@
               [type]="isPasswordVisible('new_password') ? 'text' : 'password'"
               autocomplete="new-password"
               class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 pr-10 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-100"
-              placeholder="Nueva contrasena"
+              placeholder="Nueva contraseña"
             >
             <button
               type="button"
               (click)="togglePasswordVisibility('new_password')"
               class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 transition hover:text-slate-700"
-              [attr.aria-label]="isPasswordVisible('new_password') ? 'Ocultar contrasena' : 'Mostrar contrasena'"
+              [attr.aria-label]="isPasswordVisible('new_password') ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             >
               @if (isPasswordVisible('new_password')) {
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -139,13 +139,13 @@
               [type]="isPasswordVisible('new_password_confirm') ? 'text' : 'password'"
               autocomplete="new-password"
               class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 pr-10 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-100"
-              placeholder="Repita la nueva contrasena"
+              placeholder="Repita la nueva contraseña"
             >
             <button
               type="button"
               (click)="togglePasswordVisibility('new_password_confirm')"
               class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 transition hover:text-slate-700"
-              [attr.aria-label]="isPasswordVisible('new_password_confirm') ? 'Ocultar contrasena' : 'Mostrar contrasena'"
+              [attr.aria-label]="isPasswordVisible('new_password_confirm') ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             >
               @if (isPasswordVisible('new_password_confirm')) {
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -170,7 +170,7 @@
         [disabled]="isSubmitting()"
         class="inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold uppercase tracking-[0.25em] text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {{ isSubmitting() ? 'Actualizando...' : 'Actualizar contrasena' }}
+        {{ isSubmitting() ? 'Actualizando...' : 'Actualizar contraseña' }}
       </button>
     </form>
   </section>

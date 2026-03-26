@@ -139,7 +139,7 @@ class UserManagementViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
         if not username:
             return Response({"username": ["El nombre de usuario es requerido."]}, status=drf_status.HTTP_400_BAD_REQUEST)
         if not password or len(password) < 6:
-            return Response({"password": ["La contrasena debe tener al menos 6 caracteres."]}, status=drf_status.HTTP_400_BAD_REQUEST)
+            return Response({"password": ["La contraseña debe tener al menos 6 caracteres."]}, status=drf_status.HTTP_400_BAD_REQUEST)
         if User.objects.filter(username=username).exists():
             return Response({"username": ["Ya existe un usuario con ese nombre."]}, status=drf_status.HTTP_400_BAD_REQUEST)
 
@@ -191,7 +191,7 @@ class UserManagementViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
 
         if data.get("password"):
             if len(data["password"]) < 6:
-                return Response({"password": ["La contrasena debe tener al menos 6 caracteres."]}, status=drf_status.HTTP_400_BAD_REQUEST)
+                return Response({"password": ["La contraseña debe tener al menos 6 caracteres."]}, status=drf_status.HTTP_400_BAD_REQUEST)
             user.set_password(data["password"])
             user.save(update_fields=["password"])
             profile, _ = UserAccountProfile.objects.get_or_create(user=user)
@@ -232,13 +232,13 @@ class UserManagementViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
         person = self.get_object()
         password = request.data.get("password", "")
         if not password or len(password) < 6:
-            return Response({"error": "La contrasena debe tener al menos 6 caracteres."}, status=drf_status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "La contraseña debe tener al menos 6 caracteres."}, status=drf_status.HTTP_400_BAD_REQUEST)
         person.user.set_password(password)
         person.user.save(update_fields=["password"])
         profile, _ = UserAccountProfile.objects.get_or_create(user=person.user)
         profile.must_change_password = True
         profile.save(update_fields=["must_change_password"])
-        return Response({"message": "Contrasena restablecida. El usuario debera cambiarla al iniciar sesion."})
+        return Response({"message": "Contraseña restablecida. El usuario deberá cambiarla al iniciar sesión."})
 
     @action(detail=True, methods=["post"], url_path="force_password_change")
     @transaction.atomic

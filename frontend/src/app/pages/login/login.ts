@@ -28,7 +28,7 @@ export class LoginComponent {
 
   submit() {
     if (!this.username.trim() || !this.password) {
-      this.errorMessage.set('Debe ingresar usuario y contrasena.');
+      this.errorMessage.set('Debe ingresar usuario y contraseña.');
       return;
     }
 

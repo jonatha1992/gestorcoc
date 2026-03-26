@@ -400,7 +400,7 @@ export class RecordsComponent implements OnInit {
       return;
     }
 
-    const observations = prompt('Observaciones de verificacion CREV (opcional):', '');
+    const observations = prompt('Observaciones de verificación CREV (opcional):', '');
     if (observations === null) {
       return;
     }

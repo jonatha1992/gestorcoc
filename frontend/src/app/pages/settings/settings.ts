@@ -55,7 +55,7 @@ export class SettingsComponent {
       !this.passwordForm.new_password ||
       !this.passwordForm.new_password_confirm
     ) {
-      this.toastService.error('Complete todos los campos para cambiar la contrasena.');
+      this.toastService.error('Complete todos los campos para cambiar la contraseña.');
       return;
     }
 
@@ -78,8 +78,8 @@ export class SettingsComponent {
             new_password: false,
             new_password_confirm: false,
           });
-          this.successMessage.set('Contrasena actualizada correctamente.');
-          this.toastService.success('Contrasena actualizada correctamente.');
+          this.successMessage.set('Contraseña actualizada correctamente.');
+          this.toastService.success('Contraseña actualizada correctamente.');
           if (mustRedirect) {
             void this.router.navigate(['/']);
           }
@@ -91,7 +91,7 @@ export class SettingsComponent {
             error?.error?.new_password_confirm?.[0] ||
             error?.error?.non_field_errors?.[0] ||
             error?.error?.detail ||
-            'No se pudo actualizar la contrasena.';
+            'No se pudo actualizar la contraseña.';
           this.toastService.error(detail);
         },
       });

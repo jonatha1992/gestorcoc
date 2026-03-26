@@ -213,7 +213,7 @@ const MODULE_CONFIG: Record<string, DashboardModuleUiConfig> = {
     icon: 'clipboard',
     tone: 'sky',
     chartColor: '#2563eb',
-    primaryTitle: 'Por categoria',
+    primaryTitle: 'Por categoría',
     secondaryTitle: 'Resolucion',
     filters: [
       { key: 'timestamp__gte', label: 'Desde', type: 'date', icon: 'calendar' },
@@ -253,7 +253,7 @@ const MODULE_CONFIG: Record<string, DashboardModuleUiConfig> = {
   records: {
     label: 'Registros filmicos',
     title: 'Seguimiento de registros filmicos',
-    subtitle: 'Controla entrega, verificacion e ingreso mensual de material resguardado.',
+    subtitle: 'Controla entrega, verificación e ingreso mensual de material resguardado.',
     icon: 'archive',
     tone: 'emerald',
     chartColor: '#0f766e',

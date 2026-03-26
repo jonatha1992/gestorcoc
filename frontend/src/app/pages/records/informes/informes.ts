@@ -1748,7 +1748,7 @@ export class RecordsInformesComponent implements OnInit, OnDestroy {
     destino: 'Destino',
     fecha_hecho: 'Fecha del Hecho',
     objeto_denunciado: 'Objeto Denunciado / Marca',
-    aeropuerto: 'Lugar de origen de la informacion',
+    aeropuerto: 'Lugar de origen de la información',
     desarrollo: 'Desarrollo',
     conclusion: 'Conclusion',
     firma: 'Firma',
@@ -1900,7 +1900,7 @@ export class RecordsInformesComponent implements OnInit, OnDestroy {
       ejemplo: 'Telefono Samsung S24, color negro',
     },
     aeropuerto: {
-      quePoner: 'Lugar de origen de la informacion (aeropuerto u otro lugar).',
+      quePoner: 'Lugar de origen de la información (aeropuerto u otro lugar).',
       ejemplo: 'Aeropuerto Internacional Mtro. Pistarini / Plataforma Norte',
     },
     material_filmico: {
@@ -1924,7 +1924,7 @@ export class RecordsInformesComponent implements OnInit, OnDestroy {
       ejemplo: 'Subir JPG/PNG de capturas clave del hecho.',
     },
     frame_description: {
-      quePoner: 'Consigna una descripcion breve y objetiva de lo que se ve en cada fotograma.',
+      quePoner: 'Consigna una descripción breve y objetiva de lo que se ve en cada fotograma.',
       ejemplo: '00:14:32 - Se observa al sospechoso retirando equipaje de la cinta 3.',
     },
     motivo_sin_hash: {
@@ -2173,7 +2173,7 @@ export class RecordsInformesComponent implements OnInit, OnDestroy {
       return [];
     }
 
-    return ['Breve descripcion obligatoria en cada fotograma adjunto'];
+    return ['Breve descripción obligatoria en cada fotograma adjunto'];
   }
 
   private buildValidationResult(): { invalid: Set<keyof VideoReportFormData>; message: string } {
@@ -3295,7 +3295,7 @@ export class RecordsInformesComponent implements OnInit, OnDestroy {
     const locationMeta =
       aeropuerto || unidad
         ? `
-          <p><strong>Lugar de origen de la informacion:</strong> ${this.escapeHtml(aeropuerto || 'No consignado')}</p>
+          <p><strong>Lugar de origen de la información:</strong> ${this.escapeHtml(aeropuerto || 'No consignado')}</p>
           <p><strong>Unidad:</strong> ${this.escapeHtml(unidad || 'No consignada')}</p>
         `
         : '';
