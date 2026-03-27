@@ -29,6 +29,12 @@ export const routes: Routes = [
         data: { permissions: [PermissionCodes.VIEW_ASSETS] }
     },
     {
+        path: 'unidades',
+        loadComponent: () => import('./pages/unidades/unidades.component').then(c => c.UnidadesComponent),
+        canActivate: [authGuard, permissionGuard],
+        data: { permissions: [PermissionCodes.VIEW_ASSETS] }
+    },
+    {
         path: 'novedades',
         component: NovedadesComponent,
         canActivate: [authGuard, permissionGuard],

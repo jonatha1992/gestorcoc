@@ -2,7 +2,7 @@
 <app-toast></app-toast>
 <app-confirm-modal
   [visible]="confirmModalService.visible()"
-  [options]="confirmModalService.config() || undefined"
+  [options]="confirmModalService.config()!"
   (confirmed)="handleConfirmModal()"
   (cancelled)="handleCancelModal()">
 </app-confirm-modal>
@@ -49,6 +49,16 @@
               <line x1="12" y1="22.08" x2="12" y2="12" />
             </svg>
             <span *ngIf="!isSidebarCollapsed" class="ml-2.5 text-sm font-medium">Equipamiento</span>
+          </a>
+          <a routerLink="/unidades" routerLinkActive="bg-primary-600 text-white shadow-md shadow-primary-600/20"
+            class="flex items-center p-2.5 rounded-lg transition-all duration-200 hover:bg-slate-800 hover:text-white group">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-colors group-hover:text-primary-400"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M3 21h18M5 21V7l8-4 8 4v14M8 21v-4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4" />
+              <rect x="9" y="9" width="6" height="6" />
+            </svg>
+            <span *ngIf="!isSidebarCollapsed" class="ml-2.5 text-sm font-medium">Unidades</span>
           </a>
         }
 

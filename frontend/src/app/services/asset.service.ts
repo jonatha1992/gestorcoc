@@ -8,6 +8,10 @@ export interface Unit {
     name: string;
     code: string;
     airport: string | null;
+    province: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    map_enabled: boolean;
     parent: number | null;
 }
 
@@ -79,6 +83,24 @@ export class AssetService {
                     return Array.isArray(results) ? results : [];
                 })
             )
+        );
+    }
+
+    createUnit(data: any): Observable<any> {
+        return this.api.post<any>('api/units/', data).pipe(
+            tap(() => this.invalidateKeys(KEYS.units))
+        );
+    }
+
+    updateUnit(id: number, data: any): Observable<any> {
+        return this.api.put<any>(`api/units/${id}/`, data).pipe(
+            tap(() => this.invalidateKeys(KEYS.units))
+        );
+    }
+
+    deleteUnit(id: number): Observable<any> {
+        return this.api.delete<any>(`api/units/${id}/`).pipe(
+            tap(() => this.invalidateKeys(KEYS.units))
         );
     }
 
@@ -206,6 +228,14 @@ export class AssetService {
         for (const key of new Set(keys)) {
             this.cache.invalidate(key);
         }
+    }
+
+    /**
+     * Invalida TODAS las claves del caché de assets.
+     * Útil después de eliminaciones para asegurar que los filtros se actualicen.
+     */
+    clearCache(): void {
+        Object.values(KEYS).forEach(key => this.cache.invalidate(key));
     }
 
     private hasActiveFilters<T extends object>(filters: T): boolean {

@@ -404,6 +404,8 @@ export class AssetsComponent implements OnInit, OnDestroy {
         next: () => {
           this.ngZone.run(() => {
             this.toastService.success('Sistema eliminado');
+            // Invalidar caché de unidades también para que el filtro se actualice
+            this.assetService.clearCache();
             this.refreshData();
             this.cdr.detectChanges();
           });
@@ -489,6 +491,7 @@ export class AssetsComponent implements OnInit, OnDestroy {
         next: () => {
           this.ngZone.run(() => {
             this.toastService.success('Servidor eliminado');
+            this.assetService.clearCache();
             this.refreshData();
             this.cdr.detectChanges();
           });
@@ -683,6 +686,7 @@ export class AssetsComponent implements OnInit, OnDestroy {
           next: () => {
             this.ngZone.run(() => {
               this.toastService.success('Cámara eliminada');
+              this.assetService.clearCache();
               this.refreshData();
               this.cdr.detectChanges();
             });
@@ -777,6 +781,7 @@ export class AssetsComponent implements OnInit, OnDestroy {
           next: () => {
             this.ngZone.run(() => {
               this.toastService.success('Equipo eliminado');
+              this.assetService.clearCache();
               this.refreshData();
               this.cdr.detectChanges();
             });

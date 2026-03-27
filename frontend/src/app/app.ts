@@ -81,6 +81,8 @@ export class App {
   private setPageTitle(url: string) {
     if (url.includes('/assets')) {
       this.pageTitle = 'Inventario de Equipamiento';
+    } else if (url.includes('/unidades')) {
+      this.pageTitle = 'Unidades y Regionales';
     } else if (url.includes('/novedades')) {
       this.pageTitle = 'Novedades de CCTV y Equipamiento';
     } else if (url.includes('/hechos')) {
