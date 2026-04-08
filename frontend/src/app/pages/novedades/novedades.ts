@@ -103,17 +103,6 @@ export class NovedadesComponent implements OnInit {
     return false;
   }
 
-  get canManageNovedades(): boolean {
-    return this.authService.hasPermission(PermissionCodes.MANAGE_NOVEDADES);
-  }
-
-  private requireManageNovedades(): boolean {
-    if (this.canManageNovedades) {
-      return true;
-    }
-    this.toastService.error('No tiene permiso para modificar novedades.');
-    return false;
-  }
 
   ngOnInit() {
     this.loadData();
