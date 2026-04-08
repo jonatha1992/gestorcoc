@@ -140,21 +140,17 @@ _app_branch = os.environ.get('APP_BRANCH', 'dev').strip().lower() or 'dev'
 _db_url = os.environ.get('DATABASE_URL', '').strip()
 
 
-def _postgres_database_settings():
-    if not _db_url:
-        raise ImproperlyConfigured(
-            'DATABASE_URL es obligatorio para PostgreSQL.'
-        )
-
-    parsed = _dj_db_url.parse(_db_url, conn_max_age=600)
-    if parsed.get('ENGINE') != 'django.db.backends.postgresql':
-        raise ImproperlyConfigured(
-            'Solo se admite PostgreSQL en DATABASE_URL.'
-        )
-    return parsed
+def _get_database_settings():
+    if _db_url:
+        return _dj_db_url.parse(_db_url, conn_max_age=600)
+    
+    return {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 
 
-DATABASES = {'default': _postgres_database_settings()}
+DATABASES = {'default': _get_database_settings()}
 
 
 # Password validation

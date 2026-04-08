@@ -1,4 +1,4 @@
-﻿import random
+import random
 from datetime import timedelta
 from decimal import Decimal
 
@@ -391,7 +391,6 @@ class Command(BaseCommand):
                 "status": self.NOV_STATUSES[i % len(self.NOV_STATUSES)],
                 "reported_by": reporter,
                 "reporter_name": "" if reporter else self.fake.name(),
-                "external_ticket_id": f"DGT-{10000 + i}" if i % 2 == 0 else None,
             }
             kind = i % 4
             if kind == 0 and cameras:

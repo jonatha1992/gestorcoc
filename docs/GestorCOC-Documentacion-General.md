@@ -71,7 +71,7 @@ En producción, ambos conviven en el mismo proceso Django: WhiteNoise sirve el b
 │   └──────────────┘   └─────────────────┘   └─────┬──────┘  │
 │                                                    │          │
 │   ┌──────────────┐   ┌─────────────────┐   ┌─────▼──────┐  │
-│   │  WhiteNoise   │   │   Django ORM     │──▶│PostgreSQL  │  │
+│   │  WhiteNoise   │   │   Django ORM     │──▶│ SQLite/PG  │  │
 │   │ (SPA build)   │   │                 │   │ (Railway)  │  │
 │   └──────────────┘   └─────────────────┘   └────────────┘  │
 │                                                              │
@@ -89,7 +89,7 @@ En producción, ambos conviven en el mismo proceso Django: WhiteNoise sirve el b
 | **API** | Django REST Framework | Serialización, validación de requests |
 | **Negocio** | `services.py` por app | Lógica compleja: hashes, IA, informes |
 | **Datos** | Django ORM | Acceso a base de datos |
-| **Persistencia** | PostgreSQL | Almacenamiento relacional |
+| **Persistencia** | SQLite (Local) / PostgreSQL (Prod) | Almacenamiento relacional |
 | **Archivos estáticos** | WhiteNoise | Entrega del SPA Angular compilado |
 
 ---
@@ -142,7 +142,7 @@ En producción, ambos conviven en el mismo proceso Django: WhiteNoise sirve el b
 |-----------|-------|
 | Plataforma | Railway.app |
 | Contenedor | Docker (Dockerfile en raíz) |
-| Base de datos | PostgreSQL administrado por Railway |
+| Base de datos | SQLite (Local) / PostgreSQL administrado por Railway |
 | Variables de entorno | Railway env vars |
 | Proceso de inicio | `python manage.py migrate && gunicorn config.wsgi:application` |
 
@@ -794,7 +794,7 @@ La API está documentada con `drf-spectacular`. En desarrollo:
 | Capa | Estado |
 |------|--------|
 | Backend API (Django + DRF) | ✅ Completo y estable |
-| Base de datos (PostgreSQL Railway) | ✅ Migrada y con datos seed |
+| Base de datos (SQLite/PostgreSQL) | ✅ Migrada y con datos seed |
 | Frontend SPA (Angular 21) | ✅ Funcional |
 | Autenticación JWT + Roles | ✅ Implementada |
 | Deploy en Railway | ✅ Activo |

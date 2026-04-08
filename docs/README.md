@@ -17,7 +17,7 @@
 | 3 | [Módulos del Sistema](./architecture/3-modulos.md) | Apps Django, rutas Angular, casos de uso y modelo de datos |
 | 4 | [Roles y Permisos](./architecture/2-roles-and-permissions.md) | Matriz RBAC completa: roles, permisos y flujo de autenticación |
 | 5 | [Planning y Estado](./PLANNING.md) | Estado actual por módulo y tareas completadas |
-| 6 | [Decisiones Arquitectónicas (ADRs)](./decisions/01-usar-postgressql.md) | Registro de decisiones técnicas clave |
+| 6 | [Decisiones Arquitectónicas (ADRs)](./decisions/01-base-de-datos-hibrida.md) | Registro de decisiones técnicas clave |
 | 7 | [Guía de Deploy](./runbooks/hacer_deploy.md) | Pasos para despliegue en Railway |
 | 8 | [Diagramas UML](./diagrams/) | Fuentes PlantUML: arquitectura, secuencias, modelo de datos |
 

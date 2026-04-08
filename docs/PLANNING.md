@@ -9,7 +9,7 @@
 | Capa | Estado |
 | ------ | -------- |
 | Backend API (Django + DRF) | Completo y estable |
-| Base de datos (PostgreSQL Railway) | Migrada y con datos seed |
+| Base de datos | SQLite nativo (Dev) / PostgreSQL (Railway) |
 | Frontend SPA (Angular 21) | Funcional |
 | Autenticación | Implementada (JWT + login + roles) |
 | Deploy (Railway) | Activo |
@@ -22,13 +22,13 @@
 
 | App | Modelos | API | Filtros/Busqueda | Tests |
 | ----- | --------- | ----- | ----------------- | ------- |
-| `assets` | OK | OK | OK | Parcial |
-| `novedades` | OK | OK | OK | Parcial |
-| `hechos` | OK | OK | OK | Parcial |
+| `assets` | OK | OK | OK | OK |
+| `novedades` | OK | OK | OK | OK |
+| `hechos` | OK | OK | OK | OK |
 | `personnel` | OK | OK | OK | OK |
 | `records` | OK | OK | OK | OK |
-| Dashboard / Map | OK | OK | OK | Parcial |
-| IA (Gemini/OpenRouter/Groq) | OK | OK | - | Parcial |
+| Dashboard / Map | OK | OK | OK | OK |
+| IA (Gemini/OpenRouter/Groq) | OK | OK | - | OK |
 
 ### Frontend
 
@@ -78,7 +78,7 @@
 | Componente | Valor |
 | ------------ | ------- |
 | Backend hosting | Railway (PostgreSQL + Django) |
-| Base de datos | PostgreSQL (Railway) |
+| Base de datos | SQLite (Local) / PostgreSQL (Railway) |
 | Frontend | Servido por WhiteNoise desde el mismo proceso Django |
 | Variables de entorno | `.env` local / Railway env vars en producción |
 | Proveedores IA | Gemini, OpenRouter, Groq, Ollama |

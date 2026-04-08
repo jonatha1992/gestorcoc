@@ -17,7 +17,7 @@
 
 | Componente | Tecnología |
 | :--- | :--- |
-| **Backend** | Python 3.11+, Django 5.2, DRF, SQLite (Dev), PostgreSQL (Prod) |
+| **Backend** | Python 3.14+, Django 5.2, DRF, SQLite (Dev), PostgreSQL (Prod) |
 | **Frontend** | Angular 21, Tailwind CSS v4, ApexCharts |
 | **IA** | Gemini (Primario), OpenRouter, Groq, Ollama |
 | **Hosting** | Railway (Gunicorn + WhiteNoise) |
