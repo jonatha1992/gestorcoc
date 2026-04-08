@@ -59,4 +59,4 @@ RUN DATABASE_URL="sqlite:////tmp/build.sqlite3" \
 EXPOSE 8000
 
 # El CMD inicia aplicando las migraciones, sembrando si se indica la variable de entorno, y levantando Gunicorn
-CMD ["sh", "-c", "PORT=${PORT:-8000}; python manage.py migrate || echo 'WARNING: migrate failed, starting server anyway'; if [ \"$SEED_ON_STARTUP\" = \"True\" ]; then python manage.py seed_data; fi; exec gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"]
+CMD ["sh", "-c", "export PORT=${PORT:-8000}; echo \"Starting on port $PORT\"; python manage.py migrate --noinput || echo 'WARNING: migrate failed, starting server anyway'; if [ \"$SEED_ON_STARTUP\" = \"True\" ]; then python manage.py seed_data; fi; exec gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - --error-logfile -"]
