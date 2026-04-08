@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef, NgZone, HostListener } from '@angular/core';
+import { finalize } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -47,10 +48,16 @@ export class UsuariosComponent implements OnInit {
   units = signal<Unit[]>([]);
   showForm = signal(false);
   showPasswordModal = signal(false);
+  isSubmittingPassword = signal(false);
   isEditing = false;
+  showCreatePassword = false;
+  showResetPassword = false;
+  showResetPasswordConfirm = false;
   searchText = '';
   filterRole = '';
   filterUnit = '';
+  passwordMenuToggle = false;
+  passwordMenuOpenId: number | null = null;
 
   currentPage = 1;
   totalCount = 0;
@@ -153,6 +160,7 @@ export class UsuariosComponent implements OnInit {
   openForm() {
     this.isEditing = false;
     this.currentUser = this.getEmptyUser();
+    this.resetPasswordVisibility();
     this.showForm.set(true);
   }
 
@@ -170,12 +178,14 @@ export class UsuariosComponent implements OnInit {
       is_active: user.is_active,
       user_is_active: user.user_is_active,
     };
+    this.resetPasswordVisibility();
     this.showForm.set(true);
   }
 
   closeForm() {
     this.showForm.set(false);
     this.currentUser = this.getEmptyUser();
+    this.resetPasswordVisibility();
   }
 
   saveUser() {
@@ -224,6 +234,8 @@ export class UsuariosComponent implements OnInit {
     this.selectedUserId = user.id;
     this.newPassword = '';
     this.passwordConfirm = '';
+    this.showResetPassword = false;
+    this.showResetPasswordConfirm = false;
     this.showPasswordModal.set(true);
   }
 
@@ -232,6 +244,22 @@ export class UsuariosComponent implements OnInit {
     this.selectedUserId = null;
     this.newPassword = '';
     this.passwordConfirm = '';
+    this.showResetPassword = false;
+    this.showResetPasswordConfirm = false;
+  }
+
+  togglePasswordVisibility(target: 'create' | 'reset' | 'confirm') {
+    switch (target) {
+      case 'create':
+        this.showCreatePassword = !this.showCreatePassword;
+        break;
+      case 'reset':
+        this.showResetPassword = !this.showResetPassword;
+        break;
+      case 'confirm':
+        this.showResetPasswordConfirm = !this.showResetPasswordConfirm;
+        break;
+    }
   }
 
   submitPasswordReset() {
@@ -243,17 +271,69 @@ export class UsuariosComponent implements OnInit {
       this.toastService.show('Las contraseñas no coinciden', 'error');
       return;
     }
-    this.userMgmtService.resetPassword(this.selectedUserId!, this.newPassword).subscribe({
-      next: () => {
+    this.isSubmittingPassword.set(true);
+    this.userMgmtService
+      .resetPassword(this.selectedUserId!, this.newPassword)
+      .pipe(finalize(() => this.isSubmittingPassword.set(false)))
+      .subscribe({
+        next: () => {
+          this.ngZone.run(() => {
+            this.toastService.show('Contraseña restablecida. El usuario deberá cambiarla al iniciar sesión.', 'success');
+            this.closePasswordModal();
+            this.cdr.detectChanges();
+          });
+        },
+        error: () => {
+          this.ngZone.run(() => {
+            this.toastService.show('Error al restablecer contraseña', 'error');
+            this.cdr.detectChanges();
+          });
+        },
+      });
+  }
+
+  /**
+   * Fuerza el cambio de contraseña (tipo Active Directory)
+   */
+  forcePasswordChange(user: SystemUser) {
+    if (!confirm(`¿Forzar el cambio de contraseña para "${user.username}"?\n\nEl usuario deberá cambiar su contraseña al iniciar sesión.`)) {
+      return;
+    }
+    this.userMgmtService.forcePasswordChange(user.id).subscribe({
+      next: (res) => {
         this.ngZone.run(() => {
-          this.toastService.show('Contraseña restablecida. El usuario deberá cambiarla al iniciar sesión.', 'success');
-          this.closePasswordModal();
+          this.toastService.show(res.message, 'success');
+          this.loadUsers();
           this.cdr.detectChanges();
         });
       },
       error: () => {
         this.ngZone.run(() => {
-          this.toastService.show('Error al restablecer contraseña', 'error');
+          this.toastService.show('Error al forzar cambio de contraseña', 'error');
+          this.cdr.detectChanges();
+        });
+      }
+    });
+  }
+
+  /**
+   * Marca la contraseña como permanente (no requiere cambio)
+   */
+  clearPasswordChange(user: SystemUser) {
+    if (!confirm(`¿Marcar la contraseña de "${user.username}" como permanente?\n\nEl usuario NO tendrá que cambiar su contraseña.`)) {
+      return;
+    }
+    this.userMgmtService.clearPasswordChange(user.id).subscribe({
+      next: (res) => {
+        this.ngZone.run(() => {
+          this.toastService.show(res.message, 'success');
+          this.loadUsers();
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => {
+        this.ngZone.run(() => {
+          this.toastService.show('Error al marcar contraseña como permanente', 'error');
           this.cdr.detectChanges();
         });
       }
@@ -286,6 +366,10 @@ export class UsuariosComponent implements OnInit {
     this.currentUser.badge_number = raw.replace(/\D/g, '').slice(0, 6);
   }
 
+  private resetPasswordVisibility() {
+    this.showCreatePassword = false;
+  }
+
   private getEmptyUser() {
     return {
       username: '',
@@ -310,5 +394,14 @@ export class UsuariosComponent implements OnInit {
       }
     }
     return 'Error al guardar usuario';
+  }
+
+  @HostListener('document:click', ['$event'])
+  closePasswordMenu(event: Event) {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.relative')) {
+      this.passwordMenuToggle = false;
+      this.passwordMenuOpenId = null;
+    }
   }
 }

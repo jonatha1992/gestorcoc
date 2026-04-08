@@ -122,7 +122,7 @@ class FilmRecord(TimeStampedModel):
     file_size = models.BigIntegerField(blank=True, null=True, verbose_name='Tamaño del Archivo (bytes)')
     is_integrity_verified = models.BooleanField(default=False, verbose_name='¿Integridad Verificada?')
 
-    # Verificacion CREV
+    # Verificación CREV
     verified_by_crev = models.ForeignKey(
         Person,
         on_delete=models.PROTECT,

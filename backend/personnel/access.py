@@ -40,7 +40,6 @@ class PermissionCode:
     VIEW_RECORDS = "view_records"
     MANAGE_RECORDS = "manage_records"
     USE_INTEGRITY = "use_integrity_tools"
-    USE_REPORTS = "use_report_tools"
     VERIFY_CREV = "verify_crev_record"
     MANAGE_CREV_FLOW = "manage_crev_flow"
     VIEW_SETTINGS = "view_settings"
@@ -58,9 +57,8 @@ CUSTOM_PERMISSION_LABELS = {
     PermissionCode.VIEW_HECHOS: "Can view hechos",
     PermissionCode.MANAGE_HECHOS: "Can manage hechos",
     PermissionCode.VIEW_RECORDS: "Can view records",
-    PermissionCode.MANAGE_RECORDS: "Can manage records",
+    PermissionCode.MANAGE_RECORDS: "Can manage records (includes creating reports)",
     PermissionCode.USE_INTEGRITY: "Can use integrity tools",
-    PermissionCode.USE_REPORTS: "Can use report tools",
     PermissionCode.VERIFY_CREV: "Can verify CREV records",
     PermissionCode.MANAGE_CREV_FLOW: "Can manage CREV flow",
     PermissionCode.VIEW_SETTINGS: "Can view settings",
@@ -113,7 +111,6 @@ GROUP_PERMISSION_MAP = {
         PermissionCode.VIEW_RECORDS,
         PermissionCode.MANAGE_RECORDS,
         PermissionCode.USE_INTEGRITY,
-        PermissionCode.USE_REPORTS,
         PermissionCode.VERIFY_CREV,
         PermissionCode.VIEW_SETTINGS,
     ],
@@ -126,7 +123,6 @@ GROUP_PERMISSION_MAP = {
         PermissionCode.VIEW_RECORDS,
         PermissionCode.MANAGE_RECORDS,
         PermissionCode.USE_INTEGRITY,
-        PermissionCode.USE_REPORTS,
         PermissionCode.VERIFY_CREV,
         PermissionCode.MANAGE_CREV_FLOW,
         PermissionCode.VIEW_SETTINGS,
@@ -232,6 +228,9 @@ def build_auth_user_payload(user) -> dict:
         role=role,
         permission_codes=get_permission_codes(user),
         linked_person_id=person.id if person is not None else None,
-        must_change_password=bool(profile.must_change_password) if profile is not None else False,
+        # Los superusers (ej. admin) son la excepción: nunca se les fuerza el cambio de contraseña
+        must_change_password=False if getattr(user, "is_superuser", False) else (
+            bool(profile.must_change_password) if profile is not None else False
+        ),
     )
     return payload.__dict__

@@ -16,6 +16,7 @@ import {
   getTodayDateInputValue,
   toDateTimeLocalInputValue,
 } from '../../utils/date-inputs';
+import { ConfirmModalService } from '../../services/confirm-modal.service';
 
 export interface FilmRecord {
   id: number;
@@ -79,6 +80,7 @@ export class RecordsComponent implements OnInit {
   private toastService = inject(ToastService);
   private informeService = inject(InformeService);
   private router = inject(Router);
+  private confirmModalService = inject(ConfirmModalService);
   readonly authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
@@ -122,10 +124,6 @@ export class RecordsComponent implements OnInit {
 
   get canManageRecords(): boolean {
     return this.authService.hasPermission(PermissionCodes.MANAGE_RECORDS);
-  }
-
-  get canUseReportTools(): boolean {
-    return this.authService.hasPermission(PermissionCodes.USE_REPORTS);
   }
 
   get canVerifyCrev(): boolean {
@@ -264,15 +262,15 @@ export class RecordsComponent implements OnInit {
   }
 
   openInforme(record: any) {
-    if (!this.canUseReportTools) {
+    if (!this.canManageRecords) {
       this.toastService.show('No tiene permiso para trabajar con informes.', 'warning');
       return;
     }
     const existing = this.informesMap()[record.id];
     if (existing) {
-      void this.router.navigate(['/informes'], { queryParams: { informe_id: existing.id } });
+      void this.router.navigate([`/records/${record.id}/informe`], { queryParams: { informe_id: existing.id } });
     } else {
-      void this.router.navigate(['/informes'], { queryParams: { record_id: record.id } });
+      void this.router.navigate([`/records/${record.id}/informe`]);
     }
   }
 
@@ -404,7 +402,7 @@ export class RecordsComponent implements OnInit {
       return;
     }
 
-    const observations = prompt('Observaciones de verificacion CREV (opcional):', '');
+    const observations = prompt('Observaciones de verificación CREV (opcional):', '');
     if (observations === null) {
       return;
     }
@@ -530,7 +528,7 @@ export class RecordsComponent implements OnInit {
     return missing;
   }
 
-  deleteRecord(record: any) {
+  async deleteRecord(record: any) {
     if (!this.requireManageRecords()) {
       return;
     }
@@ -539,24 +537,24 @@ export class RecordsComponent implements OnInit {
     }
 
     const label = (record?.description || '').trim() || `#${record.id}`;
-    const confirmed = confirm(`¿Eliminar registro ${label}?`);
-    if (!confirmed) {
-      return;
-    }
-
-    this.recordsService.deleteRecord(record.id).subscribe({
-      next: () => {
-        this.ngZone.run(() => {
-          this.toastService.show('Registro eliminado', 'success');
-          this.loadData();
+    try {
+      await this.confirmModalService.confirmDelete(label, 'registro');
+      this.recordsService.deleteRecord(record.id).subscribe({
+        next: () => {
+          this.ngZone.run(() => {
+            this.toastService.show('Registro eliminado', 'success');
+            this.loadData();
+            this.cdr.detectChanges();
+          });
+        },
+        error: () => this.ngZone.run(() => {
+          this.toastService.show('Error al eliminar registro', 'error');
           this.cdr.detectChanges();
-        });
-      },
-      error: () => this.ngZone.run(() => {
-        this.toastService.show('Error al eliminar registro', 'error');
-        this.cdr.detectChanges();
-      })
-    });
+        })
+      });
+    } catch {
+      // Usuario canceló
+    }
   }
 
   addInvolvedPerson() {

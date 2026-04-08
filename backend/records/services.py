@@ -531,7 +531,7 @@ class IntegrityService:
             "REGLAS DE ESTILO OBLIGATORIAS:\n"
             "1. Usa estilo de acta policial argentina: oraciones completas, voz institucional e impersonal.\n"
             "2. PROHIBIDO inventar hechos, datos, fechas, cantidades o nombres que no esten explicitamente en el contexto provisto.\n"
-            "3. Si falta informacion estructurada o no hay datos, ajusta la redaccion para omitirlos de manera fluida en lugar de usar textos como 'no consignado' o 'no determinado'. El texto resultante debe tener total sentido sin estos datos.\n"
+            "3. Si falta información estructurada o no hay datos, ajusta la redacción para omitirlos de manera fluida en lugar de usar textos como 'no consignado' o 'no determinado'. El texto resultante debe tener total sentido sin estos datos.\n"
             "4. Sin abreviaturas informales. Usar terminos tecnicos precisos.\n"
             "5. Cada apartado debe tener entre 3 y 8 oraciones, claras y directas.\n"
             "6. Devolver UNICAMENTE un JSON valido, sin texto adicional fuera del JSON."
@@ -595,14 +595,14 @@ class IntegrityService:
                 "Eres un redactor experto en informes policiales argentinos de analisis de video de CCTV. "
                 "Tu tarea es redactar el apartado 'DESARROLLO' de un informe oficial de analisis de video. "
                 "Este apartado DEBE narrar de forma objetiva y cronologica lo observado.\n"
-                "- Limitar la descripcion a lo objetivamente observable en el material filmico.\n"
+                "- Limitar la descripción a lo objetivamente observable en el material fílmico.\n"
                 "- Si se proveen fechas y horas con descripciones breves de fotogramas, integrarlas para ordenar mejor la secuencia observada.\n\n"
                 + STYLE_NOTE
             )
             payload_prompt = {
                 "instrucciones": (
                     "Redacta o mejora el texto del apartado DESARROLLO usando los datos provistos. "
-                    "Si hay texto_original, mejorar su redaccion manteniendo la informacion. "
+                    "Si hay texto_original, mejorar su redacción manteniendo la información. "
                     "Si texto_original esta vacio, redactar desde cero. "
                     "Devuelve SOLO un JSON valido con la clave 'desarrollo'. Ejemplo: {\"desarrollo\": \"texto...\"}"
                 ),
@@ -656,7 +656,7 @@ class IntegrityService:
             payload_prompt = {
                 "instrucciones": (
                     "Mejora y/o redacta desde cero los tres apartados usando el contexto estructurado provisto. "
-                    "Se sumamente inteligente: los datos que faltan deben excluirse fluidamente. Crea un texto generico pero realista en estilo policial si la mayor parte de la informacion falta y no hay textos originales."
+                    "Se sumamente inteligente: los datos que faltan deben excluirse fluidamente. Crea un texto genérico pero realista en estilo policial si la mayor parte de la información falta y no hay textos originales."
                     " Si el contexto incluye referencias de fotogramas con fecha y hora, junto con descripcion, usalas para enriquecer la cronologia del desarrollo sin inventar hechos nuevos. "
                     "PROHIBIDO inventar hechos concretos no provistos. "
                     "Devuelve SOLO un JSON valido con TRES CLAVES obligatorias. "
@@ -1196,7 +1196,7 @@ class IntegrityService:
         document = Document(str(template_path))
         IntegrityService._replace_text_in_docx(document, replacements)
 
-        # Referencia de verificacion en caratula (solo en documento exportado)
+        # Referencia de verificación en caratula (solo en documento exportado)
         reference_inserted = False
         for paragraph in document.paragraphs:
             text = (paragraph.text or "").lower()
@@ -1207,12 +1207,12 @@ class IntegrityService:
                 or "prevencion" in text
                 or "prevención" in text
             ):
-                paragraph.add_run(f" Referencia de verificacion: {verification_reference}.")
+                paragraph.add_run(f" Referencia de verificación: {verification_reference}.")
                 reference_inserted = True
                 break
 
         if not reference_inserted:
-            document.add_paragraph(f"Referencia de verificacion: {verification_reference}.")
+            document.add_paragraph(f"Referencia de verificación: {verification_reference}.")
 
         # Populate analysis body according to template layout.
         populated_informe_corto = IntegrityService._populate_informe_corto_sections(

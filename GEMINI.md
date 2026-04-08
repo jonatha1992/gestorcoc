@@ -17,17 +17,20 @@
 
 | Componente | Tecnología |
 | :--- | :--- |
-| **Backend** | Python 3.11+, Django 5.2, DRF, SQLite (Dev), PostgreSQL (Prod) |
+| **Backend** | Python 3.14+, Django 5.2, DRF, SQLite (Dev), PostgreSQL (Prod) |
 | **Frontend** | Angular 21, Tailwind CSS v4, ApexCharts |
 | **IA** | Gemini (Primario), OpenRouter, Groq, Ollama |
 | **Hosting** | Railway (Gunicorn + WhiteNoise) |
 
 ## 📖 Documentación Clave
 
-1. [Visión General](file:///d:/Repositorio/jonatha1992/gestorcoc/docs/architecture/0-overview.md)
-2. [Stack Detallado](file:///d:/Repositorio/jonatha1992/gestorcoc/docs/architecture/1-stack.md)
-3. [Guía de Despliegue](file:///d:/Repositorio/jonatha1992/gestorcoc/docs/runbooks/hacer_deploy.md)
-4. [Planning y Estado](file:///d:/Repositorio/jonatha1992/gestorcoc/docs/PLANNING.md)
+1. [Índice General](file:///d:/Repositorio/jonatha1992/gestorcoc/docs/README.md)
+2. [Visión General de Arquitectura](file:///d:/Repositorio/jonatha1992/gestorcoc/docs/architecture/0-overview.md)
+3. [Módulos del Sistema](file:///d:/Repositorio/jonatha1992/gestorcoc/docs/architecture/3-modulos.md)
+4. [Roles y Permisos](file:///d:/Repositorio/jonatha1992/gestorcoc/docs/architecture/2-roles-and-permissions.md)
+5. [Stack Detallado](file:///d:/Repositorio/jonatha1992/gestorcoc/docs/architecture/1-stack.md)
+6. [Guía de Despliegue](file:///d:/Repositorio/jonatha1992/gestorcoc/docs/runbooks/hacer_deploy.md)
+7. [Planning y Estado](file:///d:/Repositorio/jonatha1992/gestorcoc/docs/PLANNING.md)
 
 ## ⚡ Comandos Rápidos
 

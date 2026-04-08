@@ -96,6 +96,8 @@ class UserManagementViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
         "destroy":        [PermissionCode.MANAGE_USERS],
         "toggle_active":  [PermissionCode.MANAGE_USERS],
         "reset_password": [PermissionCode.MANAGE_USERS],
+        "force_password_change": [PermissionCode.MANAGE_USERS],
+        "clear_password_change": [PermissionCode.MANAGE_USERS],
     }
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = {
@@ -137,7 +139,7 @@ class UserManagementViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
         if not username:
             return Response({"username": ["El nombre de usuario es requerido."]}, status=drf_status.HTTP_400_BAD_REQUEST)
         if not password or len(password) < 6:
-            return Response({"password": ["La contrasena debe tener al menos 6 caracteres."]}, status=drf_status.HTTP_400_BAD_REQUEST)
+            return Response({"password": ["La contraseña debe tener al menos 6 caracteres."]}, status=drf_status.HTTP_400_BAD_REQUEST)
         if User.objects.filter(username=username).exists():
             return Response({"username": ["Ya existe un usuario con ese nombre."]}, status=drf_status.HTTP_400_BAD_REQUEST)
 
@@ -149,7 +151,9 @@ class UserManagementViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
         assign_role_group(user, person.role)
         person.user = user
         person.save()
-        UserAccountProfile.objects.create(user=user, must_change_password=True)
+        profile, _ = UserAccountProfile.objects.get_or_create(user=user)
+        profile.must_change_password = True
+        profile.save(update_fields=["must_change_password"])
 
         serializer = self.get_serializer(person)
         return Response(serializer.data, status=drf_status.HTTP_201_CREATED)
@@ -187,7 +191,7 @@ class UserManagementViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
 
         if data.get("password"):
             if len(data["password"]) < 6:
-                return Response({"password": ["La contrasena debe tener al menos 6 caracteres."]}, status=drf_status.HTTP_400_BAD_REQUEST)
+                return Response({"password": ["La contraseña debe tener al menos 6 caracteres."]}, status=drf_status.HTTP_400_BAD_REQUEST)
             user.set_password(data["password"])
             user.save(update_fields=["password"])
             profile, _ = UserAccountProfile.objects.get_or_create(user=user)
@@ -228,10 +232,48 @@ class UserManagementViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
         person = self.get_object()
         password = request.data.get("password", "")
         if not password or len(password) < 6:
-            return Response({"error": "La contrasena debe tener al menos 6 caracteres."}, status=drf_status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "La contraseña debe tener al menos 6 caracteres."}, status=drf_status.HTTP_400_BAD_REQUEST)
         person.user.set_password(password)
         person.user.save(update_fields=["password"])
         profile, _ = UserAccountProfile.objects.get_or_create(user=person.user)
         profile.must_change_password = True
         profile.save(update_fields=["must_change_password"])
-        return Response({"message": "Contrasena restablecida. El usuario debera cambiarla al iniciar sesion."})
+        return Response({"message": "Contraseña restablecida. El usuario deberá cambiarla al iniciar sesión."})
+
+    @action(detail=True, methods=["post"], url_path="force_password_change")
+    @transaction.atomic
+    def force_password_change(self, request, pk=None):
+        """
+        Fuerza al usuario a cambiar su contraseña en el próximo login.
+        Similar a 'Force password change at next logon' de Active Directory.
+        """
+        person = self.get_object()
+        if not person.user:
+            return Response({"error": "El usuario no tiene cuenta de sistema."}, status=drf_status.HTTP_400_BAD_REQUEST)
+        
+        profile, _ = UserAccountProfile.objects.get_or_create(user=person.user)
+        profile.must_change_password = True
+        profile.save(update_fields=["must_change_password"])
+        
+        return Response({
+            "message": f"Se ha forzado el cambio de contraseña para {person.user.username}. Deberá cambiarla en su próximo inicio de sesión."
+        })
+
+    @action(detail=True, methods=["post"], url_path="clear_password_change")
+    @transaction.atomic
+    def clear_password_change(self, request, pk=None):
+        """
+        Marca la contraseña como permanente (no requiere cambio).
+        Útil cuando el admin cambia la contraseña pero no quiere forzar el cambio.
+        """
+        person = self.get_object()
+        if not person.user:
+            return Response({"error": "El usuario no tiene cuenta de sistema."}, status=drf_status.HTTP_400_BAD_REQUEST)
+        
+        profile, _ = UserAccountProfile.objects.get_or_create(user=person.user)
+        profile.must_change_password = False
+        profile.save(update_fields=["must_change_password"])
+        
+        return Response({
+            "message": f"La contraseña de {person.user.username} ha sido marcada como permanente."
+        })

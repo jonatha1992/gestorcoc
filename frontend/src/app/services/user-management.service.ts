@@ -73,6 +73,21 @@ export class UserManagementService {
         return this.api.post<any>(`api/users/${id}/reset_password/`, { password });
     }
 
+    /**
+     * Fuerza al usuario a cambiar contraseña en el próximo login
+     * (Similar a Active Directory "Force password change at next logon")
+     */
+    forcePasswordChange(id: number): Observable<{ message: string }> {
+        return this.api.post<any>(`api/users/${id}/force_password_change/`, {});
+    }
+
+    /**
+     * Marca la contraseña como permanente (no requiere cambio)
+     */
+    clearPasswordChange(id: number): Observable<{ message: string }> {
+        return this.api.post<any>(`api/users/${id}/clear_password_change/`, {});
+    }
+
     deactivateUser(id: number): Observable<void> {
         return this.api.delete<void>(`api/users/${id}/`);
     }

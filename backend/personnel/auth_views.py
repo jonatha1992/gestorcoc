@@ -73,12 +73,12 @@ class ChangePasswordView(views.APIView):
             action="change_password",
             actor=user,
             username=user.username,
-            message="Contrasena actualizada",
+            message="Contraseña actualizada",
         )
 
         return Response(
             {
-                "message": "Contrasena actualizada correctamente.",
+                "message": "Contraseña actualizada correctamente.",
                 "user": build_auth_user_payload(user),
             },
             status=status.HTTP_200_OK,

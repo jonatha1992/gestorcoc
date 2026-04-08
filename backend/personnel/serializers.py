@@ -14,6 +14,7 @@ class PersonSerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(source="user.id", read_only=True)
     username = serializers.CharField(source="user.username", read_only=True)
     has_account = serializers.SerializerMethodField()
+    unit_name = serializers.SerializerMethodField()
 
     def get_assigned_systems_details(self, obj):
         return [
@@ -31,6 +32,9 @@ class PersonSerializer(serializers.ModelSerializer):
     def get_has_account(self, obj):
         return obj.user_id is not None
 
+    def get_unit_name(self, obj):
+        return obj.unit.name if obj.unit else None
+
     class Meta:
         model = Person
         fields = [
@@ -43,6 +47,7 @@ class PersonSerializer(serializers.ModelSerializer):
             "rank",
             "rank_display",
             "unit",
+            "unit_name",
             "guard_group",
             "assigned_systems",
             "assigned_systems_details",

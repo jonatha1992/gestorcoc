@@ -28,14 +28,14 @@
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-2">
             <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fecha desde</label>
-                <input type="date" [(ngModel)]="filterDateFrom" (ngModelChange)="onFilterChange()"
+                <input type="date" lang="es-AR" [(ngModel)]="filterDateFrom" (ngModelChange)="onFilterChange()"
                     [attr.max]="maxDate"
                     class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
                     title="Desde">
             </div>
             <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fecha hasta</label>
-                <input type="date" [(ngModel)]="filterDateTo" (ngModelChange)="onFilterChange()"
+                <input type="date" lang="es-AR" [(ngModel)]="filterDateTo" (ngModelChange)="onFilterChange()"
                     [attr.max]="maxDate"
                     class="w-full min-w-0 text-xs rounded-lg border border-slate-200 bg-white px-2 py-2 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-slate-600"
                     title="Hasta">
@@ -183,7 +183,7 @@
                             <div class="font-semibold text-slate-700">{{ getOperatorName(record) }}</div>
                         </td>
                         <td class="table-body-cell" (click)="$event.stopPropagation()">
-                            @if (canUseReportTools && getInformeForRecord(record.id)) {
+                            @if (canManageRecords && getInformeForRecord(record.id)) {
                             <button type="button" (click)="openInforme(record)"
                                 class="inline-flex items-center gap-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
@@ -193,7 +193,7 @@
                                 </svg>
                                 Ver Informe
                             </button>
-                            } @else if (canUseReportTools) {
+                            } @else if (canManageRecords) {
                             <button type="button" (click)="openInforme(record)"
                                 class="inline-flex items-center gap-1.5 text-slate-500 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
@@ -301,7 +301,7 @@
                 </button>
             </div>
 
-            <form (ngSubmit)="saveRecord()" #recordForm="ngForm" class="overflow-y-auto flex-1 px-6 py-5 space-y-6">
+            <form (ngSubmit)="saveRecord()" #recordForm="ngForm" class="overflow-y-auto flex-1 px-6 py-5 space-y-4">
 
                 <div *ngIf="validationMessage"
                     class="w-full text-sm font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-2xl px-5 py-4 mb-4 animate-slide-in">
@@ -321,7 +321,7 @@
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Fecha del Requerimiento</label>
-                            <input type="date" name="entry_date" [(ngModel)]="newRecord.entry_date"
+                            <input type="date" lang="es-AR" name="entry_date" [(ngModel)]="newRecord.entry_date"
                                 [attr.max]="maxDate"
                                 class="field-control-compact">
                         </div>
@@ -382,7 +382,7 @@
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Fecha del Hecho</label>
-                            <input type="date" name="incident_date" [(ngModel)]="newRecord.incident_date"
+                            <input type="date" lang="es-AR" name="incident_date" [(ngModel)]="newRecord.incident_date"
                                 [attr.max]="maxDate"
                                 class="field-control-compact">
                         </div>
@@ -459,7 +459,7 @@
                                 </div>
                                 <div class="space-y-1.5">
                                     <label class="field-label-compact">Fecha Nac.</label>
-                                    <input type="date" [name]="'involved_birth_date_' + $index"
+                                    <input type="date" lang="es-AR" [name]="'involved_birth_date_' + $index"
                                         [attr.max]="maxDate"
                                         [(ngModel)]="person.birth_date" class="field-control-compact">
                                 </div>
@@ -617,7 +617,7 @@
                         </div>
                         <div class="space-y-1.5">
                             <label class="field-label-compact">Fecha de Entrega</label>
-                            <input type="date" name="delivery_date" [(ngModel)]="newRecord.delivery_date"
+                            <input type="date" lang="es-AR" name="delivery_date" [(ngModel)]="newRecord.delivery_date"
                                 [attr.max]="maxDate"
                                 class="field-control-compact">
                         </div>
@@ -702,7 +702,7 @@
                         </div>
                         <div class="text-xs font-semibold text-slate-500 mt-0.5">Sin informe vinculado</div>
                     </div>
-                    <button type="button" (click)="openInforme(selectedRecord())" [class.hidden]="!canUseReportTools"
+                    <button type="button" (click)="openInforme(selectedRecord())" [class.hidden]="!canManageRecords"
                         class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
                         Crear Informe
                     </button>

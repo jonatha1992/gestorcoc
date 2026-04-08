@@ -4,11 +4,13 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from personnel.access import PermissionCode
 from personnel.permissions import ActionPermissionMixin, HasNamedPermission
+from core.mixins import UnitFilterMixin
+from django.db.models import Q
 from .models import Novedad
 from .serializers import NovedadSerializer
 
 
-class NovedadViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
+class NovedadViewSet(UnitFilterMixin, ActionPermissionMixin, viewsets.ModelViewSet):
     queryset = Novedad.objects.select_related(
         'camera', 'server', 'system', 'cameraman_gear'
     )
@@ -33,6 +35,7 @@ class NovedadViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
         'server': ['exact'],
         'system': ['exact'],
         'cameraman_gear': ['exact'],
+        'coc_ticket_number': ['icontains'],
     }
     search_fields = [
         'description',
@@ -49,6 +52,23 @@ class NovedadViewSet(ActionPermissionMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        user = self.request.user
+
+        if not user.is_authenticated:
+            return queryset.none()
+
+        if not self.is_global_viewer():
+            person = getattr(user, 'person', None)
+            if person and person.unit:
+                queryset = queryset.filter(
+                    Q(camera__server__system__unit=person.unit) |
+                    Q(server__system__unit=person.unit) |
+                    Q(system__unit=person.unit) |
+                    Q(cameraman_gear__assigned_to__unit=person.unit)
+                ).distinct()
+            else:
+                queryset = queryset.none()
+
         asset_type = (self.request.query_params.get('asset_type') or '').strip().upper()
 
         if asset_type == 'CAMERA':

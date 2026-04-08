@@ -7,6 +7,7 @@ import { AuthService } from '../../services/auth.service';
 import { AssetService, Unit } from '../../services/asset.service';
 import { PersonnelService } from '../../services/personnel.service';
 import { ToastService } from '../../services/toast.service';
+import { ConfirmModalService } from '../../services/confirm-modal.service';
 
 @Component({
   selector: 'app-personnel',
@@ -19,6 +20,7 @@ export class PersonnelComponent implements OnInit {
   private personnelService = inject(PersonnelService);
   private assetService = inject(AssetService);
   private toastService = inject(ToastService);
+  private confirmModalService = inject(ConfirmModalService);
   readonly authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
@@ -278,11 +280,12 @@ export class PersonnelComponent implements OnInit {
     });
   }
 
-  deletePerson(id: number) {
+  async deletePerson(id: number) {
     if (!this.requireManagePersonnel()) {
       return;
     }
-    if (confirm('ADVERTENCIA: Esta seguro de eliminar permanentemente a este usuario? Esta accion no se puede deshacer.')) {
+    try {
+      await this.confirmModalService.confirmDelete('este usuario', 'personal', 'ADVERTENCIA: Esta acción no se puede deshacer.');
       this.personnelService.deletePerson(id).subscribe({
         next: () => {
           this.ngZone.run(() => {
@@ -298,6 +301,8 @@ export class PersonnelComponent implements OnInit {
           });
         }
       });
+    } catch {
+      // Usuario canceló
     }
   }
 

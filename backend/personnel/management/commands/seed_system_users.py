@@ -87,7 +87,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--reset-passwords",
             action="store_true",
-            help="Reaplica las contrasenas tomadas de variables de entorno incluso si el usuario ya existe.",
+            help="Reaplica las contraseñas tomadas de variables de entorno incluso si el usuario ya existe.",
         )
 
     def handle(self, *args, **options):

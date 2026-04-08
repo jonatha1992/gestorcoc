@@ -16,3 +16,10 @@ class NovedadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Novedad
         fields = '__all__'
+        extra_kwargs = {
+            'coc_ticket_number': {
+                'required': False,
+                'allow_blank': True,
+                'allow_null': True
+            }
+        }

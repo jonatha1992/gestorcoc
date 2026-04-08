@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
 
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
@@ -54,7 +55,7 @@ export class SettingsComponent {
       !this.passwordForm.new_password ||
       !this.passwordForm.new_password_confirm
     ) {
-      this.toastService.error('Complete todos los campos para cambiar la contrasena.');
+      this.toastService.error('Complete todos los campos para cambiar la contraseña.');
       return;
     }
 
@@ -62,36 +63,38 @@ export class SettingsComponent {
     this.isSubmitting.set(true);
     this.successMessage.set('');
 
-    this.authService.changePassword(this.passwordForm).subscribe({
-      next: () => {
-        this.passwordForm = {
-          old_password: '',
-          new_password: '',
-          new_password_confirm: '',
-        };
-        this.passwordVisibility.set({
-          old_password: false,
-          new_password: false,
-          new_password_confirm: false,
-        });
-        this.successMessage.set('Contrasena actualizada correctamente.');
-        this.toastService.success('Contrasena actualizada correctamente.');
-        if (mustRedirect) {
-          void this.router.navigate(['/']);
-        }
-      },
-      error: (error) => {
-        const detail =
-          error?.error?.old_password?.[0] ||
-          error?.error?.new_password?.[0] ||
-          error?.error?.new_password_confirm?.[0] ||
-          error?.error?.non_field_errors?.[0] ||
-          error?.error?.detail ||
-          'No se pudo actualizar la contrasena.';
-        this.toastService.error(detail);
-      },
-      complete: () => this.isSubmitting.set(false),
-    });
+    this.authService
+      .changePassword(this.passwordForm)
+      .pipe(finalize(() => this.isSubmitting.set(false)))
+      .subscribe({
+        next: () => {
+          this.passwordForm = {
+            old_password: '',
+            new_password: '',
+            new_password_confirm: '',
+          };
+          this.passwordVisibility.set({
+            old_password: false,
+            new_password: false,
+            new_password_confirm: false,
+          });
+          this.successMessage.set('Contraseña actualizada correctamente.');
+          this.toastService.success('Contraseña actualizada correctamente.');
+          if (mustRedirect) {
+            void this.router.navigate(['/']);
+          }
+        },
+        error: (error) => {
+          const detail =
+            error?.error?.old_password?.[0] ||
+            error?.error?.new_password?.[0] ||
+            error?.error?.new_password_confirm?.[0] ||
+            error?.error?.non_field_errors?.[0] ||
+            error?.error?.detail ||
+            'No se pudo actualizar la contraseña.';
+          this.toastService.error(detail);
+        },
+      });
   }
 }
 

@@ -39,6 +39,11 @@ graph TD
 ## 3. Distribución de Apps
 - `assets/`: Inventario CCTV y equipamiento.
 - `novedades/`: Fallas y eventos.
-- `personnel/`: Gestión de personal.
+- `personnel/`: Gestión de personal, usuarios, roles y permisos.
 - `records/`: Registros fílmicos y servicios IA.
 - `hechos/`: Bitácora operativa.
+
+## 4. Documentación Relacionada
+- [Módulos del Sistema](./3-modulos.md) - Apps Django, rutas Angular, casos de uso y modelo de datos
+- [Roles y Permisos](./2-roles-and-permissions.md) - Matriz completa de roles y permisos del sistema
+- [Stack Tecnológico](./1-stack.md) - Detalles del stack técnico

@@ -12,6 +12,7 @@ import {
   getTodayDateInputValue,
   toDateTimeLocalInputValue,
 } from '../../utils/date-inputs';
+import { ConfirmModalService } from '../../services/confirm-modal.service';
 
 @Component({
   selector: 'app-hechos',
@@ -24,6 +25,7 @@ export class HechosComponent implements OnInit {
   private hechosService = inject(HechosService);
   private assetService = inject(AssetService);
   private toastService = inject(ToastService);
+  private confirmModalService = inject(ConfirmModalService);
   readonly authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
@@ -187,19 +189,22 @@ export class HechosComponent implements OnInit {
     this.showForm.set(true);
   }
 
-  deleteHecho(id: number) {
+  async deleteHecho(id: number) {
     if (!this.requireManageHechos()) {
       return;
     }
-    if (!confirm('¿Estás seguro de eliminar este registro?')) return;
-
-    this.hechosService.deleteHecho(id).subscribe({
-      next: () => {
-        this.toastService.show('Hecho eliminado', 'success');
-        this.loadHechos();
-      },
-      error: () => this.toastService.show('Error al eliminar', 'error'),
-    });
+    try {
+      await this.confirmModalService.confirmDelete('este registro', 'hecho');
+      this.hechosService.deleteHecho(id).subscribe({
+        next: () => {
+          this.toastService.show('Hecho eliminado', 'success');
+          this.loadHechos();
+        },
+        error: () => this.toastService.show('Error al eliminar', 'error'),
+      });
+    } catch {
+      // Usuario canceló
+    }
   }
 
   closeForm() {

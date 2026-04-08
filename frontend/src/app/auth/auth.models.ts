@@ -29,9 +29,8 @@ export const PermissionCodes = {
   VIEW_HECHOS: 'view_hechos',
   MANAGE_HECHOS: 'manage_hechos',
   VIEW_RECORDS: 'view_records',
-  MANAGE_RECORDS: 'manage_records',
+  MANAGE_RECORDS: 'manage_records',  // Incluye crear/editar informes
   USE_INTEGRITY: 'use_integrity_tools',
-  USE_REPORTS: 'use_report_tools',
   VERIFY_CREV: 'verify_crev_record',
   MANAGE_CREV_FLOW: 'manage_crev_flow',
   VIEW_SETTINGS: 'view_settings',

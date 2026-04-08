@@ -31,7 +31,7 @@
         </div>
 
         <div class="space-y-2">
-          <label class="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Contrasena</label>
+          <label class="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Contraseña</label>
           <div class="relative">
             <input [(ngModel)]="password" name="password" [type]="showPassword() ? 'text' : 'password'" autocomplete="current-password"
               class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-100"
@@ -40,7 +40,7 @@
               type="button"
               (click)="togglePasswordVisibility()"
               class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 transition hover:text-slate-700"
-              [attr.aria-label]="showPassword() ? 'Ocultar contrasena' : 'Mostrar contrasena'"
+              [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             >
               @if (showPassword()) {
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

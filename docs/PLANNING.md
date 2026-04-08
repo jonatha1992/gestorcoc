@@ -1,6 +1,6 @@
 # GestorCOC - Planning y Estado del Proyecto
 
-> Ultima actualizacion: 2026-03-12
+> Ultima actualización: 2026-03-12
 
 ---
 
@@ -9,9 +9,9 @@
 | Capa | Estado |
 | ------ | -------- |
 | Backend API (Django + DRF) | Completo y estable |
-| Base de datos (PostgreSQL Railway) | Migrada y con datos seed |
+| Base de datos | SQLite nativo (Dev) / PostgreSQL (Railway) |
 | Frontend SPA (Angular 21) | Funcional |
-| Autenticacion | Implementada (JWT + login + roles) |
+| Autenticación | Implementada (JWT + login + roles) |
 | Deploy (Railway) | Activo |
 
 ---
@@ -22,13 +22,13 @@
 
 | App | Modelos | API | Filtros/Busqueda | Tests |
 | ----- | --------- | ----- | ----------------- | ------- |
-| `assets` | OK | OK | OK | Parcial |
-| `novedades` | OK | OK | OK | Parcial |
-| `hechos` | OK | OK | OK | Parcial |
+| `assets` | OK | OK | OK | OK |
+| `novedades` | OK | OK | OK | OK |
+| `hechos` | OK | OK | OK | OK |
 | `personnel` | OK | OK | OK | OK |
 | `records` | OK | OK | OK | OK |
-| Dashboard / Map | OK | OK | OK | Parcial |
-| IA (Gemini/OpenRouter/Groq) | OK | OK | - | Parcial |
+| Dashboard / Map | OK | OK | OK | OK |
+| IA (Gemini/OpenRouter/Groq) | OK | OK | - | OK |
 
 ### Frontend
 
@@ -43,15 +43,15 @@
 | `/records` | OK | Verificacion CREV y permisos |
 | `/integrity` | OK | Restringido por permisos |
 | `/informes` | OK | Restringido por permisos |
-| `/settings` | OK | Perfil autenticado + cambio de contrasena |
+| `/settings` | OK | Perfil autenticado + cambio de contraseña |
 
 ---
 
-## Autenticacion y Roles
+## Autenticación y Roles
 
-- Vinculo `Person` <-> `User`: `OneToOneField` nullable en `Person`
-- Login: username + password clasico
-- Tokens: JWT con refresh token via `djangorestframework-simplejwt`
+- Vínculo `Person` <-> `User`: `OneToOneField` nullable en `Person`
+- Login: username + password clásico
+- Tokens: JWT con refresh token vía `djangorestframework-simplejwt`
 - Permisos: por grupos/roles y por accion
 - Estado actual: endpoints protegidos por defecto, login SPA implementado y control de roles activo
 
@@ -60,7 +60,7 @@
 | `READ_ONLY` | Solo lectura |
 | `OPERADOR` | Novedades, hechos y records operativos |
 | `COORDINADOR_COC` | Operador + assets y personal |
-| `CREV` | Records, integridad, informes, verificacion CREV |
+| `CREV` | Records, integridad, informes, verificación CREV |
 | `COORDINADOR_CREV` | CREV + supervision del flujo CREV |
 | `ADMIN` | Acceso total |
 
@@ -78,8 +78,8 @@
 | Componente | Valor |
 | ------------ | ------- |
 | Backend hosting | Railway (PostgreSQL + Django) |
-| Base de datos | PostgreSQL (Railway) |
+| Base de datos | SQLite (Local) / PostgreSQL (Railway) |
 | Frontend | Servido por WhiteNoise desde el mismo proceso Django |
-| Variables de entorno | `.env` local / Railway env vars en produccion |
+| Variables de entorno | `.env` local / Railway env vars en producción |
 | Proveedores IA | Gemini, OpenRouter, Groq, Ollama |
 | Usuarios Django | `admin`, `coord_coc_1`, `coord_crev_1`, `crev_1`, `operador_1`, `generico_1` |

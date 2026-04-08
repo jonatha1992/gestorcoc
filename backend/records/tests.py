@@ -1006,7 +1006,7 @@ class IntegrityServiceVideoReportTemplateTests(TestCase):
 
         document = Document(out)
         paragraphs_text = "\n".join((paragraph.text or "") for paragraph in document.paragraphs)
-        self.assertIn("Referencia de verificacion:", paragraphs_text)
+        self.assertIn("Referencia de verificación:", paragraphs_text)
         self.assertIn("MATERIAL FILMICO TEST", paragraphs_text)
         self.assertIn("DESARROLLO TEST", paragraphs_text)
         self.assertIn("CONCLUSION TEST", paragraphs_text)
