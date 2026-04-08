@@ -1,13 +1,75 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>GestorCoc</title>
+  <title>Gestor COC</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <style>
+    /* Ensure app-root is always a block-level element that fills the viewport */
+    app-root {
+      display: block;
+      min-height: 100vh;
+    }
+
+    /* Loading spinner shown before Angular takes over */
+    #ng-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #0f172a;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #94a3b8;
+    }
+
+    #ng-loading .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #1e293b;
+      border-top-color: #0284c7;
+      border-radius: 50%;
+      animation: ng-spin 0.8s linear infinite;
+      margin-bottom: 1.25rem;
+    }
+
+    #ng-loading p {
+      margin: 0;
+      font-size: 0.875rem;
+      letter-spacing: 0.05em;
+    }
+
+    @keyframes ng-spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
-  <app-root></app-root>
+  <app-root>
+    <!-- Shown while Angular is loading; replaced by the framework on bootstrap -->
+    <div id="ng-loading">
+      <div class="spinner"></div>
+      <p>Cargando Gestor COC…</p>
+    </div>
+  </app-root>
+  <noscript>
+    <div style="
+      display:flex; align-items:center; justify-content:center;
+      min-height:100vh; background:#0f172a; color:#e2e8f0;
+      font-family:system-ui,-apple-system,sans-serif; padding:2rem;
+      box-sizing:border-box;
+    ">
+      <div style="max-width:480px; text-align:center;">
+        <h1 style="color:#f87171; margin-bottom:0.75rem;">JavaScript requerido</h1>
+        <p style="color:#94a3b8; line-height:1.6;">
+          Esta aplicación requiere JavaScript para funcionar.
+          Por favor habilite JavaScript en su navegador y recargue la página.
+        </p>
+      </div>
+    </div>
+  </noscript>
 </body>
 </html>
+
