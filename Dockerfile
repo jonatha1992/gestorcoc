@@ -52,7 +52,7 @@ COPY --from=frontend-builder /app/frontend/dist/gestor-coc/browser /app/frontend
 # Recopilar estaticos de Django para WhiteNoise
 # Se inyecta un DATABASE_URL ficticio porque settings.py lo exige al importarse,
 # aunque collectstatic no necesita conexion real a la base de datos.
-RUN DATABASE_URL="postgres://build:build@localhost:5432/build" \
+RUN DATABASE_URL="sqlite:////tmp/build.sqlite3" \
     python manage.py collectstatic --noinput
 
 # Puerto expuesto (documentacion; Railway inyecta PORT en runtime)
