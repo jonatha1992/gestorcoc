@@ -58,5 +58,5 @@ RUN DATABASE_URL="postgres://build:build@localhost:5432/build" \
 # Puerto expuesto (documentacion; Railway inyecta PORT en runtime)
 EXPOSE 8000
 
-# El CMD inicia aplicando las migraciones pendientes y levantando Gunicorn
-CMD ["sh", "-c", "python manage.py migrate || echo 'WARNING: migrate failed, starting server anyway'; gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120"]
+# El CMD inicia aplicando las migraciones, sembrando si se indica la variable de entorno, y levantando Gunicorn
+CMD ["sh", "-c", "python manage.py migrate || echo 'WARNING: migrate failed, starting server anyway'; if [ \"$SEED_ON_STARTUP\" = \"True\" ]; then python manage.py seed_data; fi; gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120"]
