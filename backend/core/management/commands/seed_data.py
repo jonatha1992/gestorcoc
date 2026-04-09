@@ -2,6 +2,7 @@ import random
 from datetime import timedelta
 from decimal import Decimal
 
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Count, F, Max, Q
@@ -51,7 +52,7 @@ class Command(BaseCommand):
         self.volume = options["volume"]
         self.seed = options["seed"]
         self.dry_run = options["dry_run"]
-        self.created = {k: 0 for k in ["units", "systems", "servers", "cameras", "gear", "personnel", "film_records", "novedades", "hechos", "catalogs"]}
+        self.created = {k: 0 for k in ["units", "systems", "servers", "cameras", "gear", "personnel", "film_records", "novedades", "hechos", "catalogs", "admin_users"]}
         self.normalized = {k: 0 for k in ["records_entry_date", "records_request_type", "records_delivery_status", "records_backup_flag", "records_verified_by_crev", "records_generator_unit", "novedades_shape", "hechos_category", "person_guard_group"]}
         self.fake = Faker("es_AR")
         self.fake.seed_instance(self.seed)
@@ -79,6 +80,7 @@ class Command(BaseCommand):
         self._ensure_novedades(cameras, servers, systems, gear, people)
         self._ensure_hechos(cameras, people)
         self._ensure_catalogs()
+        self._ensure_admin_users(people)
         self._normalize(cameras)
         self._report()
 
@@ -562,6 +564,32 @@ class Command(BaseCommand):
             if len([x for x in [nov.camera_id, nov.server_id, nov.system_id, nov.cameraman_gear_id] if x is not None]) != 1:
                 invalid += 1
         return invalid
+
+    def _ensure_admin_users(self, people):
+        """Crea usuarios de Django para hacer login."""
+        # Crear usuario admin
+        admin_user, admin_created = User.objects.get_or_create(username='admin')
+        if admin_created:
+            admin_user.set_password('admin123')
+            admin_user.is_staff = True
+            admin_user.is_superuser = True
+            admin_user.save()
+            self.stdout.write(self.style.SUCCESS("✓ Usuario admin creado: username='admin', password='admin123'"))
+        else:
+            self.stdout.write("Usuario admin ya existe.")
+
+        # Crear usuario operador
+        operador_user, operador_created = User.objects.get_or_create(username='operador')
+        if operador_created:
+            operador_user.set_password('operador123')
+            operador_user.is_staff = True
+            operador_user.is_superuser = False
+            operador_user.save()
+            self.stdout.write(self.style.SUCCESS("✓ Usuario operador creado: username='operador', password='operador123'"))
+        else:
+            self.stdout.write("Usuario operador ya existe.")
+
+        self.created["admin_users"] = 2 if (admin_created or operador_created) else 0
 
     def _report(self):
         self.stdout.write("")
