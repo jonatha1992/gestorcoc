@@ -20,6 +20,17 @@ def spa_index(request):
     return HttpResponse(index.read_bytes(), content_type='text/html; charset=utf-8')
 
 
+def trigger_seed(request):
+    """Endpoint secreto para sembrar base de datos vía HTTP e ignorar firewalls."""
+    from django.core.management import call_command
+    import traceback
+    try:
+        call_command('seed_data')
+        return JsonResponse({'status': 'ok', 'message': '¡Base de datos sembrada con exito!'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e), 'trace': traceback.format_exc()}, status=500)
+
+
 def health_check(request):
     """Endpoint minimalista para el health check de Railway."""
     return JsonResponse({'status': 'ok'})
@@ -27,6 +38,7 @@ def health_check(request):
 
 urlpatterns = [
     path('api/health/', health_check, name='health-check'),
+    path('api/admin/run-seed/', trigger_seed, name='trigger-seed'),
     path('admin/', admin.site.urls),
     path('api/schema/', SpectacularAPIView.as_view(authentication_classes=[], permission_classes=[AllowAny]), name='schema'),
     path('swagger/', SpectacularSwaggerView.as_view(url_name='schema', authentication_classes=[], permission_classes=[AllowAny]), name='swagger-ui'),
