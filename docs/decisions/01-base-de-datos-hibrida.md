@@ -1,15 +1,17 @@
-# ADR 01: Uso de Base de Datos Híbrida (SQLite/PostgreSQL)
+# ADR 01: PostgreSQL como base de datos unica
 
 ## Estado
-Actualizado (Abril 2026)
+Actualizado (Mayo 2026)
 
 ## Contexto
-Durante el ciclo de desarrollo local, se requiere una base de datos liviana, portable y que no requiera configuración de infraestructura compleja (como Docker o servicios externos) para el inicio inmediato de nuevos desarrolladores o agentes de IA. Sin embargo, para producción se requiere un motor transaccional robusto y administrado.
+GestorCOC ya cuenta con una base de datos PostgreSQL administrada en Railway y el proyecto requiere evitar divergencias entre datos locales, archivos SQLite versionados y el entorno productivo.
 
-## Decisión
-- **Desarrollo (Local)**: Se adopta **SQLite** como motor por defecto. No requiere servidor adicional y los tests de ABM funcionan perfectamente sobre su estructura en memoria.
-- **Producción (Railway)**: Se mantiene **PostgreSQL** administrado mediante `dj-database-url` para el entorno de Staging/Producción en Railway para alta disponibilidad.
+## Decision
+- **Desarrollo, tests y produccion** usan PostgreSQL mediante la variable `DATABASE_URL`.
+- SQLite no se usa como motor de respaldo ni como archivo versionado del proyecto.
+- Si `DATABASE_URL` no esta configurada, Django falla al iniciar para evitar escribir datos en una base incorrecta.
 
-## Beneficios
-- Facilita el inicio rápido de nuevos desarrolladores y agentes de IA.
-- No requiere configuración de infraestructura compleja.
+## Consecuencias
+- El entorno local debe definir `DATABASE_URL` apuntando a PostgreSQL.
+- Railway debe tener `DATABASE_URL` configurada con la base administrada.
+- Se elimina el riesgo de operar accidentalmente sobre `backend/db.sqlite3`.

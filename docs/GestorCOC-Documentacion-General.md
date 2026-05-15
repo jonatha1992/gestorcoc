@@ -1,4 +1,4 @@
-# GestorCOC — Documentación General del Sistema
+﻿# GestorCOC — Documentación General del Sistema
 
 > **Versión**: 1.0 | **Fecha**: Marzo 2026 | **Estado**: Producción Activa
 
@@ -71,7 +71,7 @@ En producción, ambos conviven en el mismo proceso Django: WhiteNoise sirve el b
 │   └──────────────┘   └─────────────────┘   └─────┬──────┘  │
 │                                                    │          │
 │   ┌──────────────┐   ┌─────────────────┐   ┌─────▼──────┐  │
-│   │  WhiteNoise   │   │   Django ORM     │──▶│ SQLite/PG  │  │
+│   │  WhiteNoise   │   │   Django ORM     │──▶│ PostgreSQL  │  │
 │   │ (SPA build)   │   │                 │   │ (Railway)  │  │
 │   └──────────────┘   └─────────────────┘   └────────────┘  │
 │                                                              │
@@ -89,7 +89,7 @@ En producción, ambos conviven en el mismo proceso Django: WhiteNoise sirve el b
 | **API** | Django REST Framework | Serialización, validación de requests |
 | **Negocio** | `services.py` por app | Lógica compleja: hashes, IA, informes |
 | **Datos** | Django ORM | Acceso a base de datos |
-| **Persistencia** | SQLite (Local) / PostgreSQL (Prod) | Almacenamiento relacional |
+| **Persistencia** | PostgreSQL | Almacenamiento relacional |
 | **Archivos estáticos** | WhiteNoise | Entrega del SPA Angular compilado |
 
 ---
@@ -104,8 +104,8 @@ En producción, ambos conviven en el mismo proceso Django: WhiteNoise sirve el b
 | Framework web | Django | 5.2 |
 | API REST | Django REST Framework (DRF) | Latest |
 | Autenticación | djangorestframework-simplejwt | Latest |
-| Base de datos (dev) | SQLite | — |
-| Base de datos (prod) | PostgreSQL | Railway managed |
+| Base de datos | PostgreSQL | Local/test/Railway mediante `DATABASE_URL` |
+| Config BD | dj-database-url | Latest |
 | Config BD | dj-database-url | Latest |
 | Documentación API | drf-spectacular (Swagger/ReDoc) | Latest |
 | Generación de documentos | python-docx, reportlab | Latest |
@@ -142,7 +142,7 @@ En producción, ambos conviven en el mismo proceso Django: WhiteNoise sirve el b
 |-----------|-------|
 | Plataforma | Railway.app |
 | Contenedor | Docker (Dockerfile en raíz) |
-| Base de datos | SQLite (Local) / PostgreSQL administrado por Railway |
+| Base de datos | PostgreSQL administrado por Railway |
 | Variables de entorno | Railway env vars |
 | Proceso de inicio | `python manage.py migrate && gunicorn config.wsgi:application` |
 
@@ -794,7 +794,7 @@ La API está documentada con `drf-spectacular`. En desarrollo:
 | Capa | Estado |
 |------|--------|
 | Backend API (Django + DRF) | ✅ Completo y estable |
-| Base de datos (SQLite/PostgreSQL) | ✅ Migrada y con datos seed |
+| Base de datos PostgreSQL | ✅ Migrada y con datos seed |
 | Frontend SPA (Angular 21) | ✅ Funcional |
 | Autenticación JWT + Roles | ✅ Implementada |
 | Deploy en Railway | ✅ Activo |
@@ -829,3 +829,4 @@ La API está documentada con `drf-spectacular`. En desarrollo:
 ---
 
 *GestorCOC — Documentación General del Sistema | Marzo 2026*
+

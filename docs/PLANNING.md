@@ -9,7 +9,7 @@
 | Capa | Estado |
 | ------ | -------- |
 | Backend API (Django + DRF) | Completo y estable |
-| Base de datos | SQLite nativo (Dev) / PostgreSQL (Railway) |
+| Base de datos | PostgreSQL via `DATABASE_URL` |
 | Frontend SPA (Angular 21) | Funcional |
 | Autenticación | Implementada (JWT + login + roles) |
 | Deploy (Railway) | Activo |
@@ -78,7 +78,7 @@
 | Componente | Valor |
 | ------------ | ------- |
 | Backend hosting | Railway (PostgreSQL + Django) |
-| Base de datos | SQLite (Local) / PostgreSQL (Railway) |
+| Base de datos | PostgreSQL (local/test/Railway) |
 | Frontend | Servido por WhiteNoise desde el mismo proceso Django |
 | Variables de entorno | `.env` local / Railway env vars en producción |
 | Proveedores IA | Gemini, OpenRouter, Groq, Ollama |
