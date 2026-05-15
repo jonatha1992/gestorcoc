@@ -2,7 +2,7 @@
 
 ## Backend
 - **Framework**: Django 5.2 + DRF (Python 3.14+).
-- **Base de Datos**: SQLite para Desarrollo Local (Dev) y PostgreSQL vía `dj-database-url` para Producción (Prod).
+- **Base de Datos**: PostgreSQL en desarrollo, tests y producción mediante `DATABASE_URL` y `dj-database-url`.
 - **Documentación API**: `drf-spectacular` (Swagger/ReDoc).
 - **Servicios**:
   - `python-docx` / `reportlab`: Generación de informes.

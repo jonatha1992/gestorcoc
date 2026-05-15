@@ -90,20 +90,6 @@ export class NovedadesComponent implements OnInit {
   selectedAssets: any[] = [];
   generateActaAfterSave = false;
   formData: NovedadForm = this.getEmptyForm();
-<<<<<<< HEAD
-
-  get canManageNovedades(): boolean {
-    return this.authService.hasPermission(PermissionCodes.MANAGE_NOVEDADES);
-  }
-
-  private requireManageNovedades(): boolean {
-    if (this.canManageNovedades) {
-      return true;
-    }
-    this.toastService.error('No tiene permiso para modificar novedades.');
-    return false;
-  }
-=======
 
   get canManageNovedades(): boolean {
     return this.authService.hasPermission(PermissionCodes.MANAGE_NOVEDADES);
@@ -117,7 +103,6 @@ export class NovedadesComponent implements OnInit {
     return false;
   }
 
->>>>>>> 1840a29502ed2d34b9e94473e702a858c429c257
 
   ngOnInit() {
     this.loadData();
@@ -486,13 +471,10 @@ export class NovedadesComponent implements OnInit {
       `Fecha: ${new Date(novedad.created_at).toLocaleString('es-AR')}`
     );
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
-<<<<<<< HEAD
-=======
   }
 
   get maxDate(): string {
     return getTodayDateInputValue();
->>>>>>> 1840a29502ed2d34b9e94473e702a858c429c257
   }
 
   getSeverityLabel(severity: string): string {

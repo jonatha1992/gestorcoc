@@ -137,27 +137,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-_app_branch = os.environ.get('APP_BRANCH', 'dev').strip().lower() or 'dev'
 _db_url = os.environ.get('DATABASE_URL', '').strip()
 
 
 def _get_database_settings():
-    if _db_url:
-        return _dj_db_url.parse(_db_url, conn_max_age=600)
-    
-<<<<<<< HEAD
-    return {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-=======
-    volume_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH', '').strip()
-    db_path = Path(volume_path) / 'db.sqlite3' if volume_path else BASE_DIR / 'db.sqlite3'
-    
-    return {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': db_path,
->>>>>>> 1840a29502ed2d34b9e94473e702a858c429c257
-    }
+    if not _db_url:
+        raise ImproperlyConfigured('DATABASE_URL is required. Configure PostgreSQL for local, test, and Railway environments.')
+
+    return _dj_db_url.parse(_db_url, conn_max_age=600)
 
 
 DATABASES = {'default': _get_database_settings()}
