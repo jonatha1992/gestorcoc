@@ -734,6 +734,28 @@ class IntegrityService:
         return False
 
     @staticmethod
+    def _provider_api_keys(singular_setting, plural_setting):
+        """Todas las keys de un proveedor, en orden de preferencia.
+
+        El singular manda cuando difiere del primer elemento del plural. En
+        producción son el mismo valor (settings arma el singular como
+        ``KEYS[0]``), así que se devuelve la lista completa. En los tests, en
+        cambio, ``override_settings`` sólo toca el singular: respetarlo evita
+        que un test caiga contra las keys reales del entorno.
+        """
+        single = str(getattr(settings, singular_setting, '') or '').strip()
+        plural = [
+            str(key).strip()
+            for key in (getattr(settings, plural_setting, None) or [])
+            if str(key).strip()
+        ]
+        if single and (not plural or plural[0] != single):
+            return [single]
+        if plural:
+            return plural
+        return [single] if single else []
+
+    @staticmethod
     def _get_ai_provider_chain(custom_api_key='', preferred_provider=''):
         provider_order_raw = str(
             getattr(settings, 'AI_TEXT_PROVIDER_ORDER', 'ollama,gemini,openrouter,groq') or ''
@@ -765,6 +787,7 @@ class IntegrityService:
             'gemini': {
                 'name': 'gemini',
                 'api_key': str(getattr(settings, 'GEMINI_API_KEY', '') or '').strip(),
+                'api_keys': IntegrityService._provider_api_keys('GEMINI_API_KEY', 'GEMINI_API_KEYS'),
                 'api_url': str(getattr(settings, 'AI_TEXT_GEMINI_API_URL', '') or '').strip(),
                 'model': str(getattr(settings, 'AI_TEXT_GEMINI_MODEL', '') or '').strip(),
             },
@@ -783,6 +806,7 @@ class IntegrityService:
             'groq': {
                 'name': 'groq',
                 'api_key': str(getattr(settings, 'GROQ_API_KEY', '') or '').strip(),
+                'api_keys': IntegrityService._provider_api_keys('GROQ_API_KEY', 'GROQ_API_KEYS'),
                 'api_url': str(getattr(settings, 'AI_TEXT_GROQ_API_URL', '') or '').strip(),
                 'model': str(getattr(settings, 'AI_TEXT_GROQ_MODEL', '') or '').strip(),
             },
@@ -804,9 +828,15 @@ class IntegrityService:
             provider = dict(providers[provider_name])
             if index == 0 and manual_key:
                 provider['api_key'] = manual_key
+                provider['api_keys'] = [manual_key]
 
             if not provider.get('api_key') or not provider.get('api_url') or not provider.get('model'):
                 continue
+
+            # Proveedores sin pool propio (openrouter, ollama) igual exponen la
+            # lista, así el consumidor no tiene que distinguir dos formas.
+            if not provider.get('api_keys'):
+                provider['api_keys'] = [provider['api_key']]
 
             chain.append(provider)
 
@@ -821,11 +851,21 @@ class IntegrityService:
         if not providers:
             raise RuntimeError(
                 "No se configuro AI_TEXT_PROVIDER_KEYS "
-                "(GEMINI_API_KEY, OPEN_ROUTER_API_KEY o GROQ_API_KEY) "
+                "(GEMINI_API_KEY1..N, OPEN_ROUTER_API_KEY o GROQ_API_KEY1..N) "
                 "y no se ingreso ninguna manualmente."
             )
 
-        for index, provider in enumerate(providers):
+        # Un intento por (proveedor, key). La cadena sigue teniendo un elemento
+        # por proveedor —eso es lo que reportan los tests de orden— y acá se
+        # expande: antes un 429 en la key 1 de Gemini saltaba directo a
+        # OpenRouter dejando las otras seis keys de Gemini sin tocar.
+        attempts = [
+            {**provider, 'api_key': api_key}
+            for provider in providers
+            for api_key in provider['api_keys']
+        ]
+
+        for index, provider in enumerate(attempts):
             request_payload = IntegrityService._build_ai_request_payload(
                 material_filmico,
                 desarrollo,
@@ -859,7 +899,7 @@ class IntegrityService:
                         detail,
                     )
                 ):
-                    if index < len(providers) - 1:
+                    if index < len(attempts) - 1:
                         continue
                     raise RuntimeError("Todos los proveedores de IA alcanzaron su limite de cuota/tokens.")
 

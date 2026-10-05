@@ -14,17 +14,17 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Verificar que el backend esté corriendo
-Write-Host "Verificando backend en http://localhost:8000..." -NoNewline
+Write-Host "Verificando backend en http://localhost:8050..." -NoNewline
 try {
-    $response = Invoke-WebRequest -Uri "http://localhost:8000/api/health/" -TimeoutSec 5 -UseBasicParsing
+    $response = Invoke-WebRequest -Uri "http://localhost:8050/api/health/" -TimeoutSec 5 -UseBasicParsing
     Write-Host " OK" -ForegroundColor Green
 } catch {
     Write-Host " ERROR" -ForegroundColor Red
-    Write-Host "El backend no está corriendo en http://localhost:8000" -ForegroundColor Yellow
+    Write-Host "El backend no está corriendo en http://localhost:8050" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Para iniciar el backend:" -ForegroundColor Yellow
     Write-Host "  cd ..\backend" -ForegroundColor Yellow
-    Write-Host "  .\.venv\Scripts\python.exe manage.py runserver" -ForegroundColor Yellow
+    Write-Host "  .\.venv\Scripts\python.exe run_local.py" -ForegroundColor Yellow
     exit 1
 }
 

@@ -16,6 +16,8 @@ from datetime import timedelta
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 
+from config.api_keys import collect_api_keys
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -215,12 +217,19 @@ AI_TEXT_PROVIDER_SELECTION = os.getenv('AI_TEXT_PROVIDER_SELECTION', 'ordered')
 AI_TEXT_FALLBACK_MODE = os.getenv('AI_TEXT_FALLBACK_MODE', 'quota_only')
 AI_TEXT_TIMEOUT_SECONDS = int(os.getenv('AI_TEXT_TIMEOUT_SECONDS', '45'))
 
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+# El límite de Gemini es por proyecto de Google Cloud, así que keys de proyectos
+# distintos suman cuota real. Se leen todas (GEMINI_API_KEY1..N) y el singular
+# queda como la primera, que es lo que espera el código y los tests existentes.
+GEMINI_API_KEYS = collect_api_keys('GEMINI_API_KEY')
+GEMINI_API_KEY = GEMINI_API_KEYS[0] if GEMINI_API_KEYS else ''
 AI_TEXT_GEMINI_API_URL = os.getenv(
     'AI_TEXT_GEMINI_API_URL',
     'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
 )
-AI_TEXT_GEMINI_MODEL = os.getenv('AI_TEXT_GEMINI_MODEL', 'gemini-2.5-flash')
+# Verificado contra la API el 2026-08-06: gemini-2.5-flash responde 404 "no
+# longer available to new users" y la familia 2.0 responde 429 con quota 0 en
+# free tier. Los alias -latest siempre apuntan a un modelo servido.
+AI_TEXT_GEMINI_MODEL = os.getenv('AI_TEXT_GEMINI_MODEL', 'gemini-flash-latest')
 
 OPEN_ROUTER_API_KEY = os.getenv('OPEN_ROUTER_API_KEY', '')
 AI_TEXT_OPENROUTER_API_URL = os.getenv(
@@ -229,7 +238,10 @@ AI_TEXT_OPENROUTER_API_URL = os.getenv(
 )
 AI_TEXT_OPENROUTER_MODEL = os.getenv('AI_TEXT_OPENROUTER_MODEL', 'gpt-4o-mini')
 
-GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+# Groq limita por organización, no por key, así que rotar sólo suma cuota porque
+# estas keys son de cuentas distintas.
+GROQ_API_KEYS = collect_api_keys('GROQ_API_KEY')
+GROQ_API_KEY = GROQ_API_KEYS[0] if GROQ_API_KEYS else ''
 AI_TEXT_GROQ_API_URL = os.getenv(
     'AI_TEXT_GROQ_API_URL',
     'https://api.groq.com/openai/v1/chat/completions',
