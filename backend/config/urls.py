@@ -2,6 +2,9 @@
 URL configuration - API + SPA catch-all.
 """
 from pathlib import Path
+import os
+import re
+import subprocess
 
 from django.conf import settings
 from django.contrib import admin
@@ -10,6 +13,27 @@ from django.urls import include, path, re_path
 
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework.permissions import AllowAny
+
+
+def version_json(request):
+    root = Path(__file__).resolve().parents[2]
+    version = os.environ.get('APP_VERSION', '0.1.0')
+    for candidate in (root / 'VERSION', root / 'pyproject.toml'):
+        if candidate.is_file():
+            text = candidate.read_text(encoding='utf-8')
+            match = re.search(r"(?m)^version\s*=\s*['\"]([^'\"]+)", text) if candidate.suffix == '.toml' else re.search(r'\S+', text)
+            if match:
+                version = match.group(1)
+                break
+    if not re.fullmatch(r'\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?', version):
+        version = '0.1.0'
+    sha = os.environ.get('GIT_SHA', '')
+    if not re.fullmatch(r'[0-9a-fA-F]{7,40}', sha):
+        try:
+            sha = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], cwd=root, text=True, stderr=subprocess.DEVNULL).strip()
+        except (OSError, subprocess.CalledProcessError):
+            sha = 'unknown'
+    return JsonResponse({'version': version, 'sha': sha[:7]})
 
 
 def spa_index(request):
@@ -37,6 +61,7 @@ def health_check(request):
 
 
 urlpatterns = [
+    path('version.json', version_json, name='version-json'),
     path('api/health/', health_check, name='health-check'),
     path('api/admin/run-seed/', trigger_seed, name='trigger-seed'),
     path('admin/', admin.site.urls),

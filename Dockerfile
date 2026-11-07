@@ -27,6 +27,8 @@ RUN test -f /app/frontend/dist/gestor-coc/browser/index.html \
 # ==========================================
 FROM python:3.11-slim
 WORKDIR /app/backend
+ARG GIT_SHA=unknown
+ENV GIT_SHA=${GIT_SHA}
 
 # Env vars requeridas por Python
 ENV PYTHONDONTWRITEBYTECODE=1
