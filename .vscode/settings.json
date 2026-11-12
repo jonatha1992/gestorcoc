@@ -1,23 +1,24 @@
 {
-    "peacock.color": "#011124",
+    "peacock.color": "#2a13ae",
     "workbench.colorCustomizations": {
         "activityBar.activeBackground": "#022856",
-        "activityBar.background": "#022856",
+        "activityBar.background": "#2a13ae",
         "activityBar.foreground": "#e7e7e7",
         "activityBar.inactiveForeground": "#e7e7e799",
         "activityBarBadge.background": "#bb0457",
         "activityBarBadge.foreground": "#e7e7e7",
         "commandCenter.border": "#e7e7e799",
         "sash.hoverBorder": "#022856",
-        "statusBar.background": "#011124",
+        "statusBar.background": "#2a13ae",
         "statusBar.foreground": "#e7e7e7",
         "statusBarItem.hoverBackground": "#022856",
         "statusBarItem.remoteBackground": "#011124",
         "statusBarItem.remoteForeground": "#e7e7e7",
         "titleBar.activeBackground": "#011124",
         "titleBar.activeForeground": "#e7e7e7",
-        "titleBar.inactiveBackground": "#01112499",
-        "titleBar.inactiveForeground": "#e7e7e799"
+        "titleBar.inactiveBackground": "#2a13ae99",
+        "titleBar.inactiveForeground": "#e7e7e799",
+        "titleBar.background": "#2a13ae"
     },
     "sqltools.connections": [
         {
